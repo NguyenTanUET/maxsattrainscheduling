@@ -1,0 +1,10 @@
+/mnt/d/github/maxsattrainscheduling/target/release/deps/structopt_derive-fc522c498dd24c52.d: /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/lib.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/attrs.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/doc_comments.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/parse.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/spanned.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/ty.rs
+
+/mnt/d/github/maxsattrainscheduling/target/release/deps/libstructopt_derive-fc522c498dd24c52.so: /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/lib.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/attrs.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/doc_comments.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/parse.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/spanned.rs /home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/ty.rs
+
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/lib.rs:
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/attrs.rs:
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/doc_comments.rs:
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/parse.rs:
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/spanned.rs:
+/home/nguyentan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/structopt-derive-0.4.18/src/ty.rs:

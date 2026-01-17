@@ -6,8 +6,8 @@ use ddd::{
     solvers::{
         bigm,
         greedy::{self, default_heuristic},
-        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract, milp_ti,
-        SolverError,
+        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
+        maxsatddd_ladder_scl, milp_ti, SolverError,
     },
 };
 
@@ -161,6 +161,7 @@ enum SolverType {
     BigMEager,
     BigMLazy,
     MaxSatDddLadderRC2,
+    MaxSatDddLadderScl,
     MaxSatDddLadderRC2Abstract,
     MaxSatDddLadderIpamir,
     MaxSatDddCadical,
@@ -214,6 +215,7 @@ fn main() {
             "bigm_lazy" => SolverType::BigMLazy,
             "maxsat_ddd" => SolverType::MaxSatDddLadderRC2,
             "maxsat_ddd_abstract" => SolverType::MaxSatDddLadderRC2Abstract,
+            "maxsat_ddd_ladder_scl" => SolverType::MaxSatDddLadderScl,
             "maxsat_ddd_ladder_ipamir" => SolverType::MaxSatDddLadderIpamir,
             "maxsat_ddd_cdc" => SolverType::MaxSatDddCadical,
             "maxsat_idl" => SolverType::MaxSatIdl,
@@ -272,10 +274,46 @@ fn main() {
 
     let perf_out = RefCell::new(String::new());
 
-    println!("Starting gurobi environment...");
+    let needs_gurobi = solvers.iter().any(|solver| {
+        matches!(
+            solver,
+            SolverType::Greedy
+                | SolverType::GreedyFast
+                | SolverType::GreedyFStr
+                | SolverType::BigMEager
+                | SolverType::BigMLazy
+                | SolverType::MipDdd
+                | SolverType::MipHull
+                | SolverType::MaxSatTi
+                | SolverType::MipTi
+                | SolverType::MaxSatDddExternal
+                | SolverType::MaxSatDddIpamir
+                | SolverType::MaxSatDddIncremental
+                | SolverType::MaxSatDddIncrementalNoProp
+                | SolverType::MaxSatDddPairwiseCustomRc2
+                | SolverType::MaxSatDddPairwiseCustomRc2NoProp
+                | SolverType::BinarizedBigMEager10Sec
+                | SolverType::BinarizedBigMEager30Sec
+                | SolverType::BinarizedBigMEager60Sec
+                | SolverType::BinarizedBigMLazy10Sec
+                | SolverType::BinarizedBigMLazy30Sec
+                | SolverType::BinarizedBigMLazy60Sec
+        )
+    });
 
-    let env = mk_env();
-    println!("...ok.");
+    let env = if needs_gurobi {
+        println!("Starting gurobi environment...");
+        let env = mk_env();
+        println!("...ok.");
+        Some(env)
+    } else {
+        None
+    };
+    let get_env = || {
+        env.as_ref().expect(
+            "Gurobi environment unavailable; configure a Gurobi license or choose a non-Gurobi solver.",
+        )
+    };
 
     let mut problems: Vec<serde_json::Value> = Default::default();
 
@@ -307,10 +345,10 @@ fn main() {
                 //     },
                 // ),
                 SolverType::Greedy => {
-                    greedy::solve2(&p.problem, &env, delay_cost_type, default_heuristic)
+                    greedy::solve2(&p.problem, get_env(), delay_cost_type, default_heuristic)
                 }
                 SolverType::GreedyFast => heuristic::solve_heuristic_better(
-                    &env,
+                    get_env(),
                     &p.problem,
                     delay_cost_type,
                     false,
@@ -318,11 +356,17 @@ fn main() {
                 )
                 .and_then(|e| e.ok_or(SolverError::NoSolution)),
                 SolverType::GreedyFStr => {
-                    heuristic::solve_heuristic_better(&env, &p.problem, delay_cost_type, true, None)
+                    heuristic::solve_heuristic_better(
+                        get_env(),
+                        &p.problem,
+                        delay_cost_type,
+                        true,
+                        None,
+                    )
                         .and_then(|e| e.ok_or(SolverError::NoSolution))
                 }
                 SolverType::BigMEager => bigm::solve_bigm(
-                    &env,
+                    get_env(),
                     &mk_env,
                     &p.problem,
                     delay_cost_type,
@@ -335,7 +379,7 @@ fn main() {
                     },
                 ),
                 SolverType::MipHull => bigm::solve_hull(
-                    &env,
+                    get_env(),
                     &mk_env,
                     &p.problem,
                     delay_cost_type,
@@ -348,7 +392,7 @@ fn main() {
                     },
                 ),
                 SolverType::BigMLazy => bigm::solve_bigm(
-                    &env,
+                    get_env(),
                     &mk_env,
                     &p.problem,
                     delay_cost_type,
@@ -362,7 +406,7 @@ fn main() {
                 ),
                 SolverType::MaxSatTi => maxsat_ti::solve(
                     maxsatsolver::Incremental::new(),
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -374,7 +418,7 @@ fn main() {
                 )
                 .map(|(v, _)| v),
                 SolverType::MipTi => milp_ti::solve(
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -387,7 +431,7 @@ fn main() {
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddExternal => maxsat_ddd::solve(
                     || maxsatsolver::External::new(/* "./uwrmaxsat" */),
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -398,7 +442,7 @@ fn main() {
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddIpamir => maxsat_ddd::solve(
                     || maxsatsolver::Incremental::new(),
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -409,7 +453,7 @@ fn main() {
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddIncremental => maxsat_ddd::solve_incremental(
                     || maxsatsolver::Incremental::new(),
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -421,7 +465,7 @@ fn main() {
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddIncrementalNoProp => maxsat_ddd::solve_incremental(
                     || maxsatsolver::Incremental::new(),
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -437,7 +481,7 @@ fn main() {
                             satcoder::solvers::minisat::Solver::new(),
                         )
                     },
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -453,7 +497,7 @@ fn main() {
                             satcoder::solvers::minisat::Solver::new(),
                         )
                     },
-                    &env,
+                    get_env(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -461,6 +505,15 @@ fn main() {
                     |k, v| {
                         solve_data.insert(k, v);
                     },
+                )
+                .map(|(v, _)| v),
+                SolverType::MaxSatDddLadderScl => maxsatddd_ladder_scl::solve(
+                    &mk_env,
+                    satcoder::solvers::minisat::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    |k, v| { solve_data.insert(k, v); },
                 )
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddLadderRC2 => maxsatddd_ladder::solve(
@@ -510,15 +563,12 @@ fn main() {
                 )
                 .map(|(v, _)| v),
                 SolverType::MaxSatIdl => {
-                    if let DelayCostType::FiniteSteps123 = delay_cost_type {
-                        ddd::solvers::idl::solve(&p.problem)
-                    } else {
-                        panic!("Unsupported delay cost type for IDL solver.");
-                    }
+                    eprintln!("Error: IDL solver is not available in this build.");
+                    Err(SolverError::NoSolution)
                 }
                 SolverType::MipDdd => ddd::solvers::mipdddpack::solve(
                     &mk_env,
-                    &env,
+                    get_env(),
                     &p.problem,
                     delay_cost_type,
                     TIMEOUT,
@@ -528,7 +578,7 @@ fn main() {
                 ),
                 SolverType::BinarizedBigMEager10Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         false,
@@ -543,7 +593,7 @@ fn main() {
                 }
                 SolverType::BinarizedBigMEager30Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         false,
@@ -558,7 +608,7 @@ fn main() {
                 }
                 SolverType::BinarizedBigMEager60Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         false,
@@ -573,7 +623,7 @@ fn main() {
                 }
                 SolverType::BinarizedBigMLazy10Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         true,
@@ -588,7 +638,7 @@ fn main() {
                 }
                 SolverType::BinarizedBigMLazy30Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         true,
@@ -603,7 +653,7 @@ fn main() {
                 }
                 SolverType::BinarizedBigMLazy60Sec => {
                     ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        &env,
+                        get_env(),
                         &p.problem,
                         delay_cost_type,
                         true,

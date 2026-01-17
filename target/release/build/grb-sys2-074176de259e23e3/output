@@ -1,0 +1,3 @@
+cargo:rerun-if-env-changed=DOCS_RS
+cargo:rustc-link-search=native=/home/nguyentan/miniconda3/envs/gurobi/lib
+cargo:rustc-link-lib=gurobi130

@@ -1,0 +1,9 @@
+
+Gurobi 13.0.0 (linux64, gurobi_cl) logging started Fri Jan  9 22:06:33 2026
+
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2663665
+Set parameter LogFile to value "gurobi.log"
+Using license file /home/nguyentan/miniconda3/envs/gurobi/gurobi.lic
+Academic license 2663665 - for non-commercial use only - registered to tu___@vnu.edu.vn

@@ -1,0 +1,115 @@
+OUT_DIR = Some(D:\github\maxsattrainscheduling\target\debug\build\minisat-8752ef72ec6507df\out)
+OPT_LEVEL = Some(0)
+TARGET = Some(x86_64-pc-windows-msvc)
+CARGO_ENCODED_RUSTFLAGS = Some()
+cargo:rerun-if-env-changed=VCINSTALLDIR
+VCINSTALLDIR = None
+cargo:rerun-if-env-changed=VSTEL_MSBuildProjectFullPath
+VSTEL_MSBuildProjectFullPath = None
+cargo:rerun-if-env-changed=VCToolsVersion
+VCToolsVersion = None
+cargo:rerun-if-env-changed=VSCMD_ARG_VCVARS_SPECTRE
+VSCMD_ARG_VCVARS_SPECTRE = None
+cargo:rerun-if-env-changed=WindowsSdkDir
+WindowsSdkDir = None
+cargo:rerun-if-env-changed=WindowsSDKVersion
+WindowsSDKVersion = None
+cargo:rerun-if-env-changed=LIB
+LIB = None
+PATH = Some(D:\github\maxsattrainscheduling\target\debug\deps;D:\github\maxsattrainscheduling\target\debug;C:\Users\PC\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib;C:\gurobi1300\win64\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\libnvvp;E:\Oculus\Support\oculus-runtime;C:\Python312\Scripts\;C:\Python312\;c:\Users\PC\AppData\Local\Programs\cursor\resources\app\bin;C:\Program Files\Microsoft MPI\Bin\;C:\Program Files\Microsoft\jdk-11.0.16.101-hotspot\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files (x86)\dotnet\;E:\CodeBlocks\MinGW\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\dotnet\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Users\PC\AppData\Local\NVIDIA\ChatWithRTX\env_nvd_rag\Lib\site-packages\torch\lib;C:\Program Fil;C:\Program Files\LLVM\bin;C:\Users\PC\AppData\Local\Programs\Python\Python310\Scripts\;C:\Users\PC\AppData\Local\Programs\Python\Python310\;C:\Users\PC\.cargo\bin;C:\Users\PC\AppData\Local\Programs\Python\Launcher\;C:\Users\PC\AppData\Local\Microsoft\WindowsApps;C:\Users\PC\AppData\Local\GitHubDesktop\bin;D:\Microsoft VS Code\bin;C:\Program Files\JetBrains\PyCharm Community Edition 2025.1.1.1\bin;;C:\Users\PC\AppData\Roaming\npm;C:\Users\PC\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Users\PC\AppData\Roaming\Python\Python312\Scripts;D:\MiniSat\bin;C:\Users\PC\AppData\Local\Programs\cursor\resources\app\bin;D:\RustRover\RustRover 2025.1\bin;;D:\WebStorm\WebStorm 2025.1\bin;;C:\Users\PC\AppData\Local\Pandoc\;C:\Program Files\JetBrains\PyCharm 2025.2\bin;G:\rider\JetBrains Rider 2025.2.3\bin;C:\msys64\ucrt64\bin;D:\IntelliJ\IntelliJ IDEA 2025.2.4\bin;C:\Users\PC\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin)
+cargo:rerun-if-env-changed=INCLUDE
+INCLUDE = None
+HOST = Some(x86_64-pc-windows-msvc)
+cargo:rerun-if-env-changed=CXX_x86_64-pc-windows-msvc
+CXX_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CXX_x86_64_pc_windows_msvc
+CXX_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_CXX
+HOST_CXX = None
+cargo:rerun-if-env-changed=CXX
+CXX = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some(cmpxchg16b,fxsr,sse,sse2,sse3)
+DEBUG = Some(true)
+cargo:rerun-if-env-changed=CXXFLAGS
+CXXFLAGS = None
+cargo:rerun-if-env-changed=HOST_CXXFLAGS
+HOST_CXXFLAGS = None
+cargo:rerun-if-env-changed=CXXFLAGS_x86_64_pc_windows_msvc
+CXXFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=CXXFLAGS_x86_64-pc-windows-msvc
+CXXFLAGS_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+Solver.cc
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): warning C4200: nonstandard extension used: zero-sized array in struct/union
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(225): warning C4245: 'initializing': conversion from 'Minisat::RegionAllocator<uint32_t>::<unnamed-enum-Ref_Undef>' to 'Minisat::CRef', signed/unsigned mismatch
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(324): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(327): warning C4305: '*=': truncation from 'double' to 'float'
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(355): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(356): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+lib/minisat/minisat/core/Solver.cc(373): warning C4456: declaration of 'i' hides previous local declaration
+lib/minisat/minisat/core/Solver.cc(338): note: see declaration of 'i'
+lib/minisat/minisat/core/Solver.cc(377): warning C4456: declaration of 'p' hides previous local declaration
+lib/minisat/minisat/core/Solver.cc(299): note: see declaration of 'p'
+lib/minisat/minisat/core/Solver.cc(383): warning C4456: declaration of 'j' hides previous local declaration
+lib/minisat/minisat/core/Solver.cc(338): note: see declaration of 'j'
+lib/minisat/minisat/core/Solver.cc(410): warning C4456: declaration of 'i' hides previous local declaration
+lib/minisat/minisat/core/Solver.cc(398): note: see declaration of 'i'
+lib/minisat/minisat/core/Solver.cc(558): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
+lib/minisat/minisat/core/Solver.cc(672): warning C4456: declaration of 'i' hides previous local declaration
+lib/minisat/minisat/core/Solver.cc(664): note: see declaration of 'i'
+lib/minisat/minisat/core/Solver.cc(866): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+lib/minisat/minisat/core/Solver.cc(941): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+SimpSolver.cc
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): warning C4200: nonstandard extension used: zero-sized array in struct/union
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(225): warning C4245: 'initializing': conversion from 'Minisat::RegionAllocator<uint32_t>::<unnamed-enum-Ref_Undef>' to 'Minisat::CRef', signed/unsigned mismatch
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(324): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(327): warning C4305: '*=': truncation from 'double' to 'float'
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(355): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(356): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+System.cc
+lib/minisat/minisat/utils/System.cc(94): warning C4100: 'strictlyPeak': unreferenced parameter
+minisat.cc
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): warning C4200: nonstandard extension used: zero-sized array in struct/union
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(147): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(225): warning C4245: 'initializing': conversion from 'Minisat::RegionAllocator<uint32_t>::<unnamed-enum-Ref_Undef>' to 'Minisat::CRef', signed/unsigned mismatch
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(324): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(327): warning C4305: '*=': truncation from 'double' to 'float'
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(355): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/Solver.h(356): warning C4244: 'return': conversion from 'const uint64_t' to 'int', possible loss of data
+lib/minisat-c-bindings/minisat.cc(54): warning C4190: 'fromC' has C-linkage specified, but returns 'Minisat::lbool' which is incompatible with C
+C:\Users\PC\.cargo\git\checkouts\minisat-rs-6bf926ea6ed62f04\2639613\lib\minisat\minisat/core/SolverTypes.h(94): note: see declaration of 'Minisat::lbool'
+lib/minisat-c-bindings/minisat.cc(111): warning C4244: 'return': conversion from 'uint64_t' to 'int', possible loss of data
+lib/minisat-c-bindings/minisat.cc(112): warning C4244: 'return': conversion from 'uint64_t' to 'int', possible loss of data
+lib/minisat-c-bindings/minisat.cc(113): warning C4244: 'return': conversion from 'uint64_t' to 'int', possible loss of data
+lib/minisat-c-bindings/minisat.cc(114): warning C4244: 'return': conversion from 'uint64_t' to 'int', possible loss of data
+cargo:rerun-if-env-changed=AR_x86_64-pc-windows-msvc
+AR_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=AR_x86_64_pc_windows_msvc
+AR_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64_pc_windows_msvc
+ARFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64-pc-windows-msvc
+ARFLAGS_x86_64-pc-windows-msvc = None
+cargo:rustc-link-search=native=C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.50.35717\atlmfc\lib\x64
+cargo:rustc-link-lib=static=minisat
+cargo:rustc-link-search=native=D:\github\maxsattrainscheduling\target\debug\build\minisat-8752ef72ec6507df\out
+cargo:rerun-if-env-changed=CXXSTDLIB_x86_64-pc-windows-msvc
+CXXSTDLIB_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CXXSTDLIB_x86_64_pc_windows_msvc
+CXXSTDLIB_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_CXXSTDLIB
+HOST_CXXSTDLIB = None
+cargo:rerun-if-env-changed=CXXSTDLIB
+CXXSTDLIB = None

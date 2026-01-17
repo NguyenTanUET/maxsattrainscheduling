@@ -1,0 +1,5 @@
+cargo:rustc-link-search=.
+cargo:rerun-if-changed=libipamir.a
+cargo:rustc-link-lib=stdc++
+cargo:rustc-link-lib=z
+cargo:rustc-link-lib=gmp
