@@ -188,7 +188,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 120.0;
+const TIMEOUT: f64 = 600.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
