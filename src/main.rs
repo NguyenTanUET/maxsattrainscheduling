@@ -6,8 +6,8 @@ use ddd::{
     solvers::{
         bigm,
         greedy::{self, default_heuristic},
-        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
-        maxsatddd_ladder_scl, milp_ti, SolverError,
+        ddd as ddd_solvers, heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder,
+        maxsatddd_ladder_abstract, maxsatddd_ladder_scl, milp_ti, SolverError,
     },
 };
 
@@ -165,6 +165,7 @@ enum SolverType {
     MaxSatDddLadderRC2Abstract,
     MaxSatDddLadderIpamir,
     MaxSatDddCadical,
+    SatDdd,
     MaxSatIdl,
     MipDdd,
     MipHull,
@@ -188,7 +189,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 600.0;
+const TIMEOUT: f64 = 120.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
@@ -218,6 +219,7 @@ fn main() {
             "maxsat_ddd_ladder_scl" => SolverType::MaxSatDddLadderScl,
             "maxsat_ddd_ladder_ipamir" => SolverType::MaxSatDddLadderIpamir,
             "maxsat_ddd_cdc" => SolverType::MaxSatDddCadical,
+            "sat_ddd" => SolverType::SatDdd,
             "maxsat_idl" => SolverType::MaxSatIdl,
             "mip_ddd" => SolverType::MipDdd,
             "mip_hull" => SolverType::MipHull,
@@ -552,6 +554,17 @@ fn main() {
                 )
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddCadical => maxsatddd_ladder::solve(
+                    &mk_env,
+                    satcoder::solvers::minisat::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
+                )
+                .map(|(v, _)| v),
+                SolverType::SatDdd => ddd_solvers::sat::solve(
                     &mk_env,
                     satcoder::solvers::minisat::Solver::new(),
                     &p.problem,

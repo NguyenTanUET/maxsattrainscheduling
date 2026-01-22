@@ -1,5 +1,6 @@
 pub mod maxsatddd_ladder;
 pub mod maxsatddd_ladder_scl;
+pub mod ddd;
 pub mod bigm;
 pub mod binarizedbigm;
 pub mod greedy;
