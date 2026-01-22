@@ -1,9 +1,0 @@
-
-[build]
-rustflags = [
-  "-L", "/mnt/d/github/ipamir-rs",
-  "-L", "/mnt/d/github/uwrmaxsat/build/release/lib",
-  "-L", "/mnt/d/github/cadical/build",
-  "-L", "/home/nguyentan/miniconda3/envs/gurobi/lib",
-  "-l", "cadical",
-]

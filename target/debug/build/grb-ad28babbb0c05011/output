@@ -1,4 +1,0 @@
-cargo:rerun-if-changed=build/params.csv
-cargo:rerun-if-changed=build/main.rs
-cargo:rerun-if-changed=build/attrs.csv
-cargo:rerun-if-changed=build/docstrings

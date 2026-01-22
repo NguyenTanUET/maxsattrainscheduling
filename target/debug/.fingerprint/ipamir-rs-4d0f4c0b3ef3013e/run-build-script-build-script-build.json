@@ -1,1 +1,0 @@
-{"rustc":7895727629726570510,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[16513549685177776081,"build_script_build",false,1555080856077796082]],"local":[{"RerunIfChanged":{"output":"debug\\build\\ipamir-rs-4d0f4c0b3ef3013e\\output","paths":["libipamir.a"]}}],"rustflags":[],"config":0,"compile_kind":0}

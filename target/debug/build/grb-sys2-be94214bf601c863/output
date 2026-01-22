@@ -1,3 +1,0 @@
-cargo:rerun-if-env-changed=DOCS_RS
-cargo:rustc-link-search=native=\\?\C:\gurobi1300\win64\lib
-cargo:rustc-link-lib=gurobi130
