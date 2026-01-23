@@ -14,6 +14,21 @@ use typed_index_collections::TiVec;
 
 use super::{common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId}, costtree::CostTree, SolverError};
 
+#[derive(Clone, Copy, Debug)]
+pub enum SatBoundMode {
+    /// Ràng buộc UB được thêm vĩnh viễn bằng clause (phù hợp siết UB đơn điệu: UB = UB-1).
+    AddClauses,
+    /// Ràng buộc UB được áp bằng assumptions (incremental “sạch”, tiện cho thử nhiều UB mà không làm bẩn CNF).
+    Assumptions,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SatPrecEncoding {
+    Plain,
+    Scl,
+}
+
+
 /// SAT-only version of the DDD Ladder solver.
 /// 
 /// Idea:
@@ -28,12 +43,113 @@ pub fn solve<L: satcoder::Lit + Copy + std::fmt::Debug>(
     delay_cost_type: DelayCostType,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_debug(
+    solve_with_mode(
         mk_env,
         solver,
         problem,
         timeout,
         delay_cost_type,
+        SatBoundMode::AddClauses,
+        output_stats,
+    )
+}
+
+pub fn solve_incremental<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_with_mode(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        SatBoundMode::Assumptions, // incremental
+        output_stats,
+    )
+}
+
+pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_with_mode_scl(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        SatBoundMode::AddClauses,
+        output_stats,
+    )
+}
+
+pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_with_mode_scl(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        SatBoundMode::Assumptions,
+        output_stats,
+    )
+}
+
+pub fn solve_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    mode: SatBoundMode,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_debug_with_mode(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        mode,
+        SatPrecEncoding::Plain,
+        |_| {},
+        output_stats,
+    )
+}
+
+pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    mode: SatBoundMode,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_debug_with_mode(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        mode,
+        SatPrecEncoding::Scl,
         |_| {},
         output_stats,
     )
@@ -64,10 +180,34 @@ fn inject_solution_timepoints_sat<L: satcoder::Lit>(
 
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
+    solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    debug_out: impl Fn(DebugInfo),
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_debug_with_mode(
+        mk_env,
+        solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        SatBoundMode::AddClauses,
+        SatPrecEncoding::Plain,
+        debug_out,
+        output_stats,
+    )
+}
+
+pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
     mut solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
     timeout: f64,
     delay_cost_type: DelayCostType,
+    mode: SatBoundMode,
+    prec: SatPrecEncoding,
     debug_out: impl Fn(DebugInfo),
     mut output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
@@ -120,10 +260,11 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         }
     }
 
-    // Search state (SAT with decreasing UB).
+    // Search state.
     let mut best_sol: Option<(i32, Vec<Vec<i32>>)> = None;
-    // Current budget (<=). When None, we haven't got any UB yet.
-    let mut budget_ub: Option<i32> = None;
+    let mut lower_bound: i32 = 0;
+    // Upper bound on optimal cost (exclusive). When None, no bound yet.
+    let mut upper_bound: Option<i32> = None;
 
     // Unit-cost ladder vars used for the budget constraint.
     // Each pushed var corresponds to +1 cost.
@@ -134,8 +275,35 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     let mut budget_tot_len: usize = 0;
     let mut budget_tot_max_bound: usize = 0;
 
+    let mut last_added_bound: Option<usize> = None;
+
     // Conflict-choice vars (optional; currently unused because USE_CHOICE_VAR=false below).
     let mut conflict_vars: HashMap<(VisitId, VisitId), Bool<L>> = Default::default();
+    // Rows already added for SCL fixed-precedence encoding: (visit_id, time).
+    let mut scl_fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
+
+    // Optional: seed fixed-precedence (travel-time) constraints from the earliest time points.
+    const SEED_SCL_FROM_EARLIEST: bool = true;
+    if prec == SatPrecEncoding::Scl && SEED_SCL_FROM_EARLIEST {
+        for visit_id in visits.keys() {
+            let (train_idx, visit_idx) = visits[visit_id];
+            if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
+                continue;
+            }
+            let (in_var, in_t) = occupations[visit_id].delays[0];
+            add_fixed_precedence_scl(
+                &mut solver,
+                problem,
+                &visits,
+                &mut occupations,
+                &mut new_time_points,
+                &mut scl_fixed_prec_rows,
+                visit_id,
+                in_var,
+                in_t,
+            );
+        }
+    }
 
     // Heuristic thread: produces feasible UB solutions (cost, solution).
     const USE_HEURISTIC: bool = true;
@@ -151,9 +319,11 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     let mut is_sat: bool = true;
 
     loop {
+        let mut bound_assumption: Option<Bool<L>> = None;
+        let mut bound_used: Option<i32> = None;
         if start_time.elapsed().as_secs_f64() > timeout {
             let ub = best_sol.as_ref().map(|(c, _)| *c).unwrap_or(i32::MAX);
-            let lb = budget_ub.map(|b| b + 1).unwrap_or(0);
+            let lb = lower_bound;
             println!("TIMEOUT LB={} UB={}", lb, ub);
 
             do_output_stats(
@@ -181,8 +351,9 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                         best_sol = Some((ub_cost, ub_sol.clone()));
                     }
 
-                    // Use heuristic solution as a starting UB.
-                    budget_ub = Some(budget_ub.map(|b| b.min(ub_cost)).unwrap_or(ub_cost));
+                    // Use heuristic solution as a starting UB (search for strictly better).
+                    let candidate_ub = ub_cost - 1;
+                    upper_bound = Some(upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub));
 
                     // Make sure these time points exist in the encoding.
                     inject_solution_timepoints_sat(&mut solver, problem, &train_visit_ids, &mut occupations, &mut new_time_points, &ub_sol);
@@ -228,16 +399,33 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                             solution: extract_solution(problem, &occupations),
                         });
 
-                        let t1_in_var = v1.delays[v1.incumbent_idx].0;
-                        let new_t = v1.incumbent_time() + visit.travel_time;
-                        let (t1_earliest_out_var, t1_is_new) =
-                            occupations[next_visit].time_point(&mut solver, new_t);
+                        if prec == SatPrecEncoding::Scl {
+                            let in_var = v1.delays[v1.incumbent_idx].0;
+                            let in_t = v1.incumbent_time();
+                            add_fixed_precedence_scl(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut scl_fixed_prec_rows,
+                                visit_id,
+                                in_var,
+                                in_t,
+                            );
+                            stats.n_travel += 1;
+                        } else {
+                            let t1_in_var = v1.delays[v1.incumbent_idx].0;
+                            let new_t = v1.incumbent_time() + visit.travel_time;
+                            let (t1_earliest_out_var, t1_is_new) =
+                                occupations[next_visit].time_point(&mut solver, new_t);
 
-                        SatInstance::add_clause(&mut solver, vec![!t1_in_var, t1_earliest_out_var]);
-                        stats.n_travel += 1;
+                            SatInstance::add_clause(&mut solver, vec![!t1_in_var, t1_earliest_out_var]);
+                            stats.n_travel += 1;
 
-                        if t1_is_new {
-                            new_time_points.push((next_visit, t1_earliest_out_var, new_t));
+                            if t1_is_new {
+                                new_time_points.push((next_visit, t1_earliest_out_var, new_t));
+                            }
                         }
                     }
                 }
@@ -320,6 +508,32 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                 new_time_points.push((other_visit, delay_t2, t1_out));
                             }
 
+                            if prec == SatPrecEncoding::Scl {
+                                // SCL fixed-precedence rows for these (possibly new) time points.
+                                add_fixed_precedence_scl(
+                                    &mut solver,
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut scl_fixed_prec_rows,
+                                    visit_id,
+                                    delay_t1,
+                                    t2_out,
+                                );
+                                add_fixed_precedence_scl(
+                                    &mut solver,
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut scl_fixed_prec_rows,
+                                    other_visit,
+                                    delay_t2,
+                                    t1_out,
+                                );
+                            }
+
                             let v1 = &occupations[visit_id];
                             let v2 = &occupations[other_visit];
 
@@ -378,7 +592,8 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 }
 
                 // Tighten UB to search for a strictly better solution.
-                budget_ub = Some(cost - 1);
+                let candidate_ub = cost - 1;
+                upper_bound = Some(upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub));
 
                 debug_out(DebugInfo {
                     iteration,
@@ -387,22 +602,24 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 });
 
                 // If we cannot improve further, we can stop.
-                if budget_ub.unwrap() < 0 {
-                    let (c, s) = best_sol.unwrap();
-                    stats.satsolver = format!("{:?}", solver);
-                    do_output_stats(
-                        &mut output_stats,
-                        iteration,
-                        &iteration_types,
-                        &stats,
-                        &occupations,
-                        start_time,
-                        solver_time,
-                        c,
-                        c,
-                    );
-                    println!("SAT OPTIMAL (cost={})", c);
-                    return Ok((s, stats));
+                if let Some(ub) = upper_bound {
+                    if ub < lower_bound {
+                        let (c, s) = best_sol.clone().unwrap();
+                        stats.satsolver = format!("{:?}", solver);
+                        do_output_stats(
+                            &mut output_stats,
+                            iteration,
+                            &iteration_types,
+                            &stats,
+                            &occupations,
+                            start_time,
+                            solver_time,
+                            c,
+                            c,
+                        );
+                        println!("SAT OPTIMAL (cost={})", c);
+                        return Ok((s, stats));
+                    }
                 }
             }
         }
@@ -449,25 +666,33 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         }
 
         // ----- Enforce budget UB (if known) -----
-        if let Some(ub) = budget_ub {
-            if ub < 0 {
-                // Impossible to satisfy cost <= -1; return best.
-                stats.n_unsat += 1;
-                let (c, s) = best_sol.or_else(|| {
-                    heur_thread
-                        .as_ref()
-                        .and_then(|(_, rx)| rx.try_recv().ok())
-                        .map(|(c, s)| (c, s))
-                }).unwrap_or((i32::MAX, Vec::new()));
-
-                if s.is_empty() {
-                    return Err(SolverError::NoSolution);
+        if let Some(ub) = upper_bound {
+            if ub < lower_bound {
+                // Search space exhausted.
+                if let Some((c, s)) = best_sol.clone() {
+                    stats.n_unsat += 1;
+                    stats.satsolver = format!("{:?}", solver);
+                    do_output_stats(
+                        &mut output_stats,
+                        iteration,
+                        &iteration_types,
+                        &stats,
+                        &occupations,
+                        start_time,
+                        solver_time,
+                        c,
+                        c,
+                    );
+                    return Ok((s, stats));
                 }
-                stats.satsolver = format!("{:?}", solver);
-                return Ok((s, stats));
+                return Err(SolverError::NoSolution);
             }
 
-            let ub_usize = ub as usize;
+            let target_ub = match mode {
+                SatBoundMode::AddClauses => ub,
+                SatBoundMode::Assumptions => (lower_bound + ub) / 2,
+            };
+            let ub_usize = target_ub as usize;
 
             if ub_usize < budget_units.len() {
                 let need_rebuild = budget_tot.is_none()
@@ -481,10 +706,22 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
                     budget_tot = Some(tot);
                 }
 
-                // Enforce sum(budget_units) <= ub
+                // Enforce sum(budget_units) <= target_ub
                 if let Some(tot) = budget_tot.as_ref() {
                     debug_assert!(ub_usize < tot.rhs().len());
-                    SatInstance::add_clause(&mut solver, vec![!tot.rhs()[ub_usize]]);
+                    let bound_lit = !tot.rhs()[ub_usize];
+                    bound_used = Some(target_ub);
+                    match mode {
+                        SatBoundMode::AddClauses => {
+                            if last_added_bound != Some(ub_usize) {
+                                SatInstance::add_clause(&mut solver, vec![bound_lit]);
+                                last_added_bound = Some(ub_usize);
+                            }
+                        }
+                        SatBoundMode::Assumptions => {
+                            bound_assumption = Some(bound_lit);
+                        }
+                    }
                 }
             }
         }
@@ -495,7 +732,7 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         let solver_debug = format!("{:?}", solver);
         let solve_start = Instant::now();
         let result =
-            SatSolverWithCore::solve_with_assumptions(&mut solver, std::iter::empty::<Bool<L>>());
+            SatSolverWithCore::solve_with_assumptions(&mut solver, bound_assumption.into_iter());
         solver_time += solve_start.elapsed();
 
         match result {
@@ -531,23 +768,28 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
             satcoder::SatResultWithCore::Unsat(_core) => {
                 is_sat = false;
                 stats.n_unsat += 1;
-
-                // If we have a best solution, UNSAT under the tightened UB means it is optimal (for this encoding).
-                if let Some((c, s)) = best_sol {
-                    stats.satsolver = solver_debug;
-                    do_output_stats(
-                        &mut output_stats,
-                        iteration,
-                        &iteration_types,
-                        &stats,
-                        &occupations,
-                        start_time,
-                        solver_time,
-                        c,
-                        c,
-                    );
-                    println!("SAT OPTIMAL (cost={})", c);
-                    return Ok((s, stats));
+                if let Some(bound) = bound_used {
+                    lower_bound = bound + 1;
+                    if let (Some((c, s)), Some(ub)) = (best_sol.clone(), upper_bound) {
+                        if ub < lower_bound {
+                            stats.satsolver = solver_debug;
+                            do_output_stats(
+                                &mut output_stats,
+                                iteration,
+                                &iteration_types,
+                                &stats,
+                                &occupations,
+                                start_time,
+                                solver_time,
+                                c,
+                                c,
+                            );
+                            println!("SAT OPTIMAL (cost={})", c);
+                            return Ok((s, stats));
+                        }
+                    }
+                    iteration += 1;
+                    continue;
                 }
 
                 return Err(SolverError::NoSolution);
@@ -555,5 +797,45 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         }
 
         iteration += 1;
+    }
+}
+
+/// Add the SCL-compressed fixed-precedence constraint for a single time point.
+///
+/// Given an in-visit `visit_id` on train i at time t with ladder literal `in_var` (= "time >= t"),
+/// we enforce that the next visit on the same train must satisfy time >= t + travel_time.
+fn add_fixed_precedence_scl<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    problem: &Problem,
+    visits: &TiVec<VisitId, (usize, usize)>,
+    occupations: &mut TiVec<VisitId, Occ<L>>,
+    new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
+    added: &mut HashSet<(VisitId, i32)>,
+    visit_id: VisitId,
+    in_var: Bool<L>,
+    in_t: i32,
+) {
+    if !added.insert((visit_id, in_t)) {
+        return;
+    }
+
+    let (train_idx, visit_idx) = visits[visit_id];
+    if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
+        return;
+    }
+
+    let travel = problem.trains[train_idx].visits[visit_idx].travel_time;
+    let next_visit: VisitId = (usize::from(visit_id) + 1).into();
+    let req_t = in_t + travel;
+
+    let earliest_next = occupations[next_visit].delays[0].1;
+    if req_t <= earliest_next {
+        return;
+    }
+
+    let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
+    solver.add_clause(vec![!in_var, req_var]);
+    if is_new {
+        new_time_points.push((next_visit, req_var, req_t));
     }
 }

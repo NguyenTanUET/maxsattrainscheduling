@@ -165,8 +165,11 @@ enum SolverType {
     MaxSatDddLadderRC2Abstract,
     MaxSatDddLadderIpamir,
     MaxSatDddCadical,
-    SatDdd,
     MaxSatIdl,
+    SatDdd,
+    SatDddInc,
+    SatDddScl,
+    SatDddSclInc,
     MipDdd,
     MipHull,
     Greedy,
@@ -219,8 +222,11 @@ fn main() {
             "maxsat_ddd_ladder_scl" => SolverType::MaxSatDddLadderScl,
             "maxsat_ddd_ladder_ipamir" => SolverType::MaxSatDddLadderIpamir,
             "maxsat_ddd_cdc" => SolverType::MaxSatDddCadical,
-            "sat_ddd" => SolverType::SatDdd,
             "maxsat_idl" => SolverType::MaxSatIdl,
+            "sat_ddd" => SolverType::SatDdd,
+            "sat_ddd_inc" => SolverType::SatDddInc,
+            "sat_ddd_scl" => SolverType::SatDddScl,
+            "sat_ddd_scl_inc" => SolverType::SatDddSclInc,
             "mip_ddd" => SolverType::MipDdd,
             "mip_hull" => SolverType::MipHull,
             "greedy" => SolverType::Greedy,
@@ -566,7 +572,7 @@ fn main() {
                 .map(|(v, _)| v),
                 SolverType::SatDdd => ddd_solvers::sat::solve(
                     &mk_env,
-                    satcoder::solvers::minisat::Solver::new(),
+                    satcoder::solvers::rustsat_glucose::Solver::new(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
@@ -579,6 +585,38 @@ fn main() {
                     eprintln!("Error: IDL solver is not available in this build.");
                     Err(SolverError::NoSolution)
                 }
+                SolverType::SatDddInc => ddd_solvers::sat::solve_incremental(
+                    &mk_env,
+                    satcoder::solvers::rustsat_glucose::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
+                ).map(|(v, _)| v),
+                SolverType::SatDddScl => ddd_solvers::sat::solve_scl(
+                    &mk_env,
+                    satcoder::solvers::rustsat_glucose::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
+                )
+                .map(|(v, _)| v),
+                SolverType::SatDddSclInc => ddd_solvers::sat::solve_incremental_scl(
+                    &mk_env,
+                    satcoder::solvers::rustsat_glucose::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
+                )
+                .map(|(v, _)| v),
                 SolverType::MipDdd => ddd::solvers::mipdddpack::solve(
                     &mk_env,
                     get_env(),

@@ -6,7 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-satcoder = { path = "../salvers/satcoder", default-features = false, features = ["solver_minisat"] }
+satcoder = { path = "../salvers/satcoder", default-features = false, features = ["solver_minisat", "solver_rustsat_glucose"] }
+rustsat = { version = "0.7.4", optional = true }
+rustsat-glucose = { version = "0.7.4", optional = true }
 
 typed-index-collections = "3.0"
 derive_more = "0.99"
@@ -24,3 +26,6 @@ serde = { version = "1.0.193", features = ["derive"] }
 duct = "0.13.6"
 ipamir-rs = { version = "0.1.0", path = "../ipamir-rs" }
 #highs-sys = "1.2"
+
+[features]
+solver_rustsat_glucose = ["rustsat", "rustsat-glucose"]
