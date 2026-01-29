@@ -28,6 +28,12 @@ pub enum SatPrecEncoding {
     Scl,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SatSearchMode {
+    UbSearch,
+    Invalid,
+}
+
 
 /// SAT-only version of the DDD Ladder solver.
 /// 
@@ -62,13 +68,16 @@ pub fn solve_incremental<L: satcoder::Lit + Copy + std::fmt::Debug>(
     delay_cost_type: DelayCostType,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_with_mode(
+    solve_debug_with_mode(
         mk_env,
         solver,
         problem,
         timeout,
         delay_cost_type,
-        SatBoundMode::Assumptions, // incremental
+        SatBoundMode::Assumptions,
+        SatPrecEncoding::Plain,
+        SatSearchMode::Invalid,
+        |_| {},
         output_stats,
     )
 }
@@ -88,6 +97,7 @@ pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatBoundMode::AddClauses,
+        SatSearchMode::UbSearch,
         output_stats,
     )
 }
@@ -107,6 +117,7 @@ pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatBoundMode::Assumptions,
+        SatSearchMode::Invalid,
         output_stats,
     )
 }
@@ -128,6 +139,7 @@ pub fn solve_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         delay_cost_type,
         mode,
         SatPrecEncoding::Plain,
+        SatSearchMode::UbSearch,
         |_| {},
         output_stats,
     )
@@ -140,6 +152,7 @@ pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     timeout: f64,
     delay_cost_type: DelayCostType,
     mode: SatBoundMode,
+    search: SatSearchMode,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     solve_debug_with_mode(
@@ -150,6 +163,7 @@ pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         delay_cost_type,
         mode,
         SatPrecEncoding::Scl,
+        search,
         |_| {},
         output_stats,
     )
@@ -195,6 +209,7 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         delay_cost_type,
         SatBoundMode::AddClauses,
         SatPrecEncoding::Plain,
+        SatSearchMode::UbSearch,
         debug_out,
         output_stats,
     )
@@ -208,10 +223,16 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
     delay_cost_type: DelayCostType,
     mode: SatBoundMode,
     prec: SatPrecEncoding,
+    search: SatSearchMode,
     debug_out: impl Fn(DebugInfo),
     mut output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     let _p = hprof::enter("sat_solver");
+    let search_label = match search {
+        SatSearchMode::UbSearch => "ub_search",
+        SatSearchMode::Invalid => "invalid",
+    };
+    println!("SAT search mode: {}", search_label);
 
     let start_time: Instant = Instant::now();
     let mut solver_time = std::time::Duration::ZERO;
@@ -351,9 +372,13 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                         best_sol = Some((ub_cost, ub_sol.clone()));
                     }
 
-                    // Use heuristic solution as a starting UB (search for strictly better).
-                    let candidate_ub = ub_cost - 1;
-                    upper_bound = Some(upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub));
+                    if search == SatSearchMode::UbSearch {
+                        // Use heuristic solution as a starting UB (search for strictly better).
+                        let candidate_ub = ub_cost - 1;
+                        upper_bound = Some(
+                            upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
+                        );
+                    }
 
                     // Make sure these time points exist in the encoding.
                     inject_solution_timepoints_sat(&mut solver, problem, &train_visit_ids, &mut occupations, &mut new_time_points, &ub_sol);
@@ -544,7 +569,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                 .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
                                 .unwrap_or_else(|| true.into());
 
-                            const USE_CHOICE_VAR: bool = false;
+                            const USE_CHOICE_VAR: bool = true;
                             n_conflict_constraints += 1;
 
                             if USE_CHOICE_VAR {
@@ -591,9 +616,13 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                     best_sol = Some((cost, sol.clone()));
                 }
 
-                // Tighten UB to search for a strictly better solution.
-                let candidate_ub = cost - 1;
-                upper_bound = Some(upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub));
+                if search == SatSearchMode::UbSearch {
+                    // Tighten UB to search for a strictly better solution.
+                    let candidate_ub = cost - 1;
+                    upper_bound = Some(
+                        upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
+                    );
+                }
 
                 debug_out(DebugInfo {
                     iteration,
@@ -602,23 +631,40 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 });
 
                 // If we cannot improve further, we can stop.
-                if let Some(ub) = upper_bound {
-                    if ub < lower_bound {
-                        let (c, s) = best_sol.clone().unwrap();
-                        stats.satsolver = format!("{:?}", solver);
-                        do_output_stats(
-                            &mut output_stats,
-                            iteration,
-                            &iteration_types,
-                            &stats,
-                            &occupations,
-                            start_time,
-                            solver_time,
-                            c,
-                            c,
-                        );
-                        println!("SAT OPTIMAL (cost={})", c);
-                        return Ok((s, stats));
+                if search == SatSearchMode::UbSearch {
+                    if let Some(ub) = upper_bound {
+                        if ub < lower_bound {
+                            let (c, s) = best_sol.clone().unwrap();
+                            stats.satsolver = format!("{:?}", solver);
+                            do_output_stats(
+                                &mut output_stats,
+                                iteration,
+                                &iteration_types,
+                                &stats,
+                                &occupations,
+                                start_time,
+                                solver_time,
+                                c,
+                                c,
+                            );
+                            println!("SAT OPTIMAL (cost={})", c);
+                            return Ok((s, stats));
+                        }
+                    }
+                } else if search == SatSearchMode::Invalid {
+                    // Block the current schedule (timepoint boundaries only).
+                    let mut invalid_clause: Vec<Bool<L>> = Vec::new();
+                    for occ in occupations.iter() {
+                        let idx = occ.incumbent_idx;
+                        let (lit_at, _) = occ.delays[idx];
+                        invalid_clause.push(!lit_at);
+                        if idx + 1 < occ.delays.len() {
+                            let (lit_next, _) = occ.delays[idx + 1];
+                            invalid_clause.push(lit_next);
+                        }
+                    }
+                    if !invalid_clause.is_empty() {
+                        SatInstance::add_clause(&mut solver, invalid_clause);
                     }
                 }
             }
@@ -666,60 +712,66 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         }
 
         // ----- Enforce budget UB (if known) -----
-        if let Some(ub) = upper_bound {
-            if ub < lower_bound {
-                // Search space exhausted.
-                if let Some((c, s)) = best_sol.clone() {
-                    stats.n_unsat += 1;
-                    stats.satsolver = format!("{:?}", solver);
-                    do_output_stats(
-                        &mut output_stats,
-                        iteration,
-                        &iteration_types,
-                        &stats,
-                        &occupations,
-                        start_time,
-                        solver_time,
-                        c,
-                        c,
-                    );
-                    return Ok((s, stats));
-                }
-                return Err(SolverError::NoSolution);
-            }
-
-            let target_ub = match mode {
-                SatBoundMode::AddClauses => ub,
-                SatBoundMode::Assumptions => (lower_bound + ub) / 2,
-            };
-            let ub_usize = target_ub as usize;
-
-            if ub_usize < budget_units.len() {
-                let need_rebuild = budget_tot.is_none()
-                    || budget_tot_len != budget_units.len()
-                    || budget_tot_max_bound < ub_usize;
-
-                if need_rebuild {
-                    let tot = Totalizer::count(&mut solver, budget_units.iter().copied(), ub_usize as u32);
-                    budget_tot_len = budget_units.len();
-                    budget_tot_max_bound = ub_usize;
-                    budget_tot = Some(tot);
+        if search == SatSearchMode::UbSearch {
+            if let Some(ub) = upper_bound {
+                if ub < lower_bound {
+                    // Search space exhausted.
+                    if let Some((c, s)) = best_sol.clone() {
+                        stats.n_unsat += 1;
+                        stats.satsolver = format!("{:?}", solver);
+                        do_output_stats(
+                            &mut output_stats,
+                            iteration,
+                            &iteration_types,
+                            &stats,
+                            &occupations,
+                            start_time,
+                            solver_time,
+                            c,
+                            c,
+                        );
+                        return Ok((s, stats));
+                    }
+                    return Err(SolverError::NoSolution);
                 }
 
-                // Enforce sum(budget_units) <= target_ub
-                if let Some(tot) = budget_tot.as_ref() {
-                    debug_assert!(ub_usize < tot.rhs().len());
-                    let bound_lit = !tot.rhs()[ub_usize];
-                    bound_used = Some(target_ub);
-                    match mode {
-                        SatBoundMode::AddClauses => {
-                            if last_added_bound != Some(ub_usize) {
-                                SatInstance::add_clause(&mut solver, vec![bound_lit]);
-                                last_added_bound = Some(ub_usize);
+                let target_ub = match mode {
+                    SatBoundMode::AddClauses => ub,
+                    SatBoundMode::Assumptions => (lower_bound + ub) / 2,
+                };
+                let ub_usize = target_ub as usize;
+
+                if ub_usize < budget_units.len() {
+                    let need_rebuild = budget_tot.is_none()
+                        || budget_tot_len != budget_units.len()
+                        || budget_tot_max_bound < ub_usize;
+
+                    if need_rebuild {
+                        let tot = Totalizer::count(
+                            &mut solver,
+                            budget_units.iter().copied(),
+                            ub_usize as u32,
+                        );
+                        budget_tot_len = budget_units.len();
+                        budget_tot_max_bound = ub_usize;
+                        budget_tot = Some(tot);
+                    }
+
+                    // Enforce sum(budget_units) <= target_ub
+                    if let Some(tot) = budget_tot.as_ref() {
+                        debug_assert!(ub_usize < tot.rhs().len());
+                        let bound_lit = !tot.rhs()[ub_usize];
+                        bound_used = Some(target_ub);
+                        match mode {
+                            SatBoundMode::AddClauses => {
+                                if last_added_bound != Some(ub_usize) {
+                                    SatInstance::add_clause(&mut solver, vec![bound_lit]);
+                                    last_added_bound = Some(ub_usize);
+                                }
                             }
-                        }
-                        SatBoundMode::Assumptions => {
-                            bound_assumption = Some(bound_lit);
+                            SatBoundMode::Assumptions => {
+                                bound_assumption = Some(bound_lit);
+                            }
                         }
                     }
                 }
@@ -768,6 +820,25 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
             satcoder::SatResultWithCore::Unsat(_core) => {
                 is_sat = false;
                 stats.n_unsat += 1;
+                if search == SatSearchMode::Invalid {
+                    if let Some((c, s)) = best_sol.clone() {
+                        stats.satsolver = solver_debug;
+                        do_output_stats(
+                            &mut output_stats,
+                            iteration,
+                            &iteration_types,
+                            &stats,
+                            &occupations,
+                            start_time,
+                            solver_time,
+                            c,
+                            c,
+                        );
+                        return Ok((s, stats));
+                    }
+                    return Err(SolverError::NoSolution);
+                }
+
                 if let Some(bound) = bound_used {
                     lower_bound = bound + 1;
                     if let (Some((c, s)), Some(ub)) = (best_sol.clone(), upper_bound) {
@@ -834,7 +905,20 @@ fn add_fixed_precedence_scl<L: satcoder::Lit>(
     }
 
     let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
-    solver.add_clause(vec![!in_var, req_var]);
+    // For small cliques, use pairwise clauses; otherwise use SCL (single implication).
+    const SCL_PAIRWISE_THRESHOLD: usize = 5;
+    let idx = occupations[next_visit]
+        .delays
+        .partition_point(|(_, t0)| *t0 < req_t);
+    if idx <= SCL_PAIRWISE_THRESHOLD {
+        for i in 0..idx {
+            let lit_i = occupations[next_visit].delays[i].0;
+            let lit_next = occupations[next_visit].delays[i + 1].0;
+            solver.add_clause(vec![!in_var, !lit_i, lit_next]);
+        }
+    } else {
+        solver.add_clause(vec![!in_var, req_var]);
+    }
     if is_new {
         new_time_points.push((next_visit, req_var, req_t));
     }
