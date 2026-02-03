@@ -96,7 +96,7 @@ pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         problem,
         timeout,
         delay_cost_type,
-        SatBoundMode::AddClauses,
+        SatBoundMode::Assumptions,
         SatSearchMode::UbSearch,
         output_stats,
     )
@@ -117,7 +117,7 @@ pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatBoundMode::Assumptions,
-        SatSearchMode::Invalid,
+        SatSearchMode::UbSearch,
         output_stats,
     )
 }
@@ -335,6 +335,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         heuristic::spawn_heuristic_thread(mk_env, sol_in_rx, problem, delay_cost_type, sol_out_tx);
         (sol_in_tx, sol_out_rx)
     });
+    let mut heur_active = USE_HEURISTIC;
 
     let mut iteration: usize = 1;
     let mut is_sat: bool = true;
@@ -363,7 +364,8 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
 
         if is_sat {
             // Send current incumbent to heuristic and read improved UBs.
-            if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
+            if heur_active {
+                if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
                 let sol = extract_solution(problem, &occupations);
                 let _ = sol_tx.send(sol);
 
@@ -383,6 +385,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                     // Make sure these time points exist in the encoding.
                     inject_solution_timepoints_sat(&mut solver, problem, &train_visit_ids, &mut occupations, &mut new_time_points, &ub_sol);
                 }
+            }
             }
 
             let mut found_travel_time_conflict = false;
