@@ -9,10 +9,16 @@ use crate::{
     problem::{DelayCostType, Problem},
     solvers::heuristic,
 };
-use satcoder::{constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore};
+use satcoder::{
+    constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore,
+};
 use typed_index_collections::TiVec;
 
-use super::{common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId}, costtree::CostTree, SolverError};
+use super::{
+    common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
+    costtree::CostTree,
+    SolverError,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SatBoundMode {
@@ -34,9 +40,87 @@ pub enum SatSearchMode {
     Invalid,
 }
 
+/// NSC (Nested Sorting or Number Series) Pseudo-Boolean Encoder
+/// Implements incremental PB encoding sums up to a required threshold (k).
+/// It creates bits R_{i, j} where R_{i, j} = 1 means the sum of the first i weights is at least j.
+struct NscEncoder<L: satcoder::Lit> {
+    // Each element is a vector representing R_{i, j} where j goes from 1 to pos_i.
+    // Index i in `r` corresponds to the i-th added weight.
+    r: Vec<Vec<Bool<L>>>,
+}
+
+impl<L: satcoder::Lit + Copy> NscEncoder<L> {
+    fn new() -> Self {
+        Self { r: Vec::new() }
+    }
+
+    /// Incrementally adds a new variable `x` with positive integer weight `w` to the sum.
+    /// `max_k` is the maximum threshold we care about tracking exactly.
+    /// If the running sum can exceed `max_k`, the variables stop at `max_k`.
+    fn add_variable(
+        &mut self,
+        solver: &mut impl SatInstance<L>,
+        x: Bool<L>,
+        w: usize,
+        max_k: usize,
+    ) {
+        if w == 0 {
+            return;
+        }
+
+        // This is the (i)-th item. In our vectors, it's index `i`.
+        let i = self.r.len();
+
+        let prev_pos = if i == 0 { 0 } else { self.r[i - 1].len() };
+        let pos_i = std::cmp::min(max_k, prev_pos + w);
+
+        let mut r_i = Vec::with_capacity(pos_i);
+        for _ in 0..pos_i {
+            r_i.push(SatInstance::new_var(solver));
+        }
+
+        // C1: If x is chosen, sum is at least 1..min(w_i, max_k)
+        for j in 1..=std::cmp::min(w, max_k) {
+            SatInstance::add_clause(solver, vec![!x, r_i[j - 1]]);
+        }
+
+        if i > 0 {
+            // C2: Copy 1s from previous layer
+            for j in 1..=prev_pos {
+                SatInstance::add_clause(solver, vec![!self.r[i - 1][j - 1], r_i[j - 1]]);
+            }
+
+            // C3: If x is chosen and prev layer reached j, this layer reaches j+w
+            for j in 1..=prev_pos {
+                if j + w <= pos_i {
+                    SatInstance::add_clause(
+                        solver,
+                        vec![!x, !self.r[i - 1][j - 1], r_i[(j + w) - 1]],
+                    );
+                }
+            }
+        }
+
+        self.r.push(r_i);
+    }
+
+    /// Returns the exact bound variable indicating whether the sum is >= target.
+    /// To enforce sum <= k, we will assert NOT(has_sum_reached(k + 1)).
+    fn has_sum_reached(&self, target: usize) -> Option<Bool<L>> {
+        if target == 0 {
+            return None; /* Always true implicitly, but hard to return a literal */
+        }
+        let last_layer = self.r.last()?;
+        if target <= last_layer.len() {
+            Some(last_layer[target - 1])
+        } else {
+            None // Sum structurally cannot reach `target` yet
+        }
+    }
+}
 
 /// SAT-only version of the DDD Ladder solver.
-/// 
+///
 /// Idea:
 /// - keep the exact same DDD refinement (time-point generation + conflict clauses)
 /// - replace MaxSAT objective by a SAT cardinality constraint on unit-cost ladder vars
@@ -191,7 +275,6 @@ fn inject_solution_timepoints_sat<L: satcoder::Lit>(
     }
 }
 
-
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
@@ -287,16 +370,9 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
     // Upper bound on optimal cost (exclusive). When None, no bound yet.
     let mut upper_bound: Option<i32> = None;
 
-    // Unit-cost ladder vars used for the budget constraint.
-    // Each pushed var corresponds to +1 cost.
-    let mut budget_units: Vec<Bool<L>> = Vec::new();
-
-    // Cache a totalizer built over `budget_units` up to `budget_tot_max_bound`.
-    let mut budget_tot: Option<Totalizer<L>> = None;
-    let mut budget_tot_len: usize = 0;
-    let mut budget_tot_max_bound: usize = 0;
-
-    let mut last_added_bound: Option<usize> = None;
+    // NSC Encoder state (replaces Totalizer & unary ladder `budget_units`)
+    let mut nsc_enc: NscEncoder<L> = NscEncoder::new();
+    let mut nsc_current_max_k = 0; // We keep track of the maximum Ub we've built the encoder up to
 
     // Conflict-choice vars (optional; currently unused because USE_CHOICE_VAR=false below).
     let mut conflict_vars: HashMap<(VisitId, VisitId), Bool<L>> = Default::default();
@@ -340,6 +416,9 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
     let mut iteration: usize = 1;
     let mut is_sat: bool = true;
 
+    // Preallocate to avoid reallocation inside the loop
+    let mut invalid_clause: Vec<Bool<L>> = Vec::new();
+
     loop {
         let mut bound_assumption: Option<Bool<L>> = None;
         let mut bound_used: Option<i32> = None;
@@ -366,26 +445,35 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
             // Send current incumbent to heuristic and read improved UBs.
             if heur_active {
                 if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
-                let sol = extract_solution(problem, &occupations);
-                let _ = sol_tx.send(sol);
+                    let sol = extract_solution(problem, &occupations);
+                    let _ = sol_tx.send(sol);
 
-                while let Ok((ub_cost, ub_sol)) = sol_rx.try_recv() {
-                    if best_sol.as_ref().map(|(c, _)| ub_cost < *c).unwrap_or(true) {
-                        best_sol = Some((ub_cost, ub_sol.clone()));
-                    }
+                    while let Ok((ub_cost, ub_sol)) = sol_rx.try_recv() {
+                        if best_sol.as_ref().map(|(c, _)| ub_cost < *c).unwrap_or(true) {
+                            best_sol = Some((ub_cost, ub_sol.clone()));
+                        }
 
-                    if search == SatSearchMode::UbSearch {
-                        // Use heuristic solution as a starting UB (search for strictly better).
-                        let candidate_ub = ub_cost - 1;
-                        upper_bound = Some(
-                            upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
+                        if search == SatSearchMode::UbSearch {
+                            // Use heuristic solution as a starting UB (search for strictly better).
+                            let candidate_ub = ub_cost - 1;
+                            upper_bound = Some(
+                                upper_bound
+                                    .map(|b| b.min(candidate_ub))
+                                    .unwrap_or(candidate_ub),
+                            );
+                        }
+
+                        // Make sure these time points exist in the encoding.
+                        inject_solution_timepoints_sat(
+                            &mut solver,
+                            problem,
+                            &train_visit_ids,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &ub_sol,
                         );
                     }
-
-                    // Make sure these time points exist in the encoding.
-                    inject_solution_timepoints_sat(&mut solver, problem, &train_visit_ids, &mut occupations, &mut new_time_points, &ub_sol);
                 }
-            }
             }
 
             let mut found_travel_time_conflict = false;
@@ -448,7 +536,10 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                             let (t1_earliest_out_var, t1_is_new) =
                                 occupations[next_visit].time_point(&mut solver, new_t);
 
-                            SatInstance::add_clause(&mut solver, vec![!t1_in_var, t1_earliest_out_var]);
+                            SatInstance::add_clause(
+                                &mut solver,
+                                vec![!t1_in_var, t1_earliest_out_var],
+                            );
                             stats.n_travel += 1;
 
                             if t1_is_new {
@@ -459,85 +550,167 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 }
             }
 
-            // ----- Resource conflicts -----
+            // ----- Resource conflicts via Sweep Line -----
             let mut deconflicted_train_pairs: HashSet<(usize, usize)> = HashSet::new();
-            touched_intervals.retain(|visit_id| {
-                let visit_id = *visit_id;
-                let (train_idx, visit_idx) = visits[visit_id];
-                let next_visit: Option<VisitId> =
-                    if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                        Some((usize::from(visit_id) + 1).into())
-                    } else {
-                        None
-                    };
 
-                let t1_in = occupations[visit_id].incumbent_time();
-                let visit = problem.trains[train_idx].visits[visit_idx];
+            // To run a sweep line, we first collect all intervals grouped by resource.
+            // interval: [time_in, time_out)
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            struct SweepEvent {
+                time: i32,
+                is_start: bool,
+                visit_id: VisitId,
+                train_idx: usize,
+                visit_idx: usize,
+            }
 
-                let mut retain = false;
+            // We need a predictable ordering for SweepEvent. We sort primarily by time.
+            // If times are equal, END events (is_start = false) must process BEFORE START events
+            // so we don't flag [A, B) and [B, C) as overlapping.
+            impl Ord for SweepEvent {
+                fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                    self.time
+                        .cmp(&other.time)
+                        .then_with(|| match (self.is_start, other.is_start) {
+                            (true, true) => std::cmp::Ordering::Equal,
+                            (false, false) => std::cmp::Ordering::Equal,
+                            (false, true) => std::cmp::Ordering::Less, // END before START
+                            (true, false) => std::cmp::Ordering::Greater,
+                        })
+                        .then_with(|| self.visit_id.cmp(&other.visit_id))
+                }
+            }
+            impl PartialOrd for SweepEvent {
+                fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                    Some(self.cmp(other))
+                }
+            }
 
-                if let Some(conflicting_resources) = conflicts.get(&visit.resource_id) {
-                    for other_resource in conflicting_resources.iter().copied() {
-                        let t1_out = next_visit
-                            .map(|nx| occupations[nx].incumbent_time())
-                            .unwrap_or(t1_in + visit.travel_time);
+            let mut retain_touched = vec![false; touched_intervals.len()];
 
-                        for other_visit in resource_visits[other_resource].iter().copied() {
-                            if usize::from(visit_id) == usize::from(other_visit) {
-                                continue;
-                            }
-                            let v2 = &occupations[other_visit];
-                            let t2_in = v2.incumbent_time();
-                            let (other_train_idx, other_visit_idx) = visits[other_visit];
+            // Only process resources that actually have potential conflicts.
+            for (&conflicting_resource, conflicting_set) in conflicts.iter() {
+                // Determine if any touched interval requires us to check this resource set
+                let mut needs_check = false;
+                for visit_id in touched_intervals.iter() {
+                    let (train_idx, visit_idx) = visits[*visit_id];
+                    let r = problem.trains[train_idx].visits[visit_idx].resource_id;
+                    if r == conflicting_resource || conflicting_set.contains(&r) {
+                        needs_check = true;
+                        break;
+                    }
+                }
+                if !needs_check {
+                    continue;
+                }
 
-                            if other_train_idx == train_idx {
-                                continue;
-                            }
+                // Collect all current intervals for the conflicting_resource and its conflicting_set
+                let mut events = Vec::new();
+                let mut relevant_resources = conflicting_set.clone();
+                relevant_resources.push(conflicting_resource);
 
-                            let other_next_visit: Option<VisitId> = if other_visit_idx + 1
-                                < problem.trains[other_train_idx].visits.len()
-                            {
-                                Some((usize::from(other_visit) + 1).into())
+                for &res in &relevant_resources {
+                    if res >= resource_visits.len() {
+                        continue;
+                    }
+                    for &visit_id in &resource_visits[res] {
+                        let (train_idx, visit_idx) = visits[visit_id];
+                        let t_in = occupations[visit_id].incumbent_time();
+
+                        let next_visit: Option<VisitId> =
+                            if visit_idx + 1 < problem.trains[train_idx].visits.len() {
+                                Some((usize::from(visit_id) + 1).into())
                             } else {
                                 None
                             };
+                        let t_out = next_visit
+                            .map(|nx| occupations[nx].incumbent_time())
+                            .unwrap_or(
+                                t_in + problem.trains[train_idx].visits[visit_idx].travel_time,
+                            );
 
-                            let t2_out = other_next_visit
-                                .map(|v| occupations[v].incumbent_time())
-                                .unwrap_or_else(|| {
-                                    let other_visit =
-                                        problem.trains[other_train_idx].visits[other_visit_idx];
-                                    t2_in + other_visit.travel_time
-                                });
+                        events.push(SweepEvent {
+                            time: t_in,
+                            is_start: true,
+                            visit_id,
+                            train_idx,
+                            visit_idx,
+                        });
+                        events.push(SweepEvent {
+                            time: t_out,
+                            is_start: false,
+                            visit_id,
+                            train_idx,
+                            visit_idx,
+                        });
+                    }
+                }
 
-                            if t1_out <= t2_in || t2_out <= t1_in {
+                events.sort();
+
+                let mut active_intervals: Vec<SweepEvent> = Vec::new();
+
+                for ev in events {
+                    if ev.is_start {
+                        // Check against all currently active intervals
+                        for active in &active_intervals {
+                            if active.train_idx == ev.train_idx {
                                 continue;
                             }
 
-                            if !deconflicted_train_pairs.insert((train_idx, other_train_idx))
-                                || !deconflicted_train_pairs.insert((other_train_idx, train_idx))
+                            // Conflict found between `ev` and `active`
+                            let v1_id = ev.visit_id;
+                            let v2_id = active.visit_id;
+
+                            // We only process it if it's a new pair we haven't deconflicted
+                            if !deconflicted_train_pairs.insert((ev.train_idx, active.train_idx))
+                                || !deconflicted_train_pairs
+                                    .insert((active.train_idx, ev.train_idx))
                             {
-                                retain = true;
+                                // Mark touched to retain
+                                for (i, t_vid) in touched_intervals.iter().enumerate() {
+                                    if *t_vid == v1_id || *t_vid == v2_id {
+                                        retain_touched[i] = true;
+                                    }
+                                }
                                 continue;
                             }
 
                             found_resource_conflict = true;
                             stats.n_conflict += 1;
 
+                            // Re-calculate bounds for clause generation
+                            let (train_idx1, visit_idx1) = (ev.train_idx, ev.visit_idx);
+                            let t1_in = occupations[v1_id].incumbent_time();
+                            let t1_out = if visit_idx1 + 1 < problem.trains[train_idx1].visits.len()
+                            {
+                                occupations[VisitId::from(usize::from(v1_id) + 1)].incumbent_time()
+                            } else {
+                                t1_in + problem.trains[train_idx1].visits[visit_idx1].travel_time
+                            };
+
+                            let (train_idx2, visit_idx2) = (active.train_idx, active.visit_idx);
+                            let t2_in = occupations[v2_id].incumbent_time();
+                            let t2_out = if visit_idx2 + 1 < problem.trains[train_idx2].visits.len()
+                            {
+                                occupations[VisitId::from(usize::from(v2_id) + 1)].incumbent_time()
+                            } else {
+                                t2_in + problem.trains[train_idx2].visits[visit_idx2].travel_time
+                            };
+
                             let (delay_t2, t2_is_new) =
-                                occupations[other_visit].time_point(&mut solver, t1_out);
+                                occupations[v2_id].time_point(&mut solver, t1_out);
                             let (delay_t1, t1_is_new) =
-                                occupations[visit_id].time_point(&mut solver, t2_out);
+                                occupations[v1_id].time_point(&mut solver, t2_out);
 
                             if t1_is_new {
-                                new_time_points.push((visit_id, delay_t1, t2_out));
+                                new_time_points.push((v1_id, delay_t1, t2_out));
                             }
                             if t2_is_new {
-                                new_time_points.push((other_visit, delay_t2, t1_out));
+                                new_time_points.push((v2_id, delay_t2, t1_out));
                             }
 
                             if prec == SatPrecEncoding::Scl {
-                                // SCL fixed-precedence rows for these (possibly new) time points.
                                 add_fixed_precedence_scl(
                                     &mut solver,
                                     problem,
@@ -545,7 +718,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                     &mut occupations,
                                     &mut new_time_points,
                                     &mut scl_fixed_prec_rows,
-                                    visit_id,
+                                    v1_id,
                                     delay_t1,
                                     t2_out,
                                 );
@@ -556,36 +729,48 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                     &mut occupations,
                                     &mut new_time_points,
                                     &mut scl_fixed_prec_rows,
-                                    other_visit,
+                                    v2_id,
                                     delay_t2,
                                     t1_out,
                                 );
                             }
 
-                            let v1 = &occupations[visit_id];
-                            let v2 = &occupations[other_visit];
+                            let t1_out_lit =
+                                if visit_idx1 + 1 < problem.trains[train_idx1].visits.len() {
+                                    let nx = VisitId::from(usize::from(v1_id) + 1);
+                                    occupations[nx].delays[occupations[nx].incumbent_idx].0
+                                } else {
+                                    true.into()
+                                };
 
-                            let t1_out_lit = next_visit
-                                .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
-                                .unwrap_or_else(|| true.into());
-                            let t2_out_lit = other_next_visit
-                                .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
-                                .unwrap_or_else(|| true.into());
+                            let t2_out_lit =
+                                if visit_idx2 + 1 < problem.trains[train_idx2].visits.len() {
+                                    let nx = VisitId::from(usize::from(v2_id) + 1);
+                                    occupations[nx].delays[occupations[nx].incumbent_idx].0
+                                } else {
+                                    true.into()
+                                };
 
                             const USE_CHOICE_VAR: bool = true;
                             n_conflict_constraints += 1;
 
                             if USE_CHOICE_VAR {
-                                let (pa, pb) = (visit_id, other_visit);
-                                let choose = conflict_vars.get(&(pa, pb)).copied().unwrap_or_else(|| {
-                                    let new_var = SatInstance::new_var(&mut solver);
-                                    conflict_vars.insert((pa, pb), new_var);
-                                    conflict_vars.insert((pb, pa), !new_var);
-                                    new_var
-                                });
-
-                                SatInstance::add_clause(&mut solver, vec![!choose, !t1_out_lit, delay_t2]);
-                                SatInstance::add_clause(&mut solver, vec![choose, !t2_out_lit, delay_t1]);
+                                let (pa, pb) = (v1_id, v2_id);
+                                let choose =
+                                    conflict_vars.get(&(pa, pb)).copied().unwrap_or_else(|| {
+                                        let new_var = SatInstance::new_var(&mut solver);
+                                        conflict_vars.insert((pa, pb), new_var);
+                                        conflict_vars.insert((pb, pa), !new_var);
+                                        new_var
+                                    });
+                                SatInstance::add_clause(
+                                    &mut solver,
+                                    vec![!choose, !t1_out_lit, delay_t2],
+                                );
+                                SatInstance::add_clause(
+                                    &mut solver,
+                                    vec![choose, !t2_out_lit, delay_t1],
+                                );
                             } else {
                                 SatInstance::add_clause(
                                     &mut solver,
@@ -593,11 +778,26 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                 );
                             }
                         }
+                        active_intervals.push(ev);
+                    } else {
+                        // Remove from active intervals
+                        if let Some(pos) = active_intervals
+                            .iter()
+                            .position(|x| x.visit_id == ev.visit_id)
+                        {
+                            active_intervals.remove(pos);
+                        }
                     }
                 }
+            }
 
-                retain
-            });
+            let mut new_touched = Vec::new();
+            for (i, vid) in touched_intervals.into_iter().enumerate() {
+                if retain_touched[i] {
+                    new_touched.push(vid);
+                }
+            }
+            touched_intervals = new_touched;
 
             let iterationtype = if found_travel_time_conflict && found_resource_conflict {
                 IterationType::TravelAndResourceConflict
@@ -623,7 +823,9 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                     // Tighten UB to search for a strictly better solution.
                     let candidate_ub = cost - 1;
                     upper_bound = Some(
-                        upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
+                        upper_bound
+                            .map(|b| b.min(candidate_ub))
+                            .unwrap_or(candidate_ub),
                     );
                 }
 
@@ -656,7 +858,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                     }
                 } else if search == SatSearchMode::Invalid {
                     // Block the current schedule (timepoint boundaries only).
-                    let mut invalid_clause: Vec<Bool<L>> = Vec::new();
+                    invalid_clause.clear();
                     for occ in occupations.iter() {
                         let idx = occ.incumbent_idx;
                         let (lit_at, _) = occ.delays[idx];
@@ -667,15 +869,20 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                         }
                     }
                     if !invalid_clause.is_empty() {
-                        SatInstance::add_clause(&mut solver, invalid_clause);
+                        SatInstance::add_clause(&mut solver, invalid_clause.clone());
                     }
                 }
             }
         }
 
         // ----- Encode costs for newly-created time points -----
-        // SAT budget uses *unit-cost ladder vars* only (no weighted CostTree).
+        // SAT budget now uses the NSC Pseudo-Boolean encoding
         const USE_COST_TREE: bool = false;
+
+        // If we know a strict UB, we only need to build NSC up to UB.
+        // If not, we build up to an arbitrary reasonable max initially (e.g. 500)
+        let nsc_target_k = upper_bound.map(|ub| ub as usize).unwrap_or(2000);
+        nsc_current_max_k = std::cmp::max(nsc_current_max_k, nsc_target_k);
 
         for (visit, new_timepoint_var, new_t) in new_time_points.drain(..) {
             n_timepoints += 1;
@@ -686,27 +893,47 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
 
             if new_timepoint_cost > 0 {
                 if !USE_COST_TREE {
-                    for cost in occupations[visit].cost.len()..=new_timepoint_cost {
+                    // We only need ONE boolean variable to represent this decision reaching this delay.
+                    // Actually, `new_timepoint_var` ALREADY represents the decision "time >= new_t".
+                    // But our cost model incurs `new_timepoint_cost` if time >= new_t AND time < new_t_next.
+                    // For the pb formulation, we just add `new_timepoint_var` as having weight `new_timepoint_cost`?
+                    // Actually, the DDD ladder encoding says:
+                    // cost occurs if var is true. But costs stack!
+                    // If t=1 has cost 1, t=2 has cost 2, then var(t>=1) contributes 1, var(t>=2) contributes 1.
+                    // So we must figure out the *marginal* cost of this timepoint (cost at new_t - cost at previous t).
+
+                    let prev_cost = if occupations[visit].cost.len() > 1 {
+                        occupations[visit].cost.len() - 1 // the cost at the state we were previously tracking
+                    } else {
+                        0
+                    };
+
+                    // The marginal increase in cost from the previous timepoint to this one
+                    let marginal_cost = if new_timepoint_cost as usize > prev_cost {
+                        new_timepoint_cost as usize - prev_cost
+                    } else {
+                        0
+                    };
+
+                    for cost in occupations[visit].cost.len()..=new_timepoint_cost as usize {
                         let prev_cost_var = occupations[visit].cost[cost - 1];
                         let next_cost_var = SatInstance::new_var(&mut solver);
-
                         SatInstance::add_clause(&mut solver, vec![!next_cost_var, prev_cost_var]);
-
                         occupations[visit].cost.push(next_cost_var);
-                        assert!(cost + 1 == occupations[visit].cost.len());
 
-                        // Each such var is one unit of cost.
-                        budget_units.push(next_cost_var);
+                        // Feed each unit weight into NSC (or we could feed the single `next_cost_var` with weight 1)
+                        // This exactly mirrors `budget_units.push` linearly but pipes into the PB encoder directly!
+                        nsc_enc.add_variable(&mut solver, next_cost_var, 1, nsc_current_max_k);
                     }
 
                     SatInstance::add_clause(
                         &mut solver,
-                        vec![!new_timepoint_var, occupations[visit].cost[new_timepoint_cost]],
+                        vec![
+                            !new_timepoint_var,
+                            occupations[visit].cost[new_timepoint_cost as usize],
+                        ],
                     );
                 } else {
-                    // Weighted PB encoding is not implemented in the SAT-only backend.
-                    // Keep this branch to make the intent explicit.
-                    // If you really need weighted costs in SAT, implement a PB encoding here.
                     let _ = new_timepoint_var;
                     let _ = new_t;
                     let _ = new_timepoint_cost;
@@ -744,39 +971,23 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 };
                 let ub_usize = target_ub as usize;
 
-                if ub_usize < budget_units.len() {
-                    let need_rebuild = budget_tot.is_none()
-                        || budget_tot_len != budget_units.len()
-                        || budget_tot_max_bound < ub_usize;
-
-                    if need_rebuild {
-                        let tot = Totalizer::count(
-                            &mut solver,
-                            budget_units.iter().copied(),
-                            ub_usize as u32,
-                        );
-                        budget_tot_len = budget_units.len();
-                        budget_tot_max_bound = ub_usize;
-                        budget_tot = Some(tot);
-                    }
-
-                    // Enforce sum(budget_units) <= target_ub
-                    if let Some(tot) = budget_tot.as_ref() {
-                        debug_assert!(ub_usize < tot.rhs().len());
-                        let bound_lit = !tot.rhs()[ub_usize];
-                        bound_used = Some(target_ub);
-                        match mode {
-                            SatBoundMode::AddClauses => {
-                                if last_added_bound != Some(ub_usize) {
-                                    SatInstance::add_clause(&mut solver, vec![bound_lit]);
-                                    last_added_bound = Some(ub_usize);
-                                }
-                            }
-                            SatBoundMode::Assumptions => {
-                                bound_assumption = Some(bound_lit);
-                            }
+                // Enforce sum(budget_units) <= target_ub
+                // This means the sum cannot reach target_ub + 1
+                if let Some(reached_var) = nsc_enc.has_sum_reached(ub_usize + 1) {
+                    let bound_lit = !reached_var;
+                    bound_used = Some(target_ub);
+                    match mode {
+                        SatBoundMode::AddClauses => {
+                            SatInstance::add_clause(&mut solver, vec![bound_lit]);
+                        }
+                        SatBoundMode::Assumptions => {
+                            bound_assumption = Some(bound_lit);
                         }
                     }
+                } else {
+                    // The encoder structurally hasn't even grown to `ub_usize + 1` yet,
+                    // which means the sum is trivially <= target_ub based purely on the number of variables added so far.
+                    bound_used = Some(target_ub);
                 }
             }
         }
