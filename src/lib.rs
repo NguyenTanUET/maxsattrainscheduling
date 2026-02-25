@@ -1,10 +1,10 @@
 use satcoder::{Bool, SatResultWithCore, SatSolverWithCore};
 
 pub mod debug;
+pub mod maxsatsolver;
 pub mod parser;
 pub mod problem;
 pub mod solvers;
-pub mod maxsatsolver;
 
 pub fn minimize_core<L: satcoder::Lit + std::fmt::Debug>(
     core: &mut Vec<Bool<L>>,

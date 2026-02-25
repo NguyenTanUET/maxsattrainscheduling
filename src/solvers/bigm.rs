@@ -339,11 +339,7 @@ fn solve(
         let status = model.status().map_err(SolverError::GurobiError)?;
         if status == Status::TimeLimit {
             let ub = best_heur.map(|(c, _)| c).unwrap_or(i32::MAX);
-            println!(
-                "TIMEOUT LB={} UB={}",
-                global_lb,
-                ub
-            );
+            println!("TIMEOUT LB={} UB={}", global_lb, ub);
 
             do_output_stats(
                 &mut output_stats,
@@ -355,9 +351,8 @@ fn solve(
                 global_lb,
                 start_time,
                 solver_time,
-                ub
+                ub,
             );
-
 
             return Err(SolverError::Timeout);
         } else if status == Status::Infeasible {
@@ -401,7 +396,7 @@ fn solve(
                 global_lb,
                 start_time,
                 solver_time,
-                global_lb
+                global_lb,
             );
 
             return Ok(best_heur.unwrap().1);
@@ -476,7 +471,7 @@ fn solve(
                         solver_time,
                         ub_cost,
                     );
-        
+
                     return Ok(ub_sol);
                 }
 
@@ -658,7 +653,7 @@ fn do_output_stats(
     lb: i32,
     start_time: Instant,
     solver_time: std::time::Duration,
-    ub :i32,
+    ub: i32,
 ) {
     output_stats("refinements".to_string(), refinement_iterations.into());
     output_stats(
@@ -684,10 +679,7 @@ fn do_output_stats(
         "algorithm_time".to_string(),
         (start_time.elapsed().as_secs_f64() - solver_time.as_secs_f64()).into(),
     );
-    output_stats(
-        "ub".to_string(),
-        ub.into(),
-    );
+    output_stats("ub".to_string(), ub.into());
 }
 
 fn add_travel_constraint(

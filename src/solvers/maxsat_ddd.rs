@@ -16,7 +16,7 @@ pub fn solve_incremental<S: MaxSatSolver>(
     problem: &Problem,
     timeout: f64,
     delay_cost_type: DelayCostType,
-    propagate_traveltime_discretization :bool,
+    propagate_traveltime_discretization: bool,
     mut output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     let _p = hprof::enter("ipamir incremental");

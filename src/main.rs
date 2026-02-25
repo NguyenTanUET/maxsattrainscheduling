@@ -4,10 +4,10 @@ use ddd::{
     maxsatsolver, parser,
     problem::{self, DelayCostThresholds, DelayCostType, NamedProblem, Visit},
     solvers::{
-        bigm,
+        bigm, ddd as ddd_solvers,
         greedy::{self, default_heuristic},
-        ddd as ddd_solvers, heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder,
-        maxsatddd_ladder_abstract, maxsatddd_ladder_scl, milp_ti, SolverError,
+        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
+        maxsatddd_ladder_scl, milp_ti, SolverError,
     },
 };
 
@@ -47,6 +47,33 @@ struct Opt {
 
     #[structopt(long)]
     json_output: Option<String>,
+}
+
+fn parse_delay_cost_type(value: &str) -> Option<DelayCostType> {
+    let key = value.to_ascii_lowercase();
+    match key.as_str() {
+        "finsteps1_5min" => Some(DelayCostType::FiniteSteps1_5Min),
+        "finsteps1_3min" => Some(DelayCostType::FiniteSteps1_3Min),
+        "finsteps123" => Some(DelayCostType::FiniteSteps123),
+        "finsteps12345" => Some(DelayCostType::FiniteSteps12345),
+        "finsteps139" => Some(DelayCostType::FiniteSteps139),
+        "infsteps60" => Some(DelayCostType::InfiniteSteps60),
+        "infsteps180" => Some(DelayCostType::InfiniteSteps180),
+        "infsteps360" => Some(DelayCostType::InfiniteSteps360),
+        // Alias: "infsteps123" means extending finsteps123 (1/2/3 at 180s steps) without cap.
+        "infsteps123" => Some(DelayCostType::InfiniteSteps180),
+        "cont" => Some(DelayCostType::Continuous),
+        _ => None,
+    }
+}
+
+fn parse_delay_cost_type_or_panic(value: &str) -> DelayCostType {
+    parse_delay_cost_type(value).unwrap_or_else(|| {
+        panic!(
+            "Unknown objective type '{}'. Supported: finsteps1_5min, finsteps1_3min, finsteps123, finsteps12345, finsteps139, infsteps60, infsteps180, infsteps360, infsteps123, cont",
+            value
+        )
+    })
 }
 
 pub fn xml_instances(mut x: impl FnMut(String, NamedProblem)) {
@@ -254,31 +281,15 @@ fn main() {
 
     let delay_cost_type = opt
         .objective
-        .map(|obj| match obj.as_str() {
-            "finsteps1_5min" => DelayCostType::FiniteSteps1_5Min,
-            "finsteps1_3min" => DelayCostType::FiniteSteps1_3Min,
-            "finsteps123" => DelayCostType::FiniteSteps123,
-            "finsteps12345" => DelayCostType::FiniteSteps12345,
-            "finsteps139" => DelayCostType::FiniteSteps139,
-            "infsteps60" => DelayCostType::InfiniteSteps60,
-            "infsteps180" => DelayCostType::InfiniteSteps180,
-            "infsteps360" => DelayCostType::InfiniteSteps360,
-            "cont" => DelayCostType::Continuous,
-            _ => panic!("Unknown objective type."),
-        })
+        .as_deref()
+        .map(parse_delay_cost_type_or_panic)
         .unwrap_or(DelayCostType::FiniteSteps123);
     println!("Using delay cost type {:?}", delay_cost_type);
 
-    let other_delay_cost_type = opt.other_objective.map(|obj| match obj.as_str() {
-        "finsteps123" => DelayCostType::FiniteSteps123,
-        "finsteps12345" => DelayCostType::FiniteSteps12345,
-        "finsteps139" => DelayCostType::FiniteSteps139,
-        "infsteps60" => DelayCostType::InfiniteSteps60,
-        "infsteps180" => DelayCostType::InfiniteSteps180,
-        "infsteps360" => DelayCostType::InfiniteSteps360,
-        "cont" => DelayCostType::Continuous,
-        _ => panic!("Unknown objective type."),
-    });
+    let other_delay_cost_type = opt
+        .other_objective
+        .as_deref()
+        .map(parse_delay_cost_type_or_panic);
 
     let perf_out = RefCell::new(String::new());
 
@@ -363,16 +374,14 @@ fn main() {
                     None,
                 )
                 .and_then(|e| e.ok_or(SolverError::NoSolution)),
-                SolverType::GreedyFStr => {
-                    heuristic::solve_heuristic_better(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        true,
-                        None,
-                    )
-                        .and_then(|e| e.ok_or(SolverError::NoSolution))
-                }
+                SolverType::GreedyFStr => heuristic::solve_heuristic_better(
+                    get_env(),
+                    &p.problem,
+                    delay_cost_type,
+                    true,
+                    None,
+                )
+                .and_then(|e| e.ok_or(SolverError::NoSolution)),
                 SolverType::BigMEager => bigm::solve_bigm(
                     get_env(),
                     &mk_env,
@@ -521,7 +530,9 @@ fn main() {
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
-                    |k, v| { solve_data.insert(k, v); },
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
                 )
                 .map(|(v, _)| v),
                 SolverType::MaxSatDddLadderRC2 => maxsatddd_ladder::solve(
@@ -594,7 +605,8 @@ fn main() {
                     |k, v| {
                         solve_data.insert(k, v);
                     },
-                ).map(|(v, _)| v),
+                )
+                .map(|(v, _)| v),
                 SolverType::SatDddScl => ddd_solvers::sat::solve_scl(
                     &mk_env,
                     satcoder::solvers::rustsat_glucose::Solver::new(),
@@ -906,6 +918,14 @@ fn print_problem_stats(problem: &problem::Problem) -> ProblemStats {
 #[cfg(test)]
 mod tests {
     use ddd::problem::{DelayCostType, NamedProblem};
+
+    #[test]
+    fn objective_alias_infsteps123() {
+        assert!(matches!(
+            super::parse_delay_cost_type("infsteps123"),
+            Some(DelayCostType::InfiniteSteps180)
+        ));
+    }
 
     #[test]
     pub fn testproblem_maxsatddd() {

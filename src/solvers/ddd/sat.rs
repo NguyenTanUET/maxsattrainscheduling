@@ -562,6 +562,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                 visit_id: VisitId,
                 train_idx: usize,
                 visit_idx: usize,
+                resource_id: usize,
             }
 
             // We need a predictable ordering for SweepEvent. We sort primarily by time.
@@ -577,7 +578,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                             (false, true) => std::cmp::Ordering::Less, // END before START
                             (true, false) => std::cmp::Ordering::Greater,
                         })
-                        .then_with(|| self.visit_id.cmp(&other.visit_id))
+                        .then_with(|| self.visit_id.0.cmp(&other.visit_id.0))
                 }
             }
             impl PartialOrd for SweepEvent {
@@ -629,12 +630,17 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                                 t_in + problem.trains[train_idx].visits[visit_idx].travel_time,
                             );
 
+                        if t_out <= t_in {
+                            continue;
+                        }
+
                         events.push(SweepEvent {
                             time: t_in,
                             is_start: true,
                             visit_id,
                             train_idx,
                             visit_idx,
+                            resource_id: res,
                         });
                         events.push(SweepEvent {
                             time: t_out,
@@ -642,6 +648,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                             visit_id,
                             train_idx,
                             visit_idx,
+                            resource_id: res,
                         });
                     }
                 }
@@ -655,6 +662,20 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                         // Check against all currently active intervals
                         for active in &active_intervals {
                             if active.train_idx == ev.train_idx {
+                                continue;
+                            }
+
+                            // Only flag conflicts between visits whose resources
+                            // actually conflict with each other. The `conflicts` map
+                            // says conflicting_resource conflicts with each member of
+                            // conflicting_set, so one visit must be on conflicting_resource
+                            // and the other on a member of conflicting_set.
+                            let r1 = ev.resource_id;
+                            let r2 = active.resource_id;
+                            let is_valid_pair = (r1 == conflicting_resource
+                                && conflicting_set.contains(&r2))
+                                || (r2 == conflicting_resource && conflicting_set.contains(&r1));
+                            if !is_valid_pair {
                                 continue;
                             }
 
@@ -697,6 +718,15 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
                             } else {
                                 t2_in + problem.trains[train_idx2].visits[visit_idx2].travel_time
                             };
+
+                            // Guard: ensure times are valid for time_point insertion
+                            // (t must be >= earliest delay of the target occupation)
+                            let v2_earliest = occupations[v2_id].delays[0].1;
+                            let v1_earliest = occupations[v1_id].delays[0].1;
+                            if t1_out <= v2_earliest || t2_out <= v1_earliest {
+                                // No overlap in terms of reachable times; skip
+                                continue;
+                            }
 
                             let (delay_t2, t2_is_new) =
                                 occupations[v2_id].time_point(&mut solver, t1_out);

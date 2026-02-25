@@ -7,16 +7,18 @@ use std::collections::{HashMap, VecDeque};
 use grb::prelude::*;
 use log::info;
 
-use crate::problem::{Problem, DelayCostType};
+use crate::problem::{DelayCostType, Problem};
 
 use super::SolverError;
 const M: f64 = 100_000.0;
 
-pub fn solve(    
+pub fn solve(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
-env: &grb::Env,
-problem: &Problem, 
-delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(String, serde_json::Value),
+    env: &grb::Env,
+    problem: &Problem,
+    delay_cost_type: DelayCostType,
+    timeout: f64,
+    mut output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<Vec<Vec<i32>>, SolverError> {
     // assert!(matches!(delay_cost_type, DelayCostType::FiniteSteps123));
     let start_time = std::time::Instant::now();
@@ -35,13 +37,20 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
         .collect::<Vec<_>>();
 
     // Check if earliest times are feasible with travel times.
-    for (train_idx,train) in problem.trains.iter().enumerate() {
-        for visit_idx in 0..(train.visits.len()-1) {
+    for (train_idx, train) in problem.trains.iter().enumerate() {
+        for visit_idx in 0..(train.visits.len() - 1) {
             if train.visits[visit_idx].earliest + train.visits[visit_idx].travel_time
-            > train.visits[visit_idx+1].earliest {
-                panic!("Train {} visit {} earliest {} travel {} is later than visit {} earliest {}", 
-                train_idx, visit_idx, train.visits[visit_idx].earliest, train.visits[visit_idx].travel_time,
-                visit_idx+1, train.visits[visit_idx+1].earliest)
+                > train.visits[visit_idx + 1].earliest
+            {
+                panic!(
+                    "Train {} visit {} earliest {} travel {} is later than visit {} earliest {}",
+                    train_idx,
+                    visit_idx,
+                    train.visits[visit_idx].earliest,
+                    train.visits[visit_idx].travel_time,
+                    visit_idx + 1,
+                    train.visits[visit_idx + 1].earliest
+                )
             }
         }
     }
@@ -50,8 +59,11 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
     let mut resource_usage: HashMap<usize, Vec<(usize, usize)>> = HashMap::new();
     for (train_idx, train) in problem.trains.iter().enumerate() {
         for (visit_idx, visit) in train.visits.iter().enumerate() {
-            occupations.push((train_idx,visit_idx));
-            if problem.conflicts.contains(&(visit.resource_id, visit.resource_id)) {
+            occupations.push((train_idx, visit_idx));
+            if problem
+                .conflicts
+                .contains(&(visit.resource_id, visit.resource_id))
+            {
                 resource_usage
                     .entry(visit.resource_id)
                     .or_default()
@@ -79,7 +91,6 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
         (sol_in_tx, sol_out_rx)
     });
 
-
     let visit_conflicts = super::bigm::visit_conflicts(problem);
     // println!("Conflicts {:?}", visit_conflicts);
 
@@ -95,44 +106,62 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
 
         // The following parameters were found by grbtune on a selected
         // subset of (hard) mipddd-IAP instances. They gave a good speedup
-        // on the tuning set, but seemed to not make much of a difference 
+        // on the tuning set, but seemed to not make much of a difference
         // on the full benchmark.
         // model.set_param(grb::param::Presolve, 2).map_err(SolverError::GurobiError)?;
         // model.set_param(grb::param::AggFill, 1000).map_err(SolverError::GurobiError)?;
         // model.set_param(grb::param::Heuristics, 0.0).map_err(SolverError::GurobiError)?;
         // model.set_param(grb::param::BranchDir, -1).map_err(SolverError::GurobiError)?;
 
-        let interval_vars = intervals.iter().enumerate().map(|(train_idx,t)| {
-            t.iter().enumerate().map(|(visit_idx,v)| {
-                let intervals = v.iter().map(|(time,time_out)| {
-                    let cost = problem.trains[train_idx].visit_delay_cost(delay_cost_type, visit_idx, *time) as f64;
+        let interval_vars = intervals
+            .iter()
+            .enumerate()
+            .map(|(train_idx, t)| {
+                t.iter()
+                    .enumerate()
+                    .map(|(visit_idx, v)| {
+                        let intervals = v
+                            .iter()
+                            .map(|(time, time_out)| {
+                                let cost = problem.trains[train_idx].visit_delay_cost(
+                                    delay_cost_type,
+                                    visit_idx,
+                                    *time,
+                                ) as f64;
 
-                    // if cost > 1e-5 {
-                    //     cost = 1800.0 * cost + ((*time) - problem.trains[train_idx].visits[visit_idx].earliest) as f64;
-                    // }
+                                // if cost > 1e-5 {
+                                //     cost = 1800.0 * cost + ((*time) - problem.trains[train_idx].visits[visit_idx].earliest) as f64;
+                                // }
 
-                    #[allow(clippy::unnecessary_cast)]
+                                #[allow(clippy::unnecessary_cast)]
                     add_intvar!(model, 
                         name: &format!("t{}v{}-in{}_{}", train_idx, visit_idx, time, time_out),
                         bounds: 0..1.0_f64,
                         obj: cost
                     )
                     .map_err(SolverError::GurobiError).unwrap()
-                }).collect::<Vec<_>>();
+                            })
+                            .collect::<Vec<_>>();
 
-                // exactly one of these must be chosen
+                        // exactly one of these must be chosen
 
-                #[allow(clippy::useless_conversion)]
-                model.add_constr(
-                    &format!("t{}v{}ex", train_idx, visit_idx),
-                c!( intervals.iter().grb_sum() == 1)).unwrap();
+                        #[allow(clippy::useless_conversion)]
+                        model
+                            .add_constr(
+                                &format!("t{}v{}ex", train_idx, visit_idx),
+                                c!(intervals.iter().grb_sum() == 1),
+                            )
+                            .unwrap();
 
-                intervals
-            }).collect::<Vec<_>>()
-        }).collect::<Vec<_>>();
+                        intervals
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
 
         #[allow(clippy::type_complexity)]
-        let mut incompat :HashMap<(usize,usize,usize),Vec<(usize,usize,usize)>> = Default::default();
+        let mut incompat: HashMap<(usize, usize, usize), Vec<(usize, usize, usize)>> =
+            Default::default();
 
         let mut n_travel_time_constraints = 0;
         let mut n_conflict_constraints = 0;
@@ -148,20 +177,31 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                         .iter()
                         .enumerate()
                         .take_while(|(_, (_v2start, v2end))| v1start + dt >= *v2end)
-                        .map(|(idx2, _)|idx2).collect::<Vec<_>>();
+                        .map(|(idx2, _)| idx2)
+                        .collect::<Vec<_>>();
 
                     for idx2 in incompatible_intervals.iter().copied() {
-                        incompat.entry((train_idx,visit_idx,idx1)).or_default().push((train_idx,visit_idx+1,idx2));
-                        incompat.entry((train_idx,visit_idx+1,idx2)).or_default().push((train_idx,visit_idx,idx1));
+                        incompat
+                            .entry((train_idx, visit_idx, idx1))
+                            .or_default()
+                            .push((train_idx, visit_idx + 1, idx2));
+                        incompat
+                            .entry((train_idx, visit_idx + 1, idx2))
+                            .or_default()
+                            .push((train_idx, visit_idx, idx1));
                     }
 
                     #[allow(clippy::useless_conversion)]
                     model
                         .add_constr(
                             &format!("t{}v{}i{}tt", train_idx, visit_idx, idx1),
-                            c!(source_interval +
-                                 incompatible_intervals.iter().copied().map(|idx2|  
-                                    interval_vars[train_idx][visit_idx + 1][idx2]).grb_sum() <= 1.0_f64),
+                            c!(source_interval
+                                + incompatible_intervals
+                                    .iter()
+                                    .copied()
+                                    .map(|idx2| interval_vars[train_idx][visit_idx + 1][idx2])
+                                    .grb_sum()
+                                <= 1.0_f64),
                         )
                         .unwrap();
 
@@ -194,8 +234,14 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                                 let i1 = interval_vars[*t1][*v1][t1_idx];
                                 let i2 = interval_vars[*t2][*v2][t2_idx];
 
-                                incompat.entry((*t1,*v1,t1_idx)).or_default().push((*t2,*v2,t2_idx));
-                                incompat.entry((*t2,*v2,t2_idx)).or_default().push((*t1,*v1,t1_idx));
+                                incompat
+                                    .entry((*t1, *v1, t1_idx))
+                                    .or_default()
+                                    .push((*t2, *v2, t2_idx));
+                                incompat
+                                    .entry((*t2, *v2, t2_idx))
+                                    .or_default()
+                                    .push((*t1, *v1, t1_idx));
 
                                 #[allow(clippy::useless_conversion)]
                                 model
@@ -220,21 +266,22 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
 
         drop(_p_enc);
 
-
-        info!("Solving MIPDDD iteration {} with {} travel time {} conflicts", iteration, n_travel_time_constraints, n_conflict_constraints);
+        info!(
+            "Solving MIPDDD iteration {} with {} travel time {} conflicts",
+            iteration, n_travel_time_constraints, n_conflict_constraints
+        );
 
         model
-        .set_param(
-            param::TimeLimit,
-            timeout - start_time.elapsed().as_secs_f64(),
-        )
-        .map_err(SolverError::GurobiError)?;
+            .set_param(
+                param::TimeLimit,
+                timeout - start_time.elapsed().as_secs_f64(),
+            )
+            .map_err(SolverError::GurobiError)?;
 
         model.write(&format!("mipddd_it{}.lp", iteration)).unwrap();
 
         let status = {
             let _p = hprof::enter("mip solve");
-
 
             let start_solve = std::time::Instant::now();
             model.optimize().map_err(SolverError::GurobiError)?;
@@ -245,17 +292,22 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
 
         let _p = hprof::enter("mipddd refine");
 
-        
         if status == Status::TimeLimit {
-            
             let ub = best_heur.map(|(c, _)| c).unwrap_or(i32::MAX);
-            println!(
-                "TIMEOUT LB={} UB={}",
-                global_lb,
-                ub
-            );
+            println!("TIMEOUT LB={} UB={}", global_lb, ub);
 
-            do_output_stats(&mut output_stats, iteration, interval_vars, n_travel_time_constraints, n_conflict_constraints, global_lb as f64, start_time, solver_time, global_lb, ub);
+            do_output_stats(
+                &mut output_stats,
+                iteration,
+                interval_vars,
+                n_travel_time_constraints,
+                n_conflict_constraints,
+                global_lb as f64,
+                start_time,
+                solver_time,
+                global_lb,
+                ub,
+            );
 
             return Err(SolverError::Timeout);
         } else if status != Status::Optimal {
@@ -274,71 +326,98 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
 
         if cost.round() as i32 == best_heur.as_ref().map(|(c, _)| *c).unwrap_or(i32::MAX) {
             println!("TERMINATE HEURISTIC");
-            do_output_stats(&mut output_stats, iteration, interval_vars, n_travel_time_constraints, n_conflict_constraints, global_lb as f64, start_time, solver_time, global_lb, global_lb);
+            do_output_stats(
+                &mut output_stats,
+                iteration,
+                interval_vars,
+                n_travel_time_constraints,
+                n_conflict_constraints,
+                global_lb as f64,
+                start_time,
+                solver_time,
+                global_lb,
+                global_lb,
+            );
             return Ok(best_heur.unwrap().1);
         }
 
-
         info!("cost {}", cost);
 
-        let mut selected_interval = intervals.iter().enumerate().map(|(train_idx,ts)| {
-           ts.iter().enumerate().map(|(visit_idx,is)| {
-                is.iter().enumerate().position(|(iidx,_)|
-                model.get_obj_attr(
-                    attr::X,
-                    &interval_vars[train_idx][visit_idx][iidx],
-                )
-                .map_err(SolverError::GurobiError)
-                .unwrap()
-                > 0.5
-            ).unwrap()
-           }).collect::<Vec<_>>() 
-        }).collect::<Vec<_>>();
+        let mut selected_interval = intervals
+            .iter()
+            .enumerate()
+            .map(|(train_idx, ts)| {
+                ts.iter()
+                    .enumerate()
+                    .map(|(visit_idx, is)| {
+                        is.iter()
+                            .enumerate()
+                            .position(|(iidx, _)| {
+                                model
+                                    .get_obj_attr(
+                                        attr::X,
+                                        &interval_vars[train_idx][visit_idx][iidx],
+                                    )
+                                    .map_err(SolverError::GurobiError)
+                                    .unwrap()
+                                    > 0.5
+                            })
+                            .unwrap()
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
 
         // LOCALLY MINIMIZE
         // iteratively select an earlier interval if that preserves feasibility
 
-            let mut consecutive_unmodified_occupations = 0;
-            let mut i = 0;
-            let occs_len = occupations.len();
-            while consecutive_unmodified_occupations < occs_len {
-                let mut touched = false;
-                let occ_idx = i % occupations.len();
-                let (train_idx, visit_idx) = occupations[occ_idx];
-                while selected_interval[train_idx][visit_idx] > 0 {
+        let mut consecutive_unmodified_occupations = 0;
+        let mut i = 0;
+        let occs_len = occupations.len();
+        while consecutive_unmodified_occupations < occs_len {
+            let mut touched = false;
+            let occ_idx = i % occupations.len();
+            let (train_idx, visit_idx) = occupations[occ_idx];
+            while selected_interval[train_idx][visit_idx] > 0 {
+                let prev_interval = selected_interval[train_idx][visit_idx] - 1;
+                let can_reduce = !incompat
+                    .entry((train_idx, visit_idx, prev_interval))
+                    .or_default()
+                    .iter()
+                    .copied()
+                    .any(|(t2, v2, i2)| selected_interval[t2][v2] == i2);
 
-                    let prev_interval = selected_interval[train_idx][visit_idx]-1;
-                        let can_reduce = !incompat.entry((train_idx,visit_idx,prev_interval))
-                        .or_default().iter().copied()
-                        .any(|(t2,v2,i2)| {
-                            selected_interval[t2][v2] == i2
-                        });
-
-                        if can_reduce {
-                            selected_interval[train_idx][visit_idx] = prev_interval;
-                            touched = true;
-                            consecutive_unmodified_occupations = 0;
-                        } else {
-                            break;
-                        }
-
+                if can_reduce {
+                    selected_interval[train_idx][visit_idx] = prev_interval;
+                    touched = true;
+                    consecutive_unmodified_occupations = 0;
+                } else {
+                    break;
                 }
-                i+=1;
-                if !touched {
-                    consecutive_unmodified_occupations += 1;
-                }
+            }
+            i += 1;
+            if !touched {
+                consecutive_unmodified_occupations += 1;
+            }
         }
 
-        let solution:Vec<Vec<i32>> = selected_interval.iter().enumerate().map(|(train_idx,vs)|{
-            let mut train_times = vs.iter().enumerate().map(|(visit_idx,interval_idx)|
-            intervals[train_idx][visit_idx][*interval_idx].0
-        ).collect::<Vec<_>>();
-                        let last = train_times.last().copied().unwrap()
-                            + problem.trains[train_idx].visits.last().unwrap().travel_time;
-                        train_times.push(last);   train_times }
-        ).collect::<Vec<_>>();
-        
-
+        let solution: Vec<Vec<i32>> = selected_interval
+            .iter()
+            .enumerate()
+            .map(|(train_idx, vs)| {
+                let mut train_times = vs
+                    .iter()
+                    .enumerate()
+                    .map(|(visit_idx, interval_idx)| {
+                        intervals[train_idx][visit_idx][*interval_idx].0
+                    })
+                    .collect::<Vec<_>>();
+                let last = train_times.last().copied().unwrap()
+                    + problem.trains[train_idx].visits.last().unwrap().travel_time;
+                train_times.push(last);
+                train_times
+            })
+            .collect::<Vec<_>>();
 
         if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
             let _ = sol_tx.send(solution.clone());
@@ -349,7 +428,18 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                 if ub_cost == lb_cost {
                     println!("HEURISTIC UB=LB");
                     println!("TERMINATE HEURISTIC");
-                    do_output_stats(&mut output_stats, iteration, interval_vars, n_travel_time_constraints, n_conflict_constraints, global_lb as f64, start_time, solver_time, global_lb, global_lb);
+                    do_output_stats(
+                        &mut output_stats,
+                        iteration,
+                        interval_vars,
+                        n_travel_time_constraints,
+                        n_conflict_constraints,
+                        global_lb as f64,
+                        start_time,
+                        solver_time,
+                        global_lb,
+                        global_lb,
+                    );
                     return Ok(ub_sol);
                 }
 
@@ -370,7 +460,12 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                 for visit_idx in 0..train.visits.len() - 1 {
                     let dt = problem.trains[train_idx].visits[visit_idx].travel_time;
                     if solution[train_idx][visit_idx] + dt > solution[train_idx][visit_idx + 1] {
-                        panic!("travel time refinement t{}v{}x{}", train_idx, visit_idx+1, solution[train_idx][visit_idx]+dt);
+                        panic!(
+                            "travel time refinement t{}v{}x{}",
+                            train_idx,
+                            visit_idx + 1,
+                            solution[train_idx][visit_idx] + dt
+                        );
 
                         // Because we always "propagate" the new shortest traveling time to subsequent
                         // train resource occupations, we should never have this conflict type.
@@ -386,55 +481,48 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
             }
         }
 
-        const ADD_ALL_CONFLICTS :bool = false;
-
+        const ADD_ALL_CONFLICTS: bool = false;
 
         if ADD_ALL_CONFLICTS {
-
-        // Check the conflicts
-        {
-            let _p = hprof::enter("mip_ddd check conflicts");
-            for visit_pair @ ((t1, v1), (t2, v2)) in visit_conflicts.iter().copied() {
-                if !check_conflict(visit_pair, &solution)? {
-                    // warn!("conflict refinement t{}v{}x{}--{} vee t{}v{}x{}--{}", 
-                    // t1, v1, solution[t1][v1], solution[t1][v1+1],
-                    // t2, v2, solution[t2][v2], solution[t2][v2+1]);
-                    // warn!("   t1-v1   intervals {:?}", intervals[t1][v1]);
-                    // warn!("   t1-v1+1 intervals {:?}", intervals[t1][v1+1]);
-                    // warn!("   t2-v2   intervals {:?}", intervals[t2][v2]);
-                    // warn!("   t2-v2+1 intervals {:?}", intervals[t2][v2+1]);
-                    new_intervals.push_back((t2, v2, solution[t1][v1 + 1]));
-                    new_intervals.push_back((t1, v1, solution[t2][v2 + 1]));
-                    n_conflicts += 1;
+            // Check the conflicts
+            {
+                let _p = hprof::enter("mip_ddd check conflicts");
+                for visit_pair @ ((t1, v1), (t2, v2)) in visit_conflicts.iter().copied() {
+                    if !check_conflict(visit_pair, &solution)? {
+                        // warn!("conflict refinement t{}v{}x{}--{} vee t{}v{}x{}--{}",
+                        // t1, v1, solution[t1][v1], solution[t1][v1+1],
+                        // t2, v2, solution[t2][v2], solution[t2][v2+1]);
+                        // warn!("   t1-v1   intervals {:?}", intervals[t1][v1]);
+                        // warn!("   t1-v1+1 intervals {:?}", intervals[t1][v1+1]);
+                        // warn!("   t2-v2   intervals {:?}", intervals[t2][v2]);
+                        // warn!("   t2-v2+1 intervals {:?}", intervals[t2][v2+1]);
+                        new_intervals.push_back((t2, v2, solution[t1][v1 + 1]));
+                        new_intervals.push_back((t1, v1, solution[t2][v2 + 1]));
+                        n_conflicts += 1;
+                    }
                 }
             }
-        }
-
         } else {
-                // Check the conflicts
-                let violated_conflicts = {
-                    let _p = hprof::enter("check conflicts");
-        
-                    let mut cs: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
-                    for visit_pair @ ((t1, v1), (t2, v2)) in visit_conflicts.iter().copied() {
-                        if !check_conflict(visit_pair, &solution)? {
-                            cs.entry((t1, t2)).or_default().push((v1, v2));
-                        }
+            // Check the conflicts
+            let violated_conflicts = {
+                let _p = hprof::enter("check conflicts");
+
+                let mut cs: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
+                for visit_pair @ ((t1, v1), (t2, v2)) in visit_conflicts.iter().copied() {
+                    if !check_conflict(visit_pair, &solution)? {
+                        cs.entry((t1, t2)).or_default().push((v1, v2));
                     }
-                    cs
-                };
-
-                for ((t1, t2), pairs) in violated_conflicts {
-                    let (v1, v2) = *pairs.iter().min_by_key(|(v1, v2)| v1 + v2).unwrap();
-                    new_intervals.push_back((t2, v2, solution[t1][v1 + 1]));
-                    new_intervals.push_back((t1, v1, solution[t2][v2 + 1]));
-                    n_conflicts += 1;
                 }
+                cs
+            };
 
-    
+            for ((t1, t2), pairs) in violated_conflicts {
+                let (v1, v2) = *pairs.iter().min_by_key(|(v1, v2)| v1 + v2).unwrap();
+                new_intervals.push_back((t2, v2, solution[t1][v1 + 1]));
+                new_intervals.push_back((t1, v1, solution[t2][v2 + 1]));
+                n_conflicts += 1;
+            }
         }
-
-
 
         if !new_intervals.is_empty() {
             while let Some((train_idx, visit_idx, time)) = new_intervals.pop_front() {
@@ -465,7 +553,10 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                     }
                 };
             }
-            info!("Added {} new intervals to solve {} conflicts", n_new_intervals, n_conflicts);
+            info!(
+                "Added {} new intervals to solve {} conflicts",
+                n_new_intervals, n_conflicts
+            );
         } else {
             // success
             let n_intervals = intervals
@@ -474,8 +565,18 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
                 .sum::<usize>();
             println!("Solved with cost {} and {} intervals", cost, n_intervals);
 
-
-            do_output_stats(&mut output_stats, iteration, interval_vars, n_travel_time_constraints, n_conflict_constraints, cost, start_time, solver_time, global_lb, global_lb);
+            do_output_stats(
+                &mut output_stats,
+                iteration,
+                interval_vars,
+                n_travel_time_constraints,
+                n_conflict_constraints,
+                cost,
+                start_time,
+                solver_time,
+                global_lb,
+                global_lb,
+            );
 
             return Ok(solution);
         }
@@ -486,11 +587,35 @@ delay_cost_type: DelayCostType, timeout :f64, mut output_stats :impl FnMut(Strin
     }
 }
 
-fn do_output_stats(output_stats: &mut impl FnMut(String, serde_json::Value), iteration: i32, interval_vars: Vec<Vec<Vec<Var>>>, n_travel_time_constraints: i32, n_conflict_constraints: i32, cost: f64, start_time: std::time::Instant, solver_time: std::time::Duration, lb :i32, ub :i32) {
+fn do_output_stats(
+    output_stats: &mut impl FnMut(String, serde_json::Value),
+    iteration: i32,
+    interval_vars: Vec<Vec<Vec<Var>>>,
+    n_travel_time_constraints: i32,
+    n_conflict_constraints: i32,
+    cost: f64,
+    start_time: std::time::Instant,
+    solver_time: std::time::Duration,
+    lb: i32,
+    ub: i32,
+) {
     output_stats("iteration".to_string(), iteration.into());
-    output_stats("intervals".to_string(), interval_vars.iter().map(|is| is.iter().map(|i| i.len()).sum::<usize>()).sum::<usize>().into());
-    output_stats("travel_constraints".to_string(), n_travel_time_constraints.into());
-    output_stats("resource_constraints".to_string(), n_conflict_constraints.into());
+    output_stats(
+        "intervals".to_string(),
+        interval_vars
+            .iter()
+            .map(|is| is.iter().map(|i| i.len()).sum::<usize>())
+            .sum::<usize>()
+            .into(),
+    );
+    output_stats(
+        "travel_constraints".to_string(),
+        n_travel_time_constraints.into(),
+    );
+    output_stats(
+        "resource_constraints".to_string(),
+        n_conflict_constraints.into(),
+    );
     output_stats("internal_cost".to_string(), cost.into());
     output_stats("lb".to_string(), lb.into());
     output_stats("ub".to_string(), ub.into());

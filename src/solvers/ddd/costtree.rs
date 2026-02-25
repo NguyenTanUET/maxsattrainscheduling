@@ -48,8 +48,8 @@ impl<L: satcoder::Lit + std::fmt::Debug> CostTree<L> {
             // let linear_mode = false;
 
             if linear_mode && parent_node_idx.map(|i| self.nodes[i].cost).unwrap_or(0) + 1 != cost {
-                self.add_cost(solver, false.into(), cost - 1,  notify_vars);
-                return self.add_cost(solver, input, cost,  notify_vars);
+                self.add_cost(solver, false.into(), cost - 1, notify_vars);
+                return self.add_cost(solver, input, cost, notify_vars);
             } else {
                 let new_var = solver.new_var();
 
@@ -71,8 +71,7 @@ impl<L: satcoder::Lit + std::fmt::Debug> CostTree<L> {
 
                 notify_vars(
                     // format!("{}_c{}_d{}", name, cost, cost_diff),
-                    cost_diff,
-                    new_var,
+                    cost_diff, new_var,
                 );
             }
         }

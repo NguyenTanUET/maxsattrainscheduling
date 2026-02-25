@@ -9,7 +9,7 @@ use crate::{
     solvers::minimize,
 };
 
-const M: f64 = 6.0  * 3600.0;
+const M: f64 = 6.0 * 3600.0;
 
 struct TimeIndexedVar {
     vars: Vec<(i32, grb::Var)>,
@@ -80,9 +80,12 @@ pub fn solve_binarized_bigm(
             expr = expr + t * v;
         }
 
-        model.add_constr(&format!("ti_{}", name),    c!(
-            vars.iter().map(|(_,x)| *x).grb_sum() == 1
-        )).unwrap();
+        model
+            .add_constr(
+                &format!("ti_{}", name),
+                c!(vars.iter().map(|(_, x)| *x).grb_sum() == 1),
+            )
+            .unwrap();
 
         println!(
             "Time point {} with interval {} from lb={} to ub={} has {} binary vars",

@@ -1,5 +1,5 @@
-use crate::problem::{DelayCostType, Problem};
 use super::{bigm::visit_conflicts, minimize, SolverError};
+use crate::problem::{DelayCostType, Problem};
 
 pub struct ChoiceCharacteristics {
     pub time: i32,
@@ -22,9 +22,7 @@ pub fn solve2(
     let visit_conflicts = visit_conflicts(problem);
     let mut priorities = Vec::new();
     'refinement: loop {
-        let solution = {
-            minimize::minimize_solution(env, problem, priorities.clone())?
-        };
+        let solution = { minimize::minimize_solution(env, problem, priorities.clone())? };
         let choices = {
             let _p = hprof::enter("check conflicts");
 

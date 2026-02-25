@@ -26,16 +26,14 @@ pub struct NamedProblem {
     pub resource_names: Vec<String>,
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Problem {
-    pub name :String,
+    pub name: String,
     pub trains: Vec<Train>,
     pub conflicts: Vec<(usize, usize)>,
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Train {
     pub visits: Vec<Visit>,
 }
@@ -168,7 +166,8 @@ impl Problem {
                             if !ok {
                                 println!(
                                     "Resource conflict {}-{} in t{} v{} {}-{} t{} v{} {}-{}",
-                                    *r1, *r2,
+                                    *r1,
+                                    *r2,
                                     train_idx1,
                                     visit_idx1,
                                     t1_in,

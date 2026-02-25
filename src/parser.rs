@@ -28,7 +28,7 @@ pub fn read_txt_file(
     let mut current_train: Option<Vec<Visit>> = None;
     let mut next_earliest: Option<i32> = None;
     let mut problem = Problem {
-        name:instance_fn.to_string(),
+        name: instance_fn.to_string(),
         conflicts: Vec::new(),
         trains: Vec::new(),
     };
