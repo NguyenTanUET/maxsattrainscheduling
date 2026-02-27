@@ -1,0 +1,39 @@
+python3 - <<'PY'
+import json, csv
+from pathlib import Path
+
+inp = Path("results_sat_ddd_scl_cont.json")
+out = Path("results_sat_ddd_scl_cont.csv")
+
+data = json.loads(inp.read_text())
+
+rows = []
+cols = set()
+
+for p in data:
+    base = {
+        "index": p.get("index"),
+        "name": p.get("name"),
+        "trains": p.get("trains"),
+        "conflicts": p.get("conflicts"),
+        "avg_tracks": p.get("avg_tracks"),
+        "conflicting_visit_pairs": p.get("conflicting_visit_pairs"),
+        "delay_cost_type": p.get("delay_cost_type"),
+    }
+    for s in p.get("solves", []):
+        row = dict(base)
+        if isinstance(s, dict):
+            row.update(s)
+        else:
+            row["solve"] = s
+        rows.append(row)
+        cols.update(row.keys())
+
+cols = sorted(cols)
+with out.open("w", newline="") as f:
+    w = csv.DictWriter(f, fieldnames=cols)
+    w.writeheader()
+    w.writerows(rows)
+
+print("Wrote", out)
+PY

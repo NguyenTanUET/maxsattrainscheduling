@@ -1,0 +1,3 @@
+conda activate gurobi
+export GRB_LICENSE_FILE=/home/nguyentan/miniconda3/envs/gurobi/gurobi.lic
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"

@@ -1,0 +1,5 @@
+./target/release/ddd \
+  -s sat_ddd_scl \
+  --txt-instances \
+  --objective cont \
+  --json-output results_sat_ddd_scl_cont.json
