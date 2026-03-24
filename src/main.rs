@@ -59,6 +59,10 @@ struct Opt {
     /// Alias of `maxsatddd_ladder_scl_use_interval_graph`.
     #[structopt(long)]
     maxsatddd_ladder_scl_use_interval_tree: Option<bool>,
+
+    /// Objective encoding for `sat_ddd*` solvers: `nsc` or `totalizer`.
+    #[structopt(long)]
+    satddd_objective_encoding: Option<String>,
 }
 
 fn parse_delay_cost_type(value: &str) -> Option<DelayCostType> {
@@ -83,6 +87,26 @@ fn parse_delay_cost_type_or_panic(value: &str) -> DelayCostType {
     parse_delay_cost_type(value).unwrap_or_else(|| {
         panic!(
             "Unknown objective type '{}'. Supported: finsteps1_5min, finsteps1_3min, finsteps123, finsteps12345, finsteps139, infsteps60, infsteps180, infsteps360, infsteps123, cont",
+            value
+        )
+    })
+}
+
+fn parse_sat_objective_encoding(value: &str) -> Option<ddd_solvers::sat::SatObjectiveEncoding> {
+    let key = value.to_ascii_lowercase();
+    match key.as_str() {
+        "nsc" => Some(ddd_solvers::sat::SatObjectiveEncoding::Nsc),
+        "totalizer" | "incremental_totalizer" | "inc_totalizer" => {
+            Some(ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer)
+        }
+        _ => None,
+    }
+}
+
+fn parse_sat_objective_encoding_or_panic(value: &str) -> ddd_solvers::sat::SatObjectiveEncoding {
+    parse_sat_objective_encoding(value).unwrap_or_else(|| {
+        panic!(
+            "Unknown SAT objective encoding '{}'. Supported: nsc, totalizer",
             value
         )
     })
@@ -208,6 +232,7 @@ enum SolverType {
     SatDdd,
     SatDddInc,
     SatDddScl,
+    SatDddSclTotalizer,
     SatDddSclInc,
     MipDdd,
     MipHull,
@@ -266,6 +291,7 @@ fn main() {
             "sat_ddd" => SolverType::SatDdd,
             "sat_ddd_inc" => SolverType::SatDddInc,
             "sat_ddd_scl" => SolverType::SatDddScl,
+            "sat_ddd_scl_totalizer" => SolverType::SatDddSclTotalizer,
             "sat_ddd_scl_inc" => SolverType::SatDddSclInc,
             "mip_ddd" => SolverType::MipDdd,
             "mip_hull" => SolverType::MipHull,
@@ -317,6 +343,13 @@ fn main() {
         maxsatddd_ladder_scl_settings
     );
 
+    let satddd_objective_encoding = opt
+        .satddd_objective_encoding
+        .as_deref()
+        .map(parse_sat_objective_encoding_or_panic)
+        .unwrap_or(ddd_solvers::sat::SatObjectiveEncoding::Nsc);
+    println!("SatDdd objective encoding {:?}", satddd_objective_encoding);
+
     let perf_out = RefCell::new(String::new());
 
     let needs_gurobi = solvers.iter().any(|solver| {
@@ -358,6 +391,13 @@ fn main() {
         env.as_ref().expect(
             "Gurobi environment unavailable; configure a Gurobi license or choose a non-Gurobi solver.",
         )
+    };
+
+    let matches_instance_filter = |name: &str| {
+        opt.instance_name_filter
+            .as_deref()
+            .map(|filter| name.contains(filter))
+            .unwrap_or(true)
     };
 
     let mut problems: Vec<serde_json::Value> = Default::default();
@@ -608,12 +648,13 @@ fn main() {
                     },
                 )
                 .map(|(v, _)| v),
-                SolverType::SatDdd => ddd_solvers::sat::solve(
+                SolverType::SatDdd => ddd_solvers::sat::solve_with_encoding(
                     &mk_env,
                     satcoder::solvers::rustsat_glucose::Solver::new(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
+                    satddd_objective_encoding,
                     |k, v| {
                         solve_data.insert(k, v);
                     },
@@ -623,34 +664,49 @@ fn main() {
                     eprintln!("Error: IDL solver is not available in this build.");
                     Err(SolverError::NoSolution)
                 }
-                SolverType::SatDddInc => ddd_solvers::sat::solve_incremental(
+                SolverType::SatDddInc => ddd_solvers::sat::solve_incremental_with_encoding(
                     &mk_env,
                     satcoder::solvers::rustsat_glucose::Solver::new(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
+                    satddd_objective_encoding,
                     |k, v| {
                         solve_data.insert(k, v);
                     },
                 )
                 .map(|(v, _)| v),
-                SolverType::SatDddScl => ddd_solvers::sat::solve_scl(
+                SolverType::SatDddScl => ddd_solvers::sat::solve_scl_with_encoding(
                     &mk_env,
                     satcoder::solvers::rustsat_glucose::Solver::new(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
+                    satddd_objective_encoding,
                     |k, v| {
                         solve_data.insert(k, v);
                     },
                 )
                 .map(|(v, _)| v),
-                SolverType::SatDddSclInc => ddd_solvers::sat::solve_incremental_scl(
+                SolverType::SatDddSclTotalizer => ddd_solvers::sat::solve_scl_with_encoding(
                     &mk_env,
                     satcoder::solvers::rustsat_glucose::Solver::new(),
                     &p.problem,
                     TIMEOUT,
                     delay_cost_type,
+                    ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer,
+                    |k, v| {
+                        solve_data.insert(k, v);
+                    },
+                )
+                .map(|(v, _)| v),
+                SolverType::SatDddSclInc => ddd_solvers::sat::solve_incremental_scl_with_encoding(
+                    &mk_env,
+                    satcoder::solvers::rustsat_glucose::Solver::new(),
+                    &p.problem,
+                    TIMEOUT,
+                    delay_cost_type,
+                    satddd_objective_encoding,
                     |k, v| {
                         solve_data.insert(k, v);
                     },
@@ -857,16 +913,23 @@ fn main() {
 
     if opt.xml_instances {
         xml_instances(|name, p| {
-            solve_it(name, p);
+            if matches_instance_filter(&name) {
+                let _ = solve_it(name, p);
+            }
         });
     }
     if opt.txt_instances {
         txt_instances(|name, p| {
-            solve_it(name, p);
+            if matches_instance_filter(&name) {
+                let _ = solve_it(name, p);
+            }
         });
     }
     if opt.verify_instances {
         verify_instances(|name, p, solution| {
+            if !matches_instance_filter(&name) {
+                return solution;
+            }
             let cost = p
                 .problem
                 .verify_solution(&solution, delay_cost_type)
