@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 satcoder = { path = "../salvers/satcoder", default-features = false, features = ["solver_minisat", "solver_rustsat_glucose"] }
-rustsat = { version = "0.7.4", optional = true }
-rustsat-glucose = { version = "0.7.4", optional = true }
+rustsat = { version = "0.7.5", optional = true }
+rustsat-glucose = { version = "0.7.5", optional = true }
 
 typed-index-collections = "3.0"
 derive_more = "0.99"

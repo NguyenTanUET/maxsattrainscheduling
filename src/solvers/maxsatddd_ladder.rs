@@ -87,7 +87,7 @@ thread_local! { pub static  WATCH : std::cell::RefCell<Option<(usize,usize)>>  =
 
 use crate::{debug::DebugInfo, problem::DelayCostType, solvers::heuristic};
 
-use super::{costtree::CostTree, SolverError};
+use crate::solvers::{ddd::costtree::CostTree, SolverError};
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     mut solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,

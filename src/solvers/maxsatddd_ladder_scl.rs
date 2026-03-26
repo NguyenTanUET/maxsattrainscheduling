@@ -33,7 +33,7 @@ use typed_index_collections::TiVec;
 // Under this representation, the clique above compresses to ONE implication per
 // time point (the SCL idea):
 //   d_r(t) -> d_q(t + travel_r).
-// which forbids all "too early" choices at q without enumerating them.
+// which forbids all too early choices at q without enumerating them.
 // -----------------------------------------------------------------------------
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -385,7 +385,7 @@ thread_local! { pub static  WATCH : std::cell::RefCell<Option<(usize,usize)>>  =
 
 use crate::{debug::DebugInfo, problem::DelayCostType, solvers::heuristic};
 
-use super::{costtree::CostTree, SolverError};
+use crate::solvers::{ddd::costtree::CostTree, SolverError};
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
