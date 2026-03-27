@@ -67,7 +67,7 @@ struct ResourceCliqueRowKey {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SatObjectiveEncoding {
-    Nsc,
+    Scpb,
     IncrementalTotalizer,
 }
 
@@ -344,10 +344,7 @@ pub fn solve_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    let mode = match encoding {
-        SatObjectiveEncoding::Nsc => SatBoundMode::AddClauses,
-        SatObjectiveEncoding::IncrementalTotalizer => SatBoundMode::Assumptions,
-    };
+    let mode = SatBoundMode::Assumptions;
     solve_native_debug_with_mode(
         mk_env,
         problem,
@@ -436,10 +433,7 @@ pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    let mode = match encoding {
-        SatObjectiveEncoding::Nsc => SatBoundMode::AddClauses,
-        SatObjectiveEncoding::IncrementalTotalizer => SatBoundMode::Assumptions,
-    };
+    let mode = SatBoundMode::Assumptions;
     solve_native_debug_with_mode(
         mk_env,
         problem,
@@ -511,7 +505,7 @@ pub fn solve_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         problem,
         timeout,
         delay_cost_type,
-        SatObjectiveEncoding::Nsc,
+        SatObjectiveEncoding::Scpb,
         mode,
         SatPrecEncoding::Plain,
         SatSearchMode::UbSearch,
@@ -535,7 +529,7 @@ pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         problem,
         timeout,
         delay_cost_type,
-        SatObjectiveEncoding::Nsc,
+        SatObjectiveEncoding::Scpb,
         mode,
         SatPrecEncoding::Scl,
         search,
@@ -751,7 +745,7 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         problem,
         timeout,
         delay_cost_type,
-        SatObjectiveEncoding::Nsc,
+        SatObjectiveEncoding::Scpb,
         SatBoundMode::AddClauses,
         SatPrecEncoding::Plain,
         SatSearchMode::UbSearch,
@@ -777,7 +771,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         problem,
         timeout,
         delay_cost_type,
-        SatObjectiveEncoding::Nsc,
+        SatObjectiveEncoding::Scpb,
         mode,
         prec,
         search,
@@ -1299,7 +1293,7 @@ fn solve_native_debug_with_mode(
 
             if new_timepoint_cost > 0 {
                 match encoding {
-                    SatObjectiveEncoding::Nsc => {
+                    SatObjectiveEncoding::Scpb => {
                         occupations[visit].cost_tree.add_cost(
                             &mut solver,
                             new_timepoint_var,
@@ -1368,7 +1362,7 @@ fn solve_native_debug_with_mode(
                 };
                 let ub_usize = target_ub as usize;
                 match encoding {
-                    SatObjectiveEncoding::Nsc => {
+                    SatObjectiveEncoding::Scpb => {
                         if ub_usize < scpb_total_weight {
                             bound_used = Some(target_ub);
                             match mode {

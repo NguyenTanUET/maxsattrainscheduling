@@ -256,7 +256,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 600.0;
+const TIMEOUT: f64 = 120.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
@@ -835,8 +835,10 @@ fn main() {
             solve_data.insert("status".to_string(), solve_status.into());
             if matches!(solution, Err(SolverError::Timeout)) && !solve_data.contains_key("sol_time")
             {
-                if let Some(total_time) = solve_data.get("total_time").cloned() {
-                    solve_data.insert("sol_time".to_string(), total_time);
+                if let Some(total_time_secs) =
+                    solve_data.get("total_time").and_then(|v| v.as_f64())
+                {
+                    solve_data.insert("sol_time".to_string(), (total_time_secs * 1000.0).into());
                 }
             }
 
