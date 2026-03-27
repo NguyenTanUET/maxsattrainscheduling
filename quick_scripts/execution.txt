@@ -1,17 +1,26 @@
 ./target/release/ddd \
-  -s maxsat_ddd_ladder_scl \
-  --txt-instances \
-  --objective cont \
-  --json-output results_maxsat_full_cont.json
-
-  ./target/release/ddd \
-  -s sat_ddd_scl \
+  -s maxsat_ddd_ladder \
   --txt-instances \
   --objective infsteps180 \
-  --json-output results_sat_scl_infsteps180.json
+  --json-output results_maxsat_cont_300s.json
+
+./target/release/ddd \
+  -s sat_ddd_scl \
+  --satddd-objective-encoding nsc \
+  --txt-instances \
+  --objective infsteps180 \
+  --json-output results_sat_scl_infsteps180_nsc.json
 
 ./target/release/ddd \
   -s sat_ddd_scl_totalizer \
   --txt-instances \
-  --objective finstesps123 \
-  --json-output results_sat_scl_finstesps123_totalizer.json
+  --objective infsteps180 \
+  --json-output results_sat_scl_infsteps180_totalizer3_300s.json
+
+BIN=./target/release/ddd \
+SOLVER=sat_ddd_scl_totalizer \
+OBJECTIVE=cont \
+JSON_OUT=results_sat_scl_cont_totalizer3.json \
+INSTANCE_TIMEOUT_SECS=310 \
+RAM_LIMIT_KB=12000000 \
+bash quick_scripts/run_all_txt_instances_limited.sh

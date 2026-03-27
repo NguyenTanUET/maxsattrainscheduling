@@ -60,7 +60,7 @@ struct Opt {
     #[structopt(long)]
     maxsatddd_ladder_scl_use_interval_tree: Option<bool>,
 
-    /// Objective encoding for `sat_ddd*` solvers: `nsc` or `totalizer`.
+    /// Objective encoding for `sat_ddd*` solvers: `scpb` or `totalizer` (`nsc` accepted as alias).
     #[structopt(long)]
     satddd_objective_encoding: Option<String>,
 }
@@ -95,7 +95,7 @@ fn parse_delay_cost_type_or_panic(value: &str) -> DelayCostType {
 fn parse_sat_objective_encoding(value: &str) -> Option<ddd_solvers::sat::SatObjectiveEncoding> {
     let key = value.to_ascii_lowercase();
     match key.as_str() {
-        "nsc" => Some(ddd_solvers::sat::SatObjectiveEncoding::Nsc),
+        "scpb" | "nsc" => Some(ddd_solvers::sat::SatObjectiveEncoding::Scpb),
         "totalizer" | "incremental_totalizer" | "inc_totalizer" => {
             Some(ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer)
         }
@@ -106,7 +106,7 @@ fn parse_sat_objective_encoding(value: &str) -> Option<ddd_solvers::sat::SatObje
 fn parse_sat_objective_encoding_or_panic(value: &str) -> ddd_solvers::sat::SatObjectiveEncoding {
     parse_sat_objective_encoding(value).unwrap_or_else(|| {
         panic!(
-            "Unknown SAT objective encoding '{}'. Supported: nsc, totalizer",
+            "Unknown SAT objective encoding '{}'. Supported: scpb, totalizer",
             value
         )
     })
@@ -256,7 +256,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 300.0;
+const TIMEOUT: f64 = 600.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
@@ -347,7 +347,7 @@ fn main() {
         .satddd_objective_encoding
         .as_deref()
         .map(parse_sat_objective_encoding_or_panic)
-        .unwrap_or(ddd_solvers::sat::SatObjectiveEncoding::Nsc);
+        .unwrap_or(ddd_solvers::sat::SatObjectiveEncoding::Scpb);
     println!("SatDdd objective encoding {:?}", satddd_objective_encoding);
 
     let perf_out = RefCell::new(String::new());
@@ -825,6 +825,19 @@ fn main() {
                     "other_delay_cost_type".to_string(),
                     format!("{:?}", other_delay_cost_type).into(),
                 );
+            }
+            let solve_status = match solution.as_ref() {
+                Ok(_) => "ok",
+                Err(SolverError::NoSolution) => "no_solution",
+                Err(SolverError::Timeout) => "timeout",
+                Err(SolverError::GurobiError(_)) => "gurobi_error",
+            };
+            solve_data.insert("status".to_string(), solve_status.into());
+            if matches!(solution, Err(SolverError::Timeout)) && !solve_data.contains_key("sol_time")
+            {
+                if let Some(total_time) = solve_data.get("total_time").cloned() {
+                    solve_data.insert("sol_time".to_string(), total_time);
+                }
             }
 
             let solve_stats = if let Ok(solution) = solution.as_ref() {
