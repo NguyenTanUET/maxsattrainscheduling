@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashSet, fmt::Write};
+use std::{any::Any, cell::RefCell, collections::HashSet, fmt::Write};
 
 use ddd::{
     maxsatsolver, parser,
@@ -110,6 +110,28 @@ fn parse_sat_objective_encoding_or_panic(value: &str) -> ddd_solvers::sat::SatOb
             value
         )
     })
+}
+
+fn is_likely_oom_panic(payload: &(dyn Any + Send)) -> bool {
+    let message = if let Some(msg) = payload.downcast_ref::<String>() {
+        Some(msg.as_str())
+    } else if let Some(msg) = payload.downcast_ref::<&str>() {
+        Some(*msg)
+    } else {
+        None
+    };
+
+    let Some(message) = message else {
+        return false;
+    };
+
+    let message = message.to_ascii_lowercase();
+    message.contains("failed to extend generalizedtotalizer encoding")
+        || message.contains("glucose reserve failed")
+        || message.contains("glucose add_clause_ref failed")
+        || message.contains("outofmemory")
+        || message.contains("out of memory")
+        || message.contains("memory allocation")
 }
 
 pub fn xml_instances(mut x: impl FnMut(String, NamedProblem)) {
@@ -256,7 +278,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 120.0;
+const TIMEOUT: f64 = 600.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
@@ -417,7 +439,7 @@ fn main() {
             println!("Starting solver {:?}", solver);
             let mut solve_data = serde_json::Map::new();
 
-            solution = match solver {
+            solution = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match solver {
                 SolverType::Cutting => unimplemented!(),
                 // ddd::solvers::cutting::solve_cutting(
                 //     &p.problem,
@@ -812,6 +834,15 @@ fn main() {
                         },
                     )
                 }
+            })) {
+                Ok(result) => result,
+                Err(payload) => {
+                    if is_likely_oom_panic(payload.as_ref()) {
+                        Err(SolverError::OutOfMemory)
+                    } else {
+                        std::panic::resume_unwind(payload);
+                    }
+                }
             };
             hprof::end_frame();
             let solver_name = format!("{:?}", solver);
@@ -830,6 +861,7 @@ fn main() {
                 Ok(_) => "ok",
                 Err(SolverError::NoSolution) => "no_solution",
                 Err(SolverError::Timeout) => "timeout",
+                Err(SolverError::OutOfMemory) => "oom",
                 Err(SolverError::GurobiError(_)) => "gurobi_error",
             };
             solve_data.insert("status".to_string(), solve_status.into());

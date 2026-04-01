@@ -2,7 +2,7 @@
   -s maxsat_ddd_ladder \
   --txt-instances \
   --objective infsteps180 \
-  --json-output results_maxsat_cont_300s.json
+  --json-output results_maxsat_infsteps180_300s.json
 
 ./target/release/ddd \
   -s sat_ddd_scl \
@@ -15,12 +15,12 @@
   -s sat_ddd_scl_totalizer \
   --txt-instances \
   --objective infsteps180 \
-  --json-output results_sat_scl_infsteps180_totalizer3_heuristic_off_300s.json
+  --json-output results_sat_scl_infsteps180_totalizer_120s.json
 
 BIN=./target/release/ddd \
 SOLVER=sat_ddd_scl_totalizer \
 OBJECTIVE=cont \
-JSON_OUT=results_sat_scl_cont_totalizer3_300s_fix_2.json \
-INSTANCE_TIMEOUT_SECS=310 \
+JSON_OUT=results_sat_scl_cont_totalizer3_600s_increase_ex_timeout.json \
+INSTANCE_TIMEOUT_SECS=630 \
 RAM_LIMIT_KB=15000000 \
 bash quick_scripts/run_all_txt_instances_limited.sh

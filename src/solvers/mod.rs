@@ -20,4 +20,5 @@ pub enum SolverError {
     NoSolution,
     GurobiError(grb::Error),
     Timeout,
+    OutOfMemory,
 }

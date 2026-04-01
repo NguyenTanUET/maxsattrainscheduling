@@ -2,8 +2,8 @@ python3 - <<'PY'
 import json, csv
 from pathlib import Path
 
-inp = Path("results_sat_scl_infsteps180_totalizer_120s.json")
-out = Path("results_sat_scl_infsteps180_totalizer_120s.csv")
+inp = Path("results_sat_scl_cont_totalizer3_600s_increase_ex_timeout.json")
+out = Path("results_sat_scl_cont_totalizer3_600s_increase_ex_timeout.csv")
 
 data = json.loads(inp.read_text())
 

@@ -1411,7 +1411,7 @@ fn solve_native_debug_with_mode(
                                 let mut var_manager = NativeVarManager { next_var };
                                 budget_gte
                                     .encode_ub_change(0..=ub_usize, &mut collector, &mut var_manager)
-                                    .expect("failed to extend GeneralizedTotalizer encoding");
+                                    .map_err(|_| SolverError::OutOfMemory)?;
 
                                 budget_gte
                                     .enforce_ub(ub_usize)
