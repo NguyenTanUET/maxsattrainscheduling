@@ -663,6 +663,31 @@ fn inject_solution_timepoints_sat<L: satcoder::Lit>(
     }
 }
 
+fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
+    mk_env: &impl Fn() -> grb::Env,
+    problem: &Problem,
+    delay_cost_type: DelayCostType,
+    occupations: &TiVec<VisitId, Occ<L>>,
+) -> Result<Option<(i32, Vec<Vec<i32>>)>, SolverError> {
+    let initial_solution = extract_solution(problem, occupations);
+    let env = mk_env();
+
+    for use_strong_branching in [false, true] {
+        if let Some(ub_sol) = heuristic::solve_heuristic_better(
+            &env,
+            problem,
+            delay_cost_type,
+            use_strong_branching,
+            Some(&initial_solution),
+        )? {
+            let ub_cost = problem.verify_solution(&ub_sol, delay_cost_type).unwrap();
+            return Ok(Some((ub_cost, ub_sol)));
+        }
+    }
+
+    Ok(None)
+}
+
 fn current_interval_choice_lit<L: satcoder::Lit>(
     solver: &mut impl SatInstance<L>,
     occupations: &TiVec<VisitId, Occ<L>>,
@@ -885,16 +910,21 @@ fn solve_native_debug_with_mode(
         }
     }
 
-    const USE_HEURISTIC: bool = true;
-    const USE_HEURISTIC_TIMEPOINT_INJECTION: bool = false;
-    let heur_thread = USE_HEURISTIC.then(|| {
-        let (sol_in_tx, sol_in_rx) = std::sync::mpsc::channel();
-        let (sol_out_tx, sol_out_rx) = std::sync::mpsc::channel();
-        let problem = problem.clone();
-        heuristic::spawn_heuristic_thread(mk_env, sol_in_rx, problem, delay_cost_type, sol_out_tx);
-        (sol_in_tx, sol_out_rx)
-    });
-    let heur_active = USE_HEURISTIC;
+    const USE_INITIAL_HEURISTIC_UB_ONLY: bool = true;
+    if USE_INITIAL_HEURISTIC_UB_ONLY {
+        if let Some((ub_cost, ub_sol)) = compute_initial_heuristic_upper_bound(
+            &mk_env,
+            problem,
+            delay_cost_type,
+            &occupations,
+        )? {
+            println!("SAT initial heuristic UB={}", ub_cost);
+            best_sol = Some((ub_cost, ub_sol));
+            if search == SatSearchMode::UbSearch {
+                upper_bound = Some(ub_cost - 1);
+            }
+        }
+    }
 
     let mut iteration: usize = 1;
     let mut is_sat: bool = true;
@@ -923,37 +953,6 @@ fn solve_native_debug_with_mode(
         }
 
         if is_sat {
-            if heur_active {
-                if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
-                    let sol = extract_solution(problem, &occupations);
-                    let _ = sol_tx.send(sol);
-
-                    while let Ok((ub_cost, ub_sol)) = sol_rx.try_recv() {
-                        if best_sol.as_ref().map(|(c, _)| ub_cost < *c).unwrap_or(true) {
-                            best_sol = Some((ub_cost, ub_sol.clone()));
-                        }
-
-                        if search == SatSearchMode::UbSearch {
-                            let candidate_ub = ub_cost - 1;
-                            upper_bound = Some(
-                                upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
-                            );
-                        }
-
-                        if USE_HEURISTIC_TIMEPOINT_INJECTION {
-                            inject_solution_timepoints_sat(
-                                &mut solver,
-                                problem,
-                                &train_visit_ids,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &ub_sol,
-                            );
-                        }
-                    }
-                }
-            }
-
             let mut found_travel_time_conflict = false;
             let mut found_resource_conflict = false;
 
