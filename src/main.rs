@@ -37,6 +37,9 @@ struct Opt {
     instance_name_filter: Option<String>,
 
     #[structopt(long)]
+    instance_name_exact: bool,
+
+    #[structopt(long)]
     verify_instances: bool,
 
     #[structopt(long)]
@@ -433,7 +436,13 @@ fn main() {
     let matches_instance_filter = |name: &str| {
         opt.instance_name_filter
             .as_deref()
-            .map(|filter| name.contains(filter))
+            .map(|filter| {
+                if opt.instance_name_exact {
+                    name == filter
+                } else {
+                    name.contains(filter)
+                }
+            })
             .unwrap_or(true)
     };
 

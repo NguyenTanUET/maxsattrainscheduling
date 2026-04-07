@@ -16,15 +16,15 @@
   -s maxsat_ddd_ladder_scl \
   --txt-instances \
   --objective cont \
-  --maxsatddd-ladder-scl-use-precedence-graph false \
-  --json-output results_maxsat_scl_no_prec_graph_120s.json
+  --maxsatddd-ladder-scl-use-precedence-graph true \
+  --json-output results_maxsat_scl_prec_graph_120s.json
 
 ./target/release/ddd \
   -s sat_ddd_scl_totalizer \
   --txt-instances \
   --objective finsteps123 \
   --satddd-use-precedence-graph true \
-  --json-output results_sat_scl_finsteps123_totalizer_no_prec_graph_120s.json
+  --json-output results_sat_scl_finsteps123_totalizer_prec_graph_120s.json
 
 BIN=./target/release/ddd \
 SOLVER=sat_ddd_scl_totalizer \
