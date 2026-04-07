@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     time::Instant,
 };
 
@@ -91,6 +91,8 @@ struct ResourceCliqueRowKey {
 
 #[derive(Clone, Copy, Debug)]
 pub struct MaxSatDddLadderSclSettings {
+    /// Toggle precedence-graph preprocessing/queue seeding.
+    pub use_precedence_graph: bool,
     /// Use SCL-style fixed-precedence rows (d_r(t) -> d_q(t + travel)).
     pub use_scl_fixed_precedence: bool,
     /// Use interval-graph clique-cover conflict encoding (AMO over cliques).
@@ -103,6 +105,7 @@ pub struct MaxSatDddLadderSclSettings {
 impl Default for MaxSatDddLadderSclSettings {
     fn default() -> Self {
         Self {
+            use_precedence_graph: true,
             use_scl_fixed_precedence: true,
             use_interval_graph_conflicts: true,
             seed_scl_from_earliest: true,
@@ -341,6 +344,25 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
+fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
+    let mut effective = Vec::with_capacity(problem.trains.len());
+
+    for train in &problem.trains {
+        let mut train_bounds = Vec::with_capacity(train.visits.len());
+        let mut propagated_lb: Option<i32> = None;
+
+        for visit in &train.visits {
+            let lb = propagated_lb.map_or(visit.earliest, |prev_lb| prev_lb.max(visit.earliest));
+            train_bounds.push(lb);
+            propagated_lb = Some(lb + visit.travel_time);
+        }
+
+        effective.push(train_bounds);
+    }
+
+    effective
+}
+
 pub fn solve<L: satcoder::Lit + Copy + std::fmt::Debug + 'static>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
@@ -440,6 +462,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     let mut touched_intervals = Vec::new();
     let mut conflicts: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut new_time_points = Vec::new();
+    let effective_earliest = settings
+        .use_precedence_graph
+        .then(|| compute_effective_earliest(problem));
 
     #[allow(unused)]
     let mut core_sizes: BTreeMap<usize, usize> = BTreeMap::new();
@@ -460,11 +485,15 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     for (train_idx, train) in problem.trains.iter().enumerate() {
         for (visit_idx, visit) in train.visits.iter().enumerate() {
             let visit_id: VisitId = visits.push_and_get_key((train_idx, visit_idx));
+            let earliest = effective_earliest
+                .as_ref()
+                .map(|bounds| bounds[train_idx][visit_idx])
+                .unwrap_or(visit.earliest);
 
             occupations.push(Occ {
                 cost: vec![true.into()],
                 cost_tree: CostTree::new(),
-                delays: vec![(true.into(), visit.earliest), (false.into(), i32::MAX)],
+                delays: vec![(true.into(), earliest), (false.into(), i32::MAX)],
                 incumbent_idx: 0,
             });
             n_timepoints += 1;
@@ -475,7 +504,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
             resource_visits[visit.resource_id].push(visit_id);
             touched_intervals.push(visit_id);
-            new_time_points.push((visit_id, true.into(), visit.earliest));
+            new_time_points.push((visit_id, true.into(), earliest));
         }
     }
 
@@ -492,30 +521,46 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
     // Rows already added for interval-graph conflict encoding.
     let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
-    // Rows already added for SCL fixed-precedence encoding: (visit_id, time).
-    let mut scl_fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
+    // Rows already added for fixed-precedence encoding: (visit_id, time).
+    let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
     // let mut priorities: Vec<(VisitId, VisitId)> = Vec::new();
 
     // Optional: seed fixed-precedence (travel-time) constraints from the earliest
     // time points to reduce the number of "travel-time conflict" iterations.
-    if settings.use_scl_fixed_precedence && settings.seed_scl_from_earliest {
+    if settings.seed_scl_from_earliest {
         for visit_id in visits.keys() {
             let (train_idx, visit_idx) = visits[visit_id];
             if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
                 continue;
             }
             let (in_var, in_t) = occupations[visit_id].delays[0];
-            add_fixed_precedence_scl(
-                &mut solver,
-                problem,
-                &visits,
-                &mut occupations,
-                &mut new_time_points,
-                &mut scl_fixed_prec_rows,
-                visit_id,
-                in_var,
-                in_t,
-            );
+            if settings.use_precedence_graph {
+                propagate_precedence(
+                    &mut solver,
+                    problem,
+                    &visits,
+                    &mut occupations,
+                    &mut new_time_points,
+                    &mut fixed_prec_rows,
+                    visit_id,
+                    in_var,
+                    in_t,
+                    settings.use_scl_fixed_precedence,
+                );
+            } else if settings.use_scl_fixed_precedence {
+                let _ = add_fixed_precedence_row(
+                    &mut solver,
+                    problem,
+                    &visits,
+                    &mut occupations,
+                    &mut new_time_points,
+                    &mut fixed_prec_rows,
+                    visit_id,
+                    in_var,
+                    in_t,
+                    settings.use_scl_fixed_precedence,
+                );
+            }
         }
     }
 
@@ -643,30 +688,18 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         // Insert/update precedence row for this time point.
                         let in_var = v1.delays[v1.incumbent_idx].0;
                         let in_t = v1.incumbent_time();
-                        if settings.use_scl_fixed_precedence {
-                            add_fixed_precedence_scl(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut scl_fixed_prec_rows,
-                                visit_id,
-                                in_var,
-                                in_t,
-                            );
-                        } else {
-                            add_fixed_precedence_plain(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                visit_id,
-                                in_var,
-                                in_t,
-                            );
-                        }
+                        let _ = add_fixed_precedence_row(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            visit_id,
+                            in_var,
+                            in_t,
+                            settings.use_scl_fixed_precedence,
+                        );
                         stats.n_travel += 1;
                     }
 
@@ -853,30 +886,18 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             if is_new {
                                 new_time_points.push((m.visit_id, delay_after, target_t));
                             }
-                            if settings.use_scl_fixed_precedence {
-                                add_fixed_precedence_scl(
-                                    &mut solver,
-                                    problem,
-                                    &visits,
-                                    &mut occupations,
-                                    &mut new_time_points,
-                                    &mut scl_fixed_prec_rows,
-                                    m.visit_id,
-                                    delay_after,
-                                    target_t,
-                                );
-                            } else {
-                                add_fixed_precedence_plain(
-                                    &mut solver,
-                                    problem,
-                                    &visits,
-                                    &mut occupations,
-                                    &mut new_time_points,
-                                    m.visit_id,
-                                    delay_after,
-                                    target_t,
-                                );
-                            }
+                            let _ = add_fixed_precedence_row(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut fixed_prec_rows,
+                                m.visit_id,
+                                delay_after,
+                                target_t,
+                                settings.use_scl_fixed_precedence,
+                            );
                         }
 
                         let mut clique_lits = Vec::with_capacity(members.len());
@@ -975,59 +996,35 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
                                 if t1_is_new {
                                     new_time_points.push((visit_id, delay_t1, t2_out));
-                                    if settings.use_scl_fixed_precedence {
-                                        add_fixed_precedence_scl(
-                                            &mut solver,
-                                            problem,
-                                            &visits,
-                                            &mut occupations,
-                                            &mut new_time_points,
-                                            &mut scl_fixed_prec_rows,
-                                            visit_id,
-                                            delay_t1,
-                                            t2_out,
-                                        );
-                                    } else {
-                                        add_fixed_precedence_plain(
-                                            &mut solver,
-                                            problem,
-                                            &visits,
-                                            &mut occupations,
-                                            &mut new_time_points,
-                                            visit_id,
-                                            delay_t1,
-                                            t2_out,
-                                        );
-                                    }
                                 }
+                                let _ = add_fixed_precedence_row(
+                                    &mut solver,
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut fixed_prec_rows,
+                                    visit_id,
+                                    delay_t1,
+                                    t2_out,
+                                    settings.use_scl_fixed_precedence,
+                                );
 
                                 if t2_is_new {
                                     new_time_points.push((other_visit, delay_t2, t1_out));
-                                    if settings.use_scl_fixed_precedence {
-                                        add_fixed_precedence_scl(
-                                            &mut solver,
-                                            problem,
-                                            &visits,
-                                            &mut occupations,
-                                            &mut new_time_points,
-                                            &mut scl_fixed_prec_rows,
-                                            other_visit,
-                                            delay_t2,
-                                            t1_out,
-                                        );
-                                    } else {
-                                        add_fixed_precedence_plain(
-                                            &mut solver,
-                                            problem,
-                                            &visits,
-                                            &mut occupations,
-                                            &mut new_time_points,
-                                            other_visit,
-                                            delay_t2,
-                                            t1_out,
-                                        );
-                                    }
                                 }
+                                let _ = add_fixed_precedence_row(
+                                    &mut solver,
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut fixed_prec_rows,
+                                    other_visit,
+                                    delay_t2,
+                                    t1_out,
+                                    settings.use_scl_fixed_precedence,
+                                );
 
                                 let t1_out_lit = next_visit
                                     .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
@@ -1862,44 +1859,9 @@ fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bo
     }
 }
 
-/// Add plain fixed precedence row for a single chosen in-time point:
-/// d_r(t) -> d_q(t + travel).
-///
-/// This is the non-SCL fallback used when SCL mode is disabled.
-fn add_fixed_precedence_plain<L: satcoder::Lit>(
-    solver: &mut impl SatInstance<L>,
-    problem: &Problem,
-    visits: &TiVec<VisitId, (usize, usize)>,
-    occupations: &mut TiVec<VisitId, Occ<L>>,
-    new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
-    visit_id: VisitId,
-    in_var: Bool<L>,
-    in_t: i32,
-) {
-    let (train_idx, visit_idx) = visits[visit_id];
-    if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
-        return;
-    }
-
-    let travel = problem.trains[train_idx].visits[visit_idx].travel_time;
-    let next_visit: VisitId = (usize::from(visit_id) + 1).into();
-    let req_t = in_t + travel;
-
-    let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
-    solver.add_clause(vec![!in_var, req_var]);
-    if is_new {
-        new_time_points.push((next_visit, req_var, req_t));
-    }
-}
-
-/// Add the SCL-compressed fixed-precedence constraint for a single time point.
-///
-/// Given an in-visit `visit_id` on train i at time t with ladder literal `in_var` (= "time >= t"),
-/// we enforce that the next visit on the same train must satisfy time >= t + travel_time.
-///
-/// This is the ladder/SCL analogue of the fixed precedence clique:
-///   x_{ir}^p + sum_{t<=K(p)} x_{iq}^t <= 1.
-fn add_fixed_precedence_scl<L: satcoder::Lit>(
+/// Add a fixed precedence row for one chosen time point and return the
+/// propagated successor time point for further queue-based propagation.
+fn add_fixed_precedence_row<L: satcoder::Lit>(
     solver: &mut impl SatInstance<L>,
     problem: &Problem,
     visits: &TiVec<VisitId, (usize, usize)>,
@@ -1909,15 +1871,15 @@ fn add_fixed_precedence_scl<L: satcoder::Lit>(
     visit_id: VisitId,
     in_var: Bool<L>,
     in_t: i32,
-) {
-    // Avoid adding the same precedence row multiple times.
+    use_scl_fixed_precedence: bool,
+) -> Option<(VisitId, Bool<L>, i32)> {
     if !added.insert((visit_id, in_t)) {
-        return;
+        return None;
     }
 
     let (train_idx, visit_idx) = visits[visit_id];
     if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
-        return; // last visit on train
+        return None;
     }
 
     let travel = problem.trains[train_idx].visits[visit_idx].travel_time;
@@ -1926,14 +1888,50 @@ fn add_fixed_precedence_scl<L: satcoder::Lit>(
 
     let earliest_next = occupations[next_visit].delays[0].1;
     if req_t <= earliest_next {
-        // Already implied by the earliest time on the next visit.
-        return;
+        return Some((next_visit, true.into(), earliest_next));
     }
 
     let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
-    // d_r(t) -> d_q(t + travel)
-    solver.add_clause(vec![!in_var, req_var]);
+    if use_scl_fixed_precedence {
+        solver.add_clause(vec![!in_var, req_var]);
+    } else {
+        solver.add_clause(vec![!in_var, req_var]);
+    }
     if is_new {
         new_time_points.push((next_visit, req_var, req_t));
+    }
+
+    Some((next_visit, req_var, req_t))
+}
+
+fn propagate_precedence<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    problem: &Problem,
+    visits: &TiVec<VisitId, (usize, usize)>,
+    occupations: &mut TiVec<VisitId, Occ<L>>,
+    new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
+    added: &mut HashSet<(VisitId, i32)>,
+    start_visit: VisitId,
+    start_var: Bool<L>,
+    start_t: i32,
+    use_scl_fixed_precedence: bool,
+) {
+    let mut queue = VecDeque::from([(start_visit, start_var, start_t)]);
+
+    while let Some((visit_id, in_var, in_t)) = queue.pop_front() {
+        if let Some(next) = add_fixed_precedence_row(
+            solver,
+            problem,
+            visits,
+            occupations,
+            new_time_points,
+            added,
+            visit_id,
+            in_var,
+            in_t,
+            use_scl_fixed_precedence,
+        ) {
+            queue.push_back(next);
+        }
     }
 }

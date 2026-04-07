@@ -48,9 +48,17 @@ struct Opt {
     #[structopt(long)]
     json_output: Option<String>,
 
+    /// Toggle precedence-graph preprocessing/propagation in `sat_ddd*` solvers (true/false).
+    #[structopt(long)]
+    satddd_use_precedence_graph: Option<bool>,
+
     /// Toggle SCL fixed-precedence rows in `maxsat_ddd_ladder_scl` (true/false).
     #[structopt(long)]
     maxsatddd_ladder_scl_use_scl: Option<bool>,
+
+    /// Toggle precedence-graph preprocessing/propagation in `maxsat_ddd_ladder_scl` (true/false).
+    #[structopt(long)]
+    maxsatddd_ladder_scl_use_precedence_graph: Option<bool>,
 
     /// Toggle interval-graph conflict encoding in `maxsat_ddd_ladder_scl` (true/false).
     #[structopt(long)]
@@ -278,7 +286,7 @@ enum SolverType {
     MaxSatDddPairwiseCustomRc2NoProp,
 }
 
-const TIMEOUT: f64 = 600.0;
+const TIMEOUT: f64 = 120.0;
 
 fn mk_env() -> grb::Env {
     let mut env = grb::Env::new("").unwrap();
@@ -353,6 +361,9 @@ fn main() {
         .map(parse_delay_cost_type_or_panic);
 
     let maxsatddd_ladder_scl_settings = maxsatddd_ladder_scl::MaxSatDddLadderSclSettings {
+        use_precedence_graph: opt
+            .maxsatddd_ladder_scl_use_precedence_graph
+            .unwrap_or(true),
         use_scl_fixed_precedence: opt.maxsatddd_ladder_scl_use_scl.unwrap_or(true),
         use_interval_graph_conflicts: opt
             .maxsatddd_ladder_scl_use_interval_tree
@@ -371,6 +382,10 @@ fn main() {
         .map(parse_sat_objective_encoding_or_panic)
         .unwrap_or(ddd_solvers::sat::SatObjectiveEncoding::Scpb);
     println!("SatDdd objective encoding {:?}", satddd_objective_encoding);
+    let satddd_settings = ddd_solvers::sat::SatDddSettings {
+        use_precedence_graph: opt.satddd_use_precedence_graph.unwrap_or(true),
+    };
+    println!("SatDdd settings {:?}", satddd_settings);
 
     let perf_out = RefCell::new(String::new());
 
@@ -439,411 +454,425 @@ fn main() {
             println!("Starting solver {:?}", solver);
             let mut solve_data = serde_json::Map::new();
 
-            solution = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match solver {
-                SolverType::Cutting => unimplemented!(),
-                // ddd::solvers::cutting::solve_cutting(
-                //     &p.problem,
-                //     delay_cost_type,
-                //     TIMEOUT,
-                //     &p.train_names,
-                //     &p.resource_names,
-                //     |k, v| {
-                //         solve_data.insert(k, v);
-                //     },
-                // ),
-                SolverType::Greedy => {
-                    greedy::solve2(&p.problem, get_env(), delay_cost_type, default_heuristic)
-                }
-                SolverType::GreedyFast => heuristic::solve_heuristic_better(
-                    get_env(),
-                    &p.problem,
-                    delay_cost_type,
-                    false,
-                    None,
-                )
-                .and_then(|e| e.ok_or(SolverError::NoSolution)),
-                SolverType::GreedyFStr => heuristic::solve_heuristic_better(
-                    get_env(),
-                    &p.problem,
-                    delay_cost_type,
-                    true,
-                    None,
-                )
-                .and_then(|e| e.ok_or(SolverError::NoSolution)),
-                SolverType::BigMEager => bigm::solve_bigm(
-                    get_env(),
-                    &mk_env,
-                    &p.problem,
-                    delay_cost_type,
-                    false,
-                    TIMEOUT,
-                    &p.train_names,
-                    &p.resource_names,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                ),
-                SolverType::MipHull => bigm::solve_hull(
-                    get_env(),
-                    &mk_env,
-                    &p.problem,
-                    delay_cost_type,
-                    true,
-                    TIMEOUT,
-                    &p.train_names,
-                    &p.resource_names,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                ),
-                SolverType::BigMLazy => bigm::solve_bigm(
-                    get_env(),
-                    &mk_env,
-                    &p.problem,
-                    delay_cost_type,
-                    true,
-                    TIMEOUT,
-                    &p.train_names,
-                    &p.resource_names,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                ),
-                SolverType::MaxSatTi => maxsat_ti::solve(
-                    maxsatsolver::Incremental::new(),
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                    10,
-                    900,
-                )
-                .map(|(v, _)| v),
-                SolverType::MipTi => milp_ti::solve(
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                    10,
-                    900,
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddExternal => maxsat_ddd::solve(
-                    || maxsatsolver::External::new(/* "./uwrmaxsat" */),
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddIpamir => maxsat_ddd::solve(
-                    || maxsatsolver::Incremental::new(),
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddIncremental => maxsat_ddd::solve_incremental(
-                    || maxsatsolver::Incremental::new(),
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    true,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddIncrementalNoProp => maxsat_ddd::solve_incremental(
-                    || maxsatsolver::Incremental::new(),
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    false,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddPairwiseCustomRc2 => maxsat_ddd::solve_incremental(
-                    || {
-                        maxsatsolver::CustomRC2Incremental::new(
-                            satcoder::solvers::minisat::Solver::new(),
-                        )
-                    },
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    true,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddPairwiseCustomRc2NoProp => maxsat_ddd::solve_incremental(
-                    || {
-                        maxsatsolver::CustomRC2Incremental::new(
-                            satcoder::solvers::minisat::Solver::new(),
-                        )
-                    },
-                    get_env(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    false,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddLadderScl => maxsatddd_ladder_scl::solve_with_settings(
-                    &mk_env,
-                    satcoder::solvers::minisat::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    maxsatddd_ladder_scl_settings,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddLadderRC2 => maxsatddd_ladder::solve(
-                    &mk_env,
-                    satcoder::solvers::minisat::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddLadderRC2Abstract => maxsatddd_ladder_abstract::solve(
-                    &mk_env,
-                    maxsatsolver::CustomRC2Incremental::new(
-                        satcoder::solvers::minisat::Solver::new(),
-                    ),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddLadderIpamir => maxsatddd_ladder_abstract::solve(
-                    &mk_env,
-                    maxsatsolver::Incremental::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatDddCadical => maxsatddd_ladder::solve(
-                    &mk_env,
-                    satcoder::solvers::minisat::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::SatDdd => ddd_solvers::sat::solve_with_encoding(
-                    &mk_env,
-                    satcoder::solvers::rustsat_glucose::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    satddd_objective_encoding,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MaxSatIdl => {
-                    eprintln!("Error: IDL solver is not available in this build.");
-                    Err(SolverError::NoSolution)
-                }
-                SolverType::SatDddInc => ddd_solvers::sat::solve_incremental_with_encoding(
-                    &mk_env,
-                    satcoder::solvers::rustsat_glucose::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    satddd_objective_encoding,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::SatDddScl => ddd_solvers::sat::solve_scl_with_encoding(
-                    &mk_env,
-                    satcoder::solvers::rustsat_glucose::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    satddd_objective_encoding,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::SatDddSclTotalizer => ddd_solvers::sat::solve_scl_with_encoding(
-                    &mk_env,
-                    satcoder::solvers::rustsat_glucose::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::SatDddSclInc => ddd_solvers::sat::solve_incremental_scl_with_encoding(
-                    &mk_env,
-                    satcoder::solvers::rustsat_glucose::Solver::new(),
-                    &p.problem,
-                    TIMEOUT,
-                    delay_cost_type,
-                    satddd_objective_encoding,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                )
-                .map(|(v, _)| v),
-                SolverType::MipDdd => ddd::solvers::mipdddpack::solve(
-                    &mk_env,
-                    get_env(),
-                    &p.problem,
-                    delay_cost_type,
-                    TIMEOUT,
-                    |k, v| {
-                        solve_data.insert(k, v);
-                    },
-                ),
-                SolverType::BinarizedBigMEager10Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        false,
-                        10,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-                SolverType::BinarizedBigMEager30Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        false,
-                        30,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-                SolverType::BinarizedBigMEager60Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        false,
-                        60,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-                SolverType::BinarizedBigMLazy10Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        true,
-                        10,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-                SolverType::BinarizedBigMLazy30Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        true,
-                        30,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-                SolverType::BinarizedBigMLazy60Sec => {
-                    ddd::solvers::binarizedbigm::solve_binarized_bigm(
-                        get_env(),
-                        &p.problem,
-                        delay_cost_type,
-                        true,
-                        60,
-                        TIMEOUT,
-                        &p.train_names,
-                        &p.resource_names,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                }
-            })) {
-                Ok(result) => result,
-                Err(payload) => {
-                    if is_likely_oom_panic(payload.as_ref()) {
-                        Err(SolverError::OutOfMemory)
-                    } else {
-                        std::panic::resume_unwind(payload);
+            solution =
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match solver {
+                    SolverType::Cutting => unimplemented!(),
+                    // ddd::solvers::cutting::solve_cutting(
+                    //     &p.problem,
+                    //     delay_cost_type,
+                    //     TIMEOUT,
+                    //     &p.train_names,
+                    //     &p.resource_names,
+                    //     |k, v| {
+                    //         solve_data.insert(k, v);
+                    //     },
+                    // ),
+                    SolverType::Greedy => {
+                        greedy::solve2(&p.problem, get_env(), delay_cost_type, default_heuristic)
                     }
-                }
-            };
+                    SolverType::GreedyFast => heuristic::solve_heuristic_better(
+                        get_env(),
+                        &p.problem,
+                        delay_cost_type,
+                        false,
+                        None,
+                    )
+                    .and_then(|e| e.ok_or(SolverError::NoSolution)),
+                    SolverType::GreedyFStr => heuristic::solve_heuristic_better(
+                        get_env(),
+                        &p.problem,
+                        delay_cost_type,
+                        true,
+                        None,
+                    )
+                    .and_then(|e| e.ok_or(SolverError::NoSolution)),
+                    SolverType::BigMEager => bigm::solve_bigm(
+                        get_env(),
+                        &mk_env,
+                        &p.problem,
+                        delay_cost_type,
+                        false,
+                        TIMEOUT,
+                        &p.train_names,
+                        &p.resource_names,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    ),
+                    SolverType::MipHull => bigm::solve_hull(
+                        get_env(),
+                        &mk_env,
+                        &p.problem,
+                        delay_cost_type,
+                        true,
+                        TIMEOUT,
+                        &p.train_names,
+                        &p.resource_names,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    ),
+                    SolverType::BigMLazy => bigm::solve_bigm(
+                        get_env(),
+                        &mk_env,
+                        &p.problem,
+                        delay_cost_type,
+                        true,
+                        TIMEOUT,
+                        &p.train_names,
+                        &p.resource_names,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    ),
+                    SolverType::MaxSatTi => maxsat_ti::solve(
+                        maxsatsolver::Incremental::new(),
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                        10,
+                        900,
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MipTi => milp_ti::solve(
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                        10,
+                        900,
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddExternal => maxsat_ddd::solve(
+                        || maxsatsolver::External::new(/* "./uwrmaxsat" */),
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddIpamir => maxsat_ddd::solve(
+                        || maxsatsolver::Incremental::new(),
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddIncremental => maxsat_ddd::solve_incremental(
+                        || maxsatsolver::Incremental::new(),
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        true,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddIncrementalNoProp => maxsat_ddd::solve_incremental(
+                        || maxsatsolver::Incremental::new(),
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        false,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddPairwiseCustomRc2 => maxsat_ddd::solve_incremental(
+                        || {
+                            maxsatsolver::CustomRC2Incremental::new(
+                                satcoder::solvers::minisat::Solver::new(),
+                            )
+                        },
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        true,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddPairwiseCustomRc2NoProp => maxsat_ddd::solve_incremental(
+                        || {
+                            maxsatsolver::CustomRC2Incremental::new(
+                                satcoder::solvers::minisat::Solver::new(),
+                            )
+                        },
+                        get_env(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        false,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddLadderScl => maxsatddd_ladder_scl::solve_with_settings(
+                        &mk_env,
+                        satcoder::solvers::minisat::Solver::new(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        maxsatddd_ladder_scl_settings,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddLadderRC2 => maxsatddd_ladder::solve(
+                        &mk_env,
+                        satcoder::solvers::minisat::Solver::new(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddLadderRC2Abstract => maxsatddd_ladder_abstract::solve(
+                        &mk_env,
+                        maxsatsolver::CustomRC2Incremental::new(
+                            satcoder::solvers::minisat::Solver::new(),
+                        ),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddLadderIpamir => maxsatddd_ladder_abstract::solve(
+                        &mk_env,
+                        maxsatsolver::Incremental::new(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddCadical => maxsatddd_ladder::solve(
+                        &mk_env,
+                        satcoder::solvers::minisat::Solver::new(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::SatDdd => ddd_solvers::sat::solve_with_encoding_and_settings(
+                        &mk_env,
+                        satcoder::solvers::rustsat_glucose::Solver::new(),
+                        &p.problem,
+                        TIMEOUT,
+                        delay_cost_type,
+                        satddd_objective_encoding,
+                        satddd_settings,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    )
+                    .map(|(v, _)| v),
+                    SolverType::MaxSatIdl => {
+                        eprintln!("Error: IDL solver is not available in this build.");
+                        Err(SolverError::NoSolution)
+                    }
+                    SolverType::SatDddInc => {
+                        ddd_solvers::sat::solve_incremental_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            satddd_objective_encoding,
+                            satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::SatDddScl => {
+                        ddd_solvers::sat::solve_scl_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            satddd_objective_encoding,
+                            satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::SatDddSclTotalizer => {
+                        ddd_solvers::sat::solve_scl_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer,
+                            satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::SatDddSclInc => {
+                        ddd_solvers::sat::solve_incremental_scl_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            satddd_objective_encoding,
+                            satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::MipDdd => ddd::solvers::mipdddpack::solve(
+                        &mk_env,
+                        get_env(),
+                        &p.problem,
+                        delay_cost_type,
+                        TIMEOUT,
+                        |k, v| {
+                            solve_data.insert(k, v);
+                        },
+                    ),
+                    SolverType::BinarizedBigMEager10Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            false,
+                            10,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                    SolverType::BinarizedBigMEager30Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            false,
+                            30,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                    SolverType::BinarizedBigMEager60Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            false,
+                            60,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                    SolverType::BinarizedBigMLazy10Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            true,
+                            10,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                    SolverType::BinarizedBigMLazy30Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            true,
+                            30,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                    SolverType::BinarizedBigMLazy60Sec => {
+                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                            get_env(),
+                            &p.problem,
+                            delay_cost_type,
+                            true,
+                            60,
+                            TIMEOUT,
+                            &p.train_names,
+                            &p.resource_names,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                    }
+                })) {
+                    Ok(result) => result,
+                    Err(payload) => {
+                        if is_likely_oom_panic(payload.as_ref()) {
+                            Err(SolverError::OutOfMemory)
+                        } else {
+                            std::panic::resume_unwind(payload);
+                        }
+                    }
+                };
             hprof::end_frame();
             let solver_name = format!("{:?}", solver);
             solve_data.insert("solver_name".to_string(), solver_name.clone().into());
@@ -867,8 +896,7 @@ fn main() {
             solve_data.insert("status".to_string(), solve_status.into());
             if matches!(solution, Err(SolverError::Timeout)) && !solve_data.contains_key("sol_time")
             {
-                if let Some(total_time_secs) =
-                    solve_data.get("total_time").and_then(|v| v.as_f64())
+                if let Some(total_time_secs) = solve_data.get("total_time").and_then(|v| v.as_f64())
                 {
                     solve_data.insert("sol_time".to_string(), (total_time_secs * 1000.0).into());
                 }

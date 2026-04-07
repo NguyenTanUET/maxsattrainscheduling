@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     sync::mpsc,
     time::{Duration, Instant},
 };
@@ -34,11 +34,11 @@ use satcoder::{
 };
 use typed_index_collections::TiVec;
 
-use crate::solvers::SolverError;
 use super::{
     common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
     costtree::CostTree,
 };
+use crate::solvers::SolverError;
 
 type NativeLit = RsLit;
 
@@ -69,6 +69,19 @@ struct ResourceCliqueRowKey {
 pub enum SatObjectiveEncoding {
     Scpb,
     IncrementalTotalizer,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SatDddSettings {
+    pub use_precedence_graph: bool,
+}
+
+impl Default for SatDddSettings {
+    fn default() -> Self {
+        Self {
+            use_precedence_graph: true,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -344,6 +357,28 @@ pub fn solve_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_with_encoding_and_settings(
+        mk_env,
+        _solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        encoding,
+        SatDddSettings::default(),
+        output_stats,
+    )
+}
+
+pub fn solve_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     let mode = SatBoundMode::Assumptions;
     solve_native_debug_with_mode(
         mk_env,
@@ -351,6 +386,7 @@ pub fn solve_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         encoding,
+        settings,
         mode,
         SatPrecEncoding::Plain,
         SatSearchMode::UbSearch,
@@ -390,12 +426,35 @@ pub fn solve_incremental_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_incremental_with_encoding_and_settings(
+        mk_env,
+        _solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        encoding,
+        SatDddSettings::default(),
+        output_stats,
+    )
+}
+
+pub fn solve_incremental_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     solve_native_debug_with_mode(
         mk_env,
         problem,
         timeout,
         delay_cost_type,
         encoding,
+        settings,
         SatBoundMode::Assumptions,
         SatPrecEncoding::Plain,
         SatSearchMode::Invalid,
@@ -433,6 +492,28 @@ pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_scl_with_encoding_and_settings(
+        mk_env,
+        _solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        encoding,
+        SatDddSettings::default(),
+        output_stats,
+    )
+}
+
+pub fn solve_scl_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     let mode = SatBoundMode::Assumptions;
     solve_native_debug_with_mode(
         mk_env,
@@ -440,6 +521,7 @@ pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         encoding,
+        settings,
         mode,
         SatPrecEncoding::Scl,
         SatSearchMode::UbSearch,
@@ -477,12 +559,37 @@ pub fn solve_incremental_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::D
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    solve_incremental_scl_with_encoding_and_settings(
+        mk_env,
+        _solver,
+        problem,
+        timeout,
+        delay_cost_type,
+        encoding,
+        SatDddSettings::default(),
+        output_stats,
+    )
+}
+
+pub fn solve_incremental_scl_with_encoding_and_settings<
+    L: satcoder::Lit + Copy + std::fmt::Debug,
+>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
     solve_native_debug_with_mode(
         mk_env,
         problem,
         timeout,
         delay_cost_type,
         encoding,
+        settings,
         SatBoundMode::Assumptions,
         SatPrecEncoding::Scl,
         SatSearchMode::UbSearch,
@@ -506,6 +613,7 @@ pub fn solve_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatObjectiveEncoding::Scpb,
+        SatDddSettings::default(),
         mode,
         SatPrecEncoding::Plain,
         SatSearchMode::UbSearch,
@@ -530,6 +638,7 @@ pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatObjectiveEncoding::Scpb,
+        SatDddSettings::default(),
         mode,
         SatPrecEncoding::Scl,
         search,
@@ -623,11 +732,7 @@ fn encode_scpb_leq(
 
             let target_idx = bit_idx + weight;
             if target_idx < row.len() {
-                add_guarded_clause(
-                    solver,
-                    gate,
-                    [!term, !prev_row[bit_idx], row[target_idx]],
-                );
+                add_guarded_clause(solver, gate, [!term, !prev_row[bit_idx], row[target_idx]]);
             }
         }
     }
@@ -686,6 +791,25 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     }
 
     Ok(None)
+}
+
+fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
+    let mut effective = Vec::with_capacity(problem.trains.len());
+
+    for train in &problem.trains {
+        let mut train_bounds = Vec::with_capacity(train.visits.len());
+        let mut propagated_lb: Option<i32> = None;
+
+        for visit in &train.visits {
+            let lb = propagated_lb.map_or(visit.earliest, |prev_lb| prev_lb.max(visit.earliest));
+            train_bounds.push(lb);
+            propagated_lb = Some(lb + visit.travel_time);
+        }
+
+        effective.push(train_bounds);
+    }
+
+    effective
 }
 
 fn current_interval_choice_lit<L: satcoder::Lit>(
@@ -771,6 +895,7 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatObjectiveEncoding::Scpb,
+        SatDddSettings::default(),
         SatBoundMode::AddClauses,
         SatPrecEncoding::Plain,
         SatSearchMode::UbSearch,
@@ -797,6 +922,7 @@ pub fn solve_debug_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
         timeout,
         delay_cost_type,
         SatObjectiveEncoding::Scpb,
+        SatDddSettings::default(),
         mode,
         prec,
         search,
@@ -811,6 +937,7 @@ fn solve_native_debug_with_mode(
     timeout: f64,
     delay_cost_type: DelayCostType,
     encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
     mode: SatBoundMode,
     prec: SatPrecEncoding,
     search: SatSearchMode,
@@ -836,6 +963,9 @@ fn solve_native_debug_with_mode(
     let mut touched_intervals = Vec::new();
     let mut conflicts: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut new_time_points: Vec<(VisitId, Bool<NativeLit>, i32)> = Vec::new();
+    let effective_earliest = settings
+        .use_precedence_graph
+        .then(|| compute_effective_earliest(problem));
 
     let mut iteration_types: BTreeMap<IterationType, usize> = BTreeMap::new();
 
@@ -853,11 +983,15 @@ fn solve_native_debug_with_mode(
         for (visit_idx, visit) in train.visits.iter().enumerate() {
             let visit_id: VisitId = visits.push_and_get_key((train_idx, visit_idx));
             train_visit_ids[train_idx].push(visit_id);
+            let earliest = effective_earliest
+                .as_ref()
+                .map(|bounds| bounds[train_idx][visit_idx])
+                .unwrap_or(visit.earliest);
 
             occupations.push(Occ {
                 cost: vec![true.into()],
                 cost_tree: CostTree::new(),
-                delays: vec![(true.into(), visit.earliest), (false.into(), i32::MAX)],
+                delays: vec![(true.into(), earliest), (false.into(), i32::MAX)],
                 incumbent_idx: 0,
             });
             n_timepoints += 1;
@@ -868,7 +1002,7 @@ fn solve_native_debug_with_mode(
 
             resource_visits[visit.resource_id].push(visit_id);
             touched_intervals.push(visit_id);
-            new_time_points.push((visit_id, true.into(), visit.earliest));
+            new_time_points.push((visit_id, true.into(), earliest));
         }
     }
 
@@ -886,38 +1020,51 @@ fn solve_native_debug_with_mode(
     let mut last_added_bound: Option<usize> = None;
 
     let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
-    let mut scl_fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
+    let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
 
-    const SEED_SCL_FROM_EARLIEST: bool = true;
-    if prec == SatPrecEncoding::Scl && SEED_SCL_FROM_EARLIEST {
+    const SEED_PRECEDENCE_FROM_EARLIEST: bool = true;
+    if SEED_PRECEDENCE_FROM_EARLIEST {
         for visit_id in visits.keys() {
             let (train_idx, visit_idx) = visits[visit_id];
             if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
                 continue;
             }
             let (in_var, in_t) = occupations[visit_id].delays[0];
-            add_fixed_precedence_scl(
-                &mut solver,
-                problem,
-                &visits,
-                &mut occupations,
-                &mut new_time_points,
-                &mut scl_fixed_prec_rows,
-                visit_id,
-                in_var,
-                in_t,
-            );
+            if settings.use_precedence_graph {
+                propagate_precedence(
+                    &mut solver,
+                    problem,
+                    &visits,
+                    &mut occupations,
+                    &mut new_time_points,
+                    &mut fixed_prec_rows,
+                    visit_id,
+                    in_var,
+                    in_t,
+                    prec,
+                );
+            } else if prec == SatPrecEncoding::Scl {
+                let _ = add_fixed_precedence_row(
+                    &mut solver,
+                    problem,
+                    &visits,
+                    &mut occupations,
+                    &mut new_time_points,
+                    &mut fixed_prec_rows,
+                    visit_id,
+                    in_var,
+                    in_t,
+                    prec,
+                );
+            }
         }
     }
 
     const USE_INITIAL_HEURISTIC_UB_ONLY: bool = true;
     if USE_INITIAL_HEURISTIC_UB_ONLY {
-        if let Some((ub_cost, ub_sol)) = compute_initial_heuristic_upper_bound(
-            &mk_env,
-            problem,
-            delay_cost_type,
-            &occupations,
-        )? {
+        if let Some((ub_cost, ub_sol)) =
+            compute_initial_heuristic_upper_bound(&mk_env, problem, delay_cost_type, &occupations)?
+        {
             println!("SAT initial heuristic UB={}", ub_cost);
             best_sol = Some((ub_cost, ub_sol));
             if search == SatSearchMode::UbSearch {
@@ -990,37 +1137,21 @@ fn solve_native_debug_with_mode(
                             solution: extract_solution(problem, &occupations),
                         });
 
-                        if prec == SatPrecEncoding::Scl {
-                            let in_var = v1.delays[v1.incumbent_idx].0;
-                            let in_t = v1.incumbent_time();
-                            add_fixed_precedence_scl(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut scl_fixed_prec_rows,
-                                visit_id,
-                                in_var,
-                                in_t,
-                            );
-                            stats.n_travel += 1;
-                        } else {
-                            let t1_in_var = v1.delays[v1.incumbent_idx].0;
-                            let new_t = v1.incumbent_time() + visit.travel_time;
-                            let (t1_earliest_out_var, t1_is_new) =
-                                occupations[next_visit].time_point(&mut solver, new_t);
-
-                            SatInstance::add_clause(
-                                &mut solver,
-                                vec![!t1_in_var, t1_earliest_out_var],
-                            );
-                            stats.n_travel += 1;
-
-                            if t1_is_new {
-                                new_time_points.push((next_visit, t1_earliest_out_var, new_t));
-                            }
-                        }
+                        let in_var = v1.delays[v1.incumbent_idx].0;
+                        let in_t = v1.incumbent_time();
+                        let _ = add_fixed_precedence_row(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            visit_id,
+                            in_var,
+                            in_t,
+                            prec,
+                        );
+                        stats.n_travel += 1;
                     }
                 }
             }
@@ -1172,19 +1303,18 @@ fn solve_native_debug_with_mode(
                         if is_new {
                             new_time_points.push((m.visit_id, delay_after, target_t));
                         }
-                        if prec == SatPrecEncoding::Scl {
-                            add_fixed_precedence_scl(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut scl_fixed_prec_rows,
-                                m.visit_id,
-                                delay_after,
-                                target_t,
-                            );
-                        }
+                        let _ = add_fixed_precedence_row(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            m.visit_id,
+                            delay_after,
+                            target_t,
+                            prec,
+                        );
                     }
 
                     let mut clique_lits = Vec::with_capacity(members.len());
@@ -1233,7 +1363,9 @@ fn solve_native_debug_with_mode(
                 if search == SatSearchMode::UbSearch {
                     let candidate_ub = cost - 1;
                     upper_bound = Some(
-                        upper_bound.map(|b| b.min(candidate_ub)).unwrap_or(candidate_ub),
+                        upper_bound
+                            .map(|b| b.min(candidate_ub))
+                            .unwrap_or(candidate_ub),
                     );
                     if use_cont_fixed_query {
                         cont_active_query_bound = None;
@@ -1366,10 +1498,8 @@ fn solve_native_debug_with_mode(
                             bound_used = Some(target_ub);
                             match mode {
                                 SatBoundMode::AddClauses => {
-                                    let encoded_terms = scpb_addclauses_bounds
-                                        .get(&ub_usize)
-                                        .copied()
-                                        .unwrap_or(0);
+                                    let encoded_terms =
+                                        scpb_addclauses_bounds.get(&ub_usize).copied().unwrap_or(0);
                                     if encoded_terms < scpb_terms.len() {
                                         encode_scpb_leq(&mut solver, &scpb_terms, ub_usize, None);
                                         scpb_addclauses_bounds.insert(ub_usize, scpb_terms.len());
@@ -1390,10 +1520,8 @@ fn solve_native_debug_with_mode(
                                                 ub_usize,
                                                 Some(selector),
                                             );
-                                            scpb_assumption_bounds.insert(
-                                                ub_usize,
-                                                (scpb_terms.len(), selector),
-                                            );
+                                            scpb_assumption_bounds
+                                                .insert(ub_usize, (scpb_terms.len(), selector));
                                             selector
                                         }
                                     };
@@ -1409,7 +1537,11 @@ fn solve_native_debug_with_mode(
                                 let mut collector = NativeClauseCollector { inner };
                                 let mut var_manager = NativeVarManager { next_var };
                                 budget_gte
-                                    .encode_ub_change(0..=ub_usize, &mut collector, &mut var_manager)
+                                    .encode_ub_change(
+                                        0..=ub_usize,
+                                        &mut collector,
+                                        &mut var_manager,
+                                    )
                                     .map_err(|_| SolverError::OutOfMemory)?;
 
                                 budget_gte
@@ -1584,7 +1716,7 @@ fn solve_native_debug_with_mode(
     }
 }
 
-fn add_fixed_precedence_scl<L: satcoder::Lit>(
+fn add_fixed_precedence_row<L: satcoder::Lit>(
     solver: &mut impl SatInstance<L>,
     problem: &Problem,
     visits: &TiVec<VisitId, (usize, usize)>,
@@ -1594,14 +1726,15 @@ fn add_fixed_precedence_scl<L: satcoder::Lit>(
     visit_id: VisitId,
     in_var: Bool<L>,
     in_t: i32,
-) {
+    prec: SatPrecEncoding,
+) -> Option<(VisitId, Bool<L>, i32)> {
     if !added.insert((visit_id, in_t)) {
-        return;
+        return None;
     }
 
     let (train_idx, visit_idx) = visits[visit_id];
     if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
-        return;
+        return None;
     }
 
     let travel = problem.trains[train_idx].visits[visit_idx].travel_time;
@@ -1610,24 +1743,65 @@ fn add_fixed_precedence_scl<L: satcoder::Lit>(
 
     let earliest_next = occupations[next_visit].delays[0].1;
     if req_t <= earliest_next {
-        return;
+        return Some((next_visit, true.into(), earliest_next));
     }
 
     let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
-    const SCL_PAIRWISE_THRESHOLD: usize = 5;
-    let idx = occupations[next_visit]
-        .delays
-        .partition_point(|(_, t0)| *t0 < req_t);
-    if idx <= SCL_PAIRWISE_THRESHOLD {
-        for i in 0..idx {
-            let lit_i = occupations[next_visit].delays[i].0;
-            let lit_next = occupations[next_visit].delays[i + 1].0;
-            solver.add_clause(vec![!in_var, !lit_i, lit_next]);
+    match prec {
+        SatPrecEncoding::Plain => {
+            solver.add_clause(vec![!in_var, req_var]);
         }
-    } else {
-        solver.add_clause(vec![!in_var, req_var]);
+        SatPrecEncoding::Scl => {
+            const SCL_PAIRWISE_THRESHOLD: usize = 5;
+            let idx = occupations[next_visit]
+                .delays
+                .partition_point(|(_, t0)| *t0 < req_t);
+            if idx <= SCL_PAIRWISE_THRESHOLD {
+                for i in 0..idx {
+                    let lit_i = occupations[next_visit].delays[i].0;
+                    let lit_next = occupations[next_visit].delays[i + 1].0;
+                    solver.add_clause(vec![!in_var, !lit_i, lit_next]);
+                }
+            } else {
+                solver.add_clause(vec![!in_var, req_var]);
+            }
+        }
     }
     if is_new {
         new_time_points.push((next_visit, req_var, req_t));
+    }
+
+    Some((next_visit, req_var, req_t))
+}
+
+fn propagate_precedence<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    problem: &Problem,
+    visits: &TiVec<VisitId, (usize, usize)>,
+    occupations: &mut TiVec<VisitId, Occ<L>>,
+    new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
+    added: &mut HashSet<(VisitId, i32)>,
+    start_visit: VisitId,
+    start_var: Bool<L>,
+    start_t: i32,
+    prec: SatPrecEncoding,
+) {
+    let mut queue = VecDeque::from([(start_visit, start_var, start_t)]);
+
+    while let Some((visit_id, in_var, in_t)) = queue.pop_front() {
+        if let Some(next) = add_fixed_precedence_row(
+            solver,
+            problem,
+            visits,
+            occupations,
+            new_time_points,
+            added,
+            visit_id,
+            in_var,
+            in_t,
+            prec,
+        ) {
+            queue.push_back(next);
+        }
     }
 }
