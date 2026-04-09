@@ -259,7 +259,6 @@ fn assert_binary_le<L: satcoder::Lit + Copy + 'static>(
 struct BinaryObjective<L: satcoder::Lit> {
     reg_bits: Vec<Bool<L>>,
     remaining: Option<Binary<L>>,
-    hard_upper_bound: Option<usize>,
 }
 
 impl<L: satcoder::Lit + Copy + 'static> BinaryObjective<L> {
@@ -267,7 +266,6 @@ impl<L: satcoder::Lit + Copy + 'static> BinaryObjective<L> {
         Self {
             reg_bits: Vec::new(),
             remaining: None,
-            hard_upper_bound: None,
         }
     }
 
@@ -286,20 +284,16 @@ impl<L: satcoder::Lit + Copy + 'static> BinaryObjective<L> {
         self.remaining = Some(next_remaining);
     }
 
-    fn ensure_upper_bound(
+    fn ensure_capacity(
         &mut self,
         solver: &mut impl SatInstance<L>,
         soft_constraints: &mut HashMap<Bool<L>, (Soft<L>, usize, usize)>,
-        upper_bound: usize,
+        capacity: usize,
     ) {
-        let need_bits = bits_needed(upper_bound);
+        let need_bits = bits_needed(capacity);
+        let old_len = self.reg_bits.len();
 
         if need_bits > self.reg_bits.len() {
-            assert!(
-                self.remaining.is_none(),
-                "binary register width cannot grow after link constraints have been emitted"
-            );
-
             while self.reg_bits.len() < need_bits {
                 let bit = self.reg_bits.len();
                 let reg_bit = solver.new_var();
@@ -307,14 +301,18 @@ impl<L: satcoder::Lit + Copy + 'static> BinaryObjective<L> {
                 self.reg_bits.push(reg_bit);
                 soft_constraints.insert(!reg_bit, (Soft::Primary, weight, weight));
             }
-            self.remaining = Some(build_binary_register(&self.reg_bits));
         }
 
-        if self.hard_upper_bound.map_or(true, |old| upper_bound < old) {
-            let reg_expr = build_binary_register(&self.reg_bits);
-            let ub_expr = Binary::constant(upper_bound);
-            assert_binary_le(solver, &reg_expr, &ub_expr);
-            self.hard_upper_bound = Some(upper_bound);
+        if old_len == self.reg_bits.len() {
+            if self.remaining.is_none() {
+                self.remaining = Some(build_binary_register(&self.reg_bits));
+            }
+        } else if let Some(remaining) = self.remaining.take() {
+            let mut bits = remaining.into_list();
+            bits.extend(self.reg_bits[old_len..].iter().copied());
+            self.remaining = Some(Binary::from_list(bits));
+        } else {
+            self.remaining = Some(build_binary_register(&self.reg_bits));
         }
     }
 }
@@ -516,6 +514,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     let mut total_cost = 0;
     let mut soft_constraints = HashMap::new();
     let mut binary_objective = BinaryObjective::new();
+    let mut objective_capacity = 0usize;
     let mut debug_actions = Vec::new();
     // let mut cost_var_names: HashMap<Bool<L>, String> = HashMap::new();
 
@@ -570,6 +569,22 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     } else {
         None
     };
+    let mut injected_heuristic_cost: Option<i32> = None;
+    if !settings.use_precedence_graph {
+        if let Some((ub_cost, ub_sol)) = best_heur.as_ref() {
+            inject_solution_timepoints_maxsat(
+                &mut solver,
+                problem,
+                &visits,
+                &mut occupations,
+                &mut new_time_points,
+                &mut fixed_prec_rows,
+                settings.use_scl_fixed_precedence,
+                ub_sol,
+            );
+            injected_heuristic_cost = Some(*ub_cost);
+        }
+    }
 
     let heur_thread = USE_HEURISTIC.then(|| {
         let (sol_in_tx, sol_in_rx) = std::sync::mpsc::channel();
@@ -1137,12 +1152,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 return Ok((trains, stats));
             }
         }
-        let objective_ub = best_heur
-            .as_ref()
-            .map(|(ub_cost, _)| usize::try_from(*ub_cost).unwrap())
-            .expect("binary objective requires an initial heuristic upper bound");
-        binary_objective.ensure_upper_bound(&mut solver, &mut soft_constraints, objective_ub);
-
         for (visit, new_timepoint_var, new_t) in new_time_points.drain(..) {
             n_timepoints += 1;
             let (train_idx, visit_idx) = visits[visit];
@@ -1173,6 +1182,12 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         occupations[visit].cost.push(next_cost_var);
                         assert!(cost + 1 == occupations[visit].cost.len());
 
+                        objective_capacity = objective_capacity.saturating_add(1);
+                        binary_objective.ensure_capacity(
+                            &mut solver,
+                            &mut soft_constraints,
+                            objective_capacity,
+                        );
                         binary_objective.add_term(&mut solver, next_cost_var, 1);
                         // println!(
                         //     "Extending t{}v{} to cost {} {:?}",
@@ -1211,6 +1226,12 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     );
 
                     for (cost_var, weight) in emitted_terms {
+                        objective_capacity = objective_capacity.saturating_add(weight);
+                        binary_objective.ensure_capacity(
+                            &mut solver,
+                            &mut soft_constraints,
+                            objective_capacity,
+                        );
                         binary_objective.add_term(&mut solver, cost_var, weight);
                     }
                 }
@@ -1500,6 +1521,25 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             // Do weighted RC2
 
             if core.len() == 0 {
+                if !settings.use_precedence_graph {
+                    if let Some((ub_cost, ub_sol)) = best_heur.as_ref() {
+                        if injected_heuristic_cost != Some(*ub_cost) {
+                            inject_solution_timepoints_maxsat(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut fixed_prec_rows,
+                                settings.use_scl_fixed_precedence,
+                                ub_sol,
+                            );
+                            injected_heuristic_cost = Some(*ub_cost);
+                            iteration += 1;
+                            continue;
+                        }
+                    }
+                }
                 return Err(SolverError::NoSolution); // UNSAT
             }
 
@@ -1741,6 +1781,44 @@ fn extract_solution<L: satcoder::Lit>(
         trains.push(train_times);
     }
     trains
+}
+
+fn inject_solution_timepoints_maxsat<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    problem: &Problem,
+    visits: &TiVec<VisitId, (usize, usize)>,
+    occupations: &mut TiVec<VisitId, Occ<L>>,
+    new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
+    fixed_prec_rows: &mut HashSet<(VisitId, i32)>,
+    use_scl_fixed_precedence: bool,
+    sol: &[Vec<i32>],
+) {
+    let mut flat_visit = 0usize;
+    for (train_idx, train) in problem.trains.iter().enumerate() {
+        for visit_idx in 0..train.visits.len() {
+            let visit_id = VisitId(flat_visit as u32);
+            flat_visit += 1;
+            let time = sol[train_idx][visit_idx];
+            let (lit, is_new) = occupations[visit_id].time_point(solver, time);
+            if is_new {
+                new_time_points.push((visit_id, lit, time));
+            }
+            if visit_idx + 1 < train.visits.len() {
+                let _ = add_fixed_precedence_row(
+                    solver,
+                    problem,
+                    visits,
+                    occupations,
+                    new_time_points,
+                    fixed_prec_rows,
+                    visit_id,
+                    lit,
+                    time,
+                    use_scl_fixed_precedence,
+                );
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
