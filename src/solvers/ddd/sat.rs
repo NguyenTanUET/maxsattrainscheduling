@@ -749,10 +749,15 @@ fn encode_scpb_leq(
     }
 }
 
-fn encode_exact_unary_counter(
+fn encode_exact_unary_counter_limited(
     solver: &mut NativeSolver,
     inputs: &[Bool<NativeLit>],
+    max_threshold: usize,
 ) -> Vec<Bool<NativeLit>> {
+    if max_threshold == 0 {
+        return Vec::new();
+    }
+
     let mut fixed_true = 0usize;
     let mut variable_inputs = Vec::new();
 
@@ -764,43 +769,106 @@ fn encode_exact_unary_counter(
         }
     }
 
-    let mut prev: Vec<Bool<NativeLit>> = Vec::new();
-    for input in variable_inputs {
-        let mut row = Vec::with_capacity(prev.len() + 1);
-        for threshold in 1..=(prev.len() + 1) {
-            let prev_at_threshold = if threshold <= prev.len() {
-                prev[threshold - 1]
-            } else {
-                false.into()
-            };
-            let prev_before_threshold = if threshold == 1 {
-                true.into()
-            } else {
-                prev[threshold - 2]
-            };
-            let out = SatInstance::new_var(solver);
+    let max_variable_threshold = max_threshold.saturating_sub(fixed_true);
+    let variable_count =
+        encode_balanced_totalizer_limited(solver, &variable_inputs, max_variable_threshold);
 
-            // out <=> prev_at_threshold OR (input AND prev_before_threshold)
-            SatInstance::add_clause(solver, vec![!prev_at_threshold, out]);
-            SatInstance::add_clause(solver, vec![!input, !prev_before_threshold, out]);
-            SatInstance::add_clause(solver, vec![!out, prev_at_threshold, input]);
-            SatInstance::add_clause(solver, vec![!out, prev_at_threshold, prev_before_threshold]);
-
-            row.push(out);
-        }
-        prev = row;
-    }
-
-    let max_count = fixed_true + prev.len();
-    let mut outputs = Vec::with_capacity(max_count);
-    for threshold in 1..=max_count {
+    let mut outputs = Vec::with_capacity(max_threshold);
+    for threshold in 1..=max_threshold {
         if threshold <= fixed_true {
             outputs.push(true.into());
         } else {
-            outputs.push(prev[threshold - fixed_true - 1]);
+            let variable_threshold = threshold - fixed_true;
+            if variable_threshold <= variable_count.len() {
+                outputs.push(variable_count[variable_threshold - 1]);
+            } else {
+                outputs.push(false.into());
+            }
         }
     }
     outputs
+}
+
+fn unary_counter_at(counter: &[Bool<NativeLit>], threshold: usize) -> Bool<NativeLit> {
+    if threshold == 0 {
+        true.into()
+    } else {
+        counter.get(threshold - 1).copied().unwrap_or(false.into())
+    }
+}
+
+fn encode_totalizer_merge_limited(
+    solver: &mut NativeSolver,
+    left: &[Bool<NativeLit>],
+    right: &[Bool<NativeLit>],
+    limit: usize,
+) -> Vec<Bool<NativeLit>> {
+    let out_len = limit.min(left.len() + right.len());
+    if out_len == 0 {
+        return Vec::new();
+    }
+
+    let mut out = Vec::with_capacity(out_len);
+    for _ in 0..out_len {
+        out.push(SatInstance::new_var(solver));
+    }
+
+    for i in 1..=left.len().min(out_len) {
+        SatInstance::add_clause(solver, vec![!left[i - 1], out[i - 1]]);
+    }
+    for j in 1..=right.len().min(out_len) {
+        SatInstance::add_clause(solver, vec![!right[j - 1], out[j - 1]]);
+    }
+    for i in 1..=left.len() {
+        for j in 1..=right.len() {
+            let threshold = i + j;
+            if threshold <= out_len {
+                SatInstance::add_clause(
+                    solver,
+                    vec![!left[i - 1], !right[j - 1], out[threshold - 1]],
+                );
+            }
+        }
+    }
+
+    for threshold in 1..=out_len {
+        for left_max in 0..threshold {
+            let right_max = threshold - 1 - left_max;
+            SatInstance::add_clause(
+                solver,
+                vec![
+                    !out[threshold - 1],
+                    unary_counter_at(left, left_max + 1),
+                    unary_counter_at(right, right_max + 1),
+                ],
+            );
+        }
+    }
+
+    for threshold in 2..=out_len {
+        SatInstance::add_clause(solver, vec![!out[threshold - 1], out[threshold - 2]]);
+    }
+
+    out
+}
+
+fn encode_balanced_totalizer_limited(
+    solver: &mut NativeSolver,
+    inputs: &[Bool<NativeLit>],
+    limit: usize,
+) -> Vec<Bool<NativeLit>> {
+    let limit = limit.min(inputs.len());
+    if limit == 0 || inputs.is_empty() {
+        return Vec::new();
+    }
+    if inputs.len() == 1 {
+        return vec![inputs[0]];
+    }
+
+    let mid = inputs.len() / 2;
+    let left = encode_balanced_totalizer_limited(solver, &inputs[..mid], limit);
+    let right = encode_balanced_totalizer_limited(solver, &inputs[mid..], limit);
+    encode_totalizer_merge_limited(solver, &left, &right, limit)
 }
 
 fn encode_parity_from_unary_counter(
@@ -830,10 +898,19 @@ fn encode_parity_from_unary_counter(
     parity
 }
 
-fn encode_bit_totalizer_sum_bits(
+fn shifted_bound(bound: usize, bit_idx: usize) -> usize {
+    if bit_idx >= usize::BITS as usize {
+        0
+    } else {
+        bound >> bit_idx
+    }
+}
+
+fn encode_bit_totalizer_sum_bits_with_overflow(
     solver: &mut NativeSolver,
     terms: &[(NativeLit, usize)],
-) -> Vec<Bool<NativeLit>> {
+    bound: Option<usize>,
+) -> (Vec<Bool<NativeLit>>, Vec<Bool<NativeLit>>) {
     let mut buckets: Vec<Vec<Bool<NativeLit>>> = Vec::new();
     for &(lit, weight) in terms {
         if weight == 0 {
@@ -856,6 +933,7 @@ fn encode_bit_totalizer_sum_bits(
     }
 
     let mut sum_bits = Vec::new();
+    let mut overflow_lits = Vec::new();
     let mut carry: Vec<Bool<NativeLit>> = Vec::new();
     let mut bit_idx = 0usize;
 
@@ -869,15 +947,30 @@ fn encode_bit_totalizer_sum_bits(
         if units.is_empty() {
             sum_bits.push(false.into());
         } else {
-            let ge = encode_exact_unary_counter(solver, &units);
+            let cap_count = bound.map(|b| shifted_bound(b, bit_idx));
+            let max_threshold = cap_count
+                .and_then(|cap| cap.checked_add(1))
+                .unwrap_or(units.len())
+                .min(units.len());
+            let ge = encode_exact_unary_counter_limited(solver, &units, max_threshold);
+            if let Some(cap) = cap_count {
+                if let Some(overflow_threshold) = cap.checked_add(1) {
+                    if overflow_threshold <= ge.len() {
+                        overflow_lits.push(ge[overflow_threshold - 1]);
+                    }
+                }
+            }
             sum_bits.push(encode_parity_from_unary_counter(solver, &ge));
-            carry = (1..=(ge.len() / 2)).map(|idx| ge[(2 * idx) - 1]).collect();
+            let max_carry = cap_count
+                .map(|cap| (cap / 2).min(ge.len() / 2))
+                .unwrap_or(ge.len() / 2);
+            carry = (1..=max_carry).map(|idx| ge[(2 * idx) - 1]).collect();
         }
 
         bit_idx += 1;
     }
 
-    sum_bits
+    (sum_bits, overflow_lits)
 }
 
 fn usize_bit(value: usize, bit_idx: usize) -> bool {
@@ -908,18 +1001,73 @@ fn encode_binary_leq_constant(
     }
 }
 
-fn encode_bit_totalizer_leq(
-    solver: &mut NativeSolver,
-    terms: &[(NativeLit, usize)],
-    bound: usize,
-    gate: Option<Bool<NativeLit>>,
-) {
-    if terms.is_empty() {
-        return;
+#[derive(Default)]
+struct BitTotalizerBoundNetwork {
+    encoded_terms: usize,
+    sum_bits: Vec<Bool<NativeLit>>,
+    overflow_lits: Vec<Bool<NativeLit>>,
+}
+
+#[derive(Default)]
+struct BitTotalizerObjective {
+    terms: Vec<(NativeLit, usize)>,
+    total_weight: usize,
+    bound_networks: HashMap<usize, BitTotalizerBoundNetwork>,
+    addclauses_bounds: HashMap<usize, usize>,
+    assumption_bounds: HashMap<usize, (usize, Bool<NativeLit>)>,
+}
+
+impl BitTotalizerObjective {
+    fn add_term(&mut self, lit: NativeLit, weight: usize) {
+        if weight == 0 {
+            return;
+        }
+        self.terms.push((lit, weight));
+        self.total_weight = self.total_weight.saturating_add(weight);
     }
 
-    let sum_bits = encode_bit_totalizer_sum_bits(solver, terms);
-    encode_binary_leq_constant(solver, &sum_bits, bound, gate);
+    fn term_count(&self) -> usize {
+        self.terms.len()
+    }
+
+    fn ensure_bound_network(&mut self, solver: &mut NativeSolver, bound: usize) {
+        if self
+            .bound_networks
+            .get(&bound)
+            .map(|network| network.encoded_terms == self.terms.len())
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        let (sum_bits, overflow_lits) =
+            encode_bit_totalizer_sum_bits_with_overflow(solver, &self.terms, Some(bound));
+        self.bound_networks.insert(
+            bound,
+            BitTotalizerBoundNetwork {
+                encoded_terms: self.terms.len(),
+                sum_bits,
+                overflow_lits,
+            },
+        );
+    }
+
+    fn encode_leq(
+        &mut self,
+        solver: &mut NativeSolver,
+        bound: usize,
+        gate: Option<Bool<NativeLit>>,
+    ) {
+        self.ensure_bound_network(solver, bound);
+        let network = self
+            .bound_networks
+            .get(&bound)
+            .expect("bit totalizer bound network was just encoded");
+        for &overflow in &network.overflow_lits {
+            add_guarded_clause(solver, gate, [!overflow]);
+        }
+        encode_binary_leq_constant(solver, &network.sum_bits, bound, gate);
+    }
 }
 
 fn inject_solution_timepoints_sat<L: satcoder::Lit>(
@@ -1192,11 +1340,7 @@ fn solve_native_debug_with_mode(
     let mut scpb_assumption_bounds: HashMap<usize, (usize, Bool<NativeLit>)> = HashMap::new();
     let mut budget_gte = GeneralizedTotalizer::default();
     let mut last_added_bound: Option<usize> = None;
-    let mut bit_totalizer_terms: Vec<(NativeLit, usize)> = Vec::new();
-    let mut bit_totalizer_total_weight = 0usize;
-    let mut bit_totalizer_addclauses_bounds: HashMap<usize, usize> = HashMap::new();
-    let mut bit_totalizer_assumption_bounds: HashMap<usize, (usize, Bool<NativeLit>)> =
-        HashMap::new();
+    let mut bit_totalizer = BitTotalizerObjective::default();
 
     let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
     let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
@@ -1639,9 +1783,7 @@ fn solve_native_debug_with_mode(
                                 let lit = cost_var
                                     .lit()
                                     .expect("CostTree produced a non-literal bit-totalizer term");
-                                bit_totalizer_terms.push((lit, weight));
-                                bit_totalizer_total_weight =
-                                    bit_totalizer_total_weight.saturating_add(weight);
+                                bit_totalizer.add_term(lit, weight);
                             },
                         );
                     }
@@ -1725,48 +1867,45 @@ fn solve_native_debug_with_mode(
                         }
                     }
                     SatObjectiveEncoding::BitTotalizer => {
-                        if ub_usize < bit_totalizer_total_weight {
+                        if ub_usize < bit_totalizer.total_weight {
                             bound_used = Some(target_ub);
+                            let term_count = bit_totalizer.term_count();
                             match mode {
                                 SatBoundMode::AddClauses => {
-                                    let encoded_terms = bit_totalizer_addclauses_bounds
+                                    let encoded_terms = bit_totalizer
+                                        .addclauses_bounds
                                         .get(&ub_usize)
                                         .copied()
                                         .unwrap_or(0);
-                                    if encoded_terms < bit_totalizer_terms.len() {
-                                        encode_bit_totalizer_leq(
-                                            &mut solver,
-                                            &bit_totalizer_terms,
-                                            ub_usize,
-                                            None,
-                                        );
-                                        bit_totalizer_addclauses_bounds
-                                            .insert(ub_usize, bit_totalizer_terms.len());
+                                    if encoded_terms < term_count {
+                                        bit_totalizer.encode_leq(&mut solver, ub_usize, None);
+                                        bit_totalizer
+                                            .addclauses_bounds
+                                            .insert(ub_usize, term_count);
                                     }
                                 }
                                 SatBoundMode::Assumptions => {
-                                    let selector =
-                                        match bit_totalizer_assumption_bounds.get(&ub_usize) {
-                                            Some((encoded_terms, selector))
-                                                if *encoded_terms == bit_totalizer_terms.len() =>
-                                            {
-                                                *selector
-                                            }
-                                            _ => {
-                                                let selector = SatInstance::new_var(&mut solver);
-                                                encode_bit_totalizer_leq(
-                                                    &mut solver,
-                                                    &bit_totalizer_terms,
-                                                    ub_usize,
-                                                    Some(selector),
-                                                );
-                                                bit_totalizer_assumption_bounds.insert(
-                                                    ub_usize,
-                                                    (bit_totalizer_terms.len(), selector),
-                                                );
-                                                selector
-                                            }
-                                        };
+                                    let cached =
+                                        bit_totalizer.assumption_bounds.get(&ub_usize).copied();
+                                    let selector = match cached {
+                                        Some((encoded_terms, selector))
+                                            if encoded_terms == term_count =>
+                                        {
+                                            selector
+                                        }
+                                        _ => {
+                                            let selector = SatInstance::new_var(&mut solver);
+                                            bit_totalizer.encode_leq(
+                                                &mut solver,
+                                                ub_usize,
+                                                Some(selector),
+                                            );
+                                            bit_totalizer
+                                                .assumption_bounds
+                                                .insert(ub_usize, (term_count, selector));
+                                            selector
+                                        }
+                                    };
                                     bound_assumptions.push(selector);
                                 }
                             }
