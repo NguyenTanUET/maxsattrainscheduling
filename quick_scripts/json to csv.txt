@@ -8,7 +8,7 @@
 
 # Compact (old format)
 python3 quick_scripts/json_results_to_csv_batch.py \
-  results_sat_scl_totalizer_infsteps180_cost_fix.json \
+  results_maxsat_scl_cont_phaseC.json \
   --format compact --overwrite
 
 # Trace (expand value_trace)
@@ -20,3 +20,4 @@ python3 quick_scripts/json_results_to_csv_batch.py \
 python3 quick_scripts/json_results_to_csv_batch.py \
   results_*.json \
   --format compact --overwrite
+

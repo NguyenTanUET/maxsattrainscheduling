@@ -103,21 +103,21 @@ fn parse_delay_cost_type_or_panic(value: &str) -> DelayCostType {
     })
 }
 
-fn parse_sat_objective_encoding(value: &str) -> Option<ddd_solvers::sat::SatObjectiveEncoding> {
+fn parse_sat_objective_encoding(value: &str) -> Option<ddd_solvers::incremental_sat::SatObjectiveEncoding> {
     let key = value.to_ascii_lowercase();
     match key.as_str() {
-        "scpb" | "nsc" => Some(ddd_solvers::sat::SatObjectiveEncoding::Scpb),
+        "scpb" | "nsc" => Some(ddd_solvers::incremental_sat::SatObjectiveEncoding::Scpb),
         "totalizer" | "incremental_totalizer" | "inc_totalizer" => {
-            Some(ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer)
+            Some(ddd_solvers::incremental_sat::SatObjectiveEncoding::IncrementalTotalizer)
         }
         "bit_totalizer" | "binary_totalizer" | "bit" | "binary" => {
-            Some(ddd_solvers::sat::SatObjectiveEncoding::BitTotalizer)
+            Some(ddd_solvers::incremental_sat::SatObjectiveEncoding::BitTotalizer)
         }
         _ => None,
     }
 }
 
-fn parse_sat_objective_encoding_or_panic(value: &str) -> ddd_solvers::sat::SatObjectiveEncoding {
+fn parse_sat_objective_encoding_or_panic(value: &str) -> ddd_solvers::incremental_sat::SatObjectiveEncoding {
     parse_sat_objective_encoding(value).unwrap_or_else(|| {
         panic!(
             "Unknown SAT objective encoding '{}'. Supported: scpb, totalizer, bit_totalizer",
@@ -270,6 +270,8 @@ enum SolverType {
     SatDddScl,
     SatDddSclTotalizer,
     SatDddSclInc,
+    SatDddSclAddClauses,
+    SatDddSclFreshAddClauses,
     MipDdd,
     MipHull,
     Greedy,
@@ -329,6 +331,8 @@ fn main() {
             "sat_ddd_scl" => SolverType::SatDddScl,
             "sat_ddd_scl_totalizer" => SolverType::SatDddSclTotalizer,
             "sat_ddd_scl_inc" => SolverType::SatDddSclInc,
+            "sat_ddd_scl_addclauses" => SolverType::SatDddSclAddClauses,
+            "sat_ddd_scl_fresh_addclauses" => SolverType::SatDddSclFreshAddClauses,
             "mip_ddd" => SolverType::MipDdd,
             "mip_hull" => SolverType::MipHull,
             "greedy" => SolverType::Greedy,
@@ -386,9 +390,9 @@ fn main() {
         .satddd_objective_encoding
         .as_deref()
         .map(parse_sat_objective_encoding_or_panic)
-        .unwrap_or(ddd_solvers::sat::SatObjectiveEncoding::Scpb);
+        .unwrap_or(ddd_solvers::incremental_sat::SatObjectiveEncoding::Scpb);
     println!("SatDdd objective encoding {:?}", satddd_objective_encoding);
-    let satddd_settings = ddd_solvers::sat::SatDddSettings {
+    let satddd_settings = ddd_solvers::incremental_sat::SatDddSettings {
         use_precedence_graph: opt.satddd_use_precedence_graph.unwrap_or(true),
     };
     println!("SatDdd settings {:?}", satddd_settings);
@@ -699,7 +703,7 @@ fn main() {
                         },
                     )
                     .map(|(v, _)| v),
-                    SolverType::SatDdd => ddd_solvers::sat::solve_with_encoding_and_settings(
+                    SolverType::SatDdd => ddd_solvers::incremental_sat::solve_with_encoding_and_settings(
                         &mk_env,
                         satcoder::solvers::rustsat_glucose::Solver::new(),
                         &p.problem,
@@ -717,7 +721,7 @@ fn main() {
                         Err(SolverError::NoSolution)
                     }
                     SolverType::SatDddInc => {
-                        ddd_solvers::sat::solve_incremental_with_encoding_and_settings(
+                        ddd_solvers::incremental_sat::solve_incremental_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -732,7 +736,7 @@ fn main() {
                         .map(|(v, _)| v)
                     }
                     SolverType::SatDddScl => {
-                        ddd_solvers::sat::solve_scl_with_encoding_and_settings(
+                        ddd_solvers::incremental_sat::solve_scl_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -747,13 +751,13 @@ fn main() {
                         .map(|(v, _)| v)
                     }
                     SolverType::SatDddSclTotalizer => {
-                        ddd_solvers::sat::solve_scl_with_encoding_and_settings(
+                        ddd_solvers::incremental_sat::solve_scl_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
                             TIMEOUT,
                             delay_cost_type,
-                            ddd_solvers::sat::SatObjectiveEncoding::IncrementalTotalizer,
+                            ddd_solvers::incremental_sat::SatObjectiveEncoding::IncrementalTotalizer,
                             satddd_settings,
                             |k, v| {
                                 solve_data.insert(k, v);
@@ -762,7 +766,7 @@ fn main() {
                         .map(|(v, _)| v)
                     }
                     SolverType::SatDddSclInc => {
-                        ddd_solvers::sat::solve_incremental_scl_with_encoding_and_settings(
+                        ddd_solvers::incremental_sat::solve_incremental_scl_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -770,6 +774,60 @@ fn main() {
                             delay_cost_type,
                             satddd_objective_encoding,
                             satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::SatDddSclAddClauses => {
+                        // Pure AddClauses bound mode: bound enforced by hard
+                        // clauses (permanent) instead of per-call assumptions.
+                        // Same SCL hybrid precedence + Glucose backend; cost
+                        // encoding configurable via --satddd-objective-encoding.
+                        ddd_solvers::incremental_sat::solve_scl_addclauses_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            satddd_objective_encoding,
+                            satddd_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::SatDddSclFreshAddClauses => {
+                        // Fresh-solver-per-iteration AddClauses (puresat module):
+                        // replays the logged formula into a brand-new Glucose
+                        // instance at every DDD iteration, dropping all learned
+                        // clauses and VSIDS state. Foundation for parallel SAT.
+                        // puresat duplicates incremental_sat's config types, so
+                        // translate the parsed enums/struct here.
+                        let pure_encoding = match satddd_objective_encoding {
+                            ddd_solvers::incremental_sat::SatObjectiveEncoding::Scpb => {
+                                ddd_solvers::puresat::SatObjectiveEncoding::Scpb
+                            }
+                            ddd_solvers::incremental_sat::SatObjectiveEncoding::IncrementalTotalizer => {
+                                ddd_solvers::puresat::SatObjectiveEncoding::IncrementalTotalizer
+                            }
+                            ddd_solvers::incremental_sat::SatObjectiveEncoding::BitTotalizer => {
+                                ddd_solvers::puresat::SatObjectiveEncoding::BitTotalizer
+                            }
+                        };
+                        let pure_settings = ddd_solvers::puresat::SatDddSettings {
+                            use_precedence_graph: satddd_settings.use_precedence_graph,
+                        };
+                        ddd_solvers::puresat::solve_scl_fresh_addclauses_with_encoding_and_settings(
+                            &mk_env,
+                            satcoder::solvers::rustsat_glucose::Solver::new(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            pure_encoding,
+                            pure_settings,
                             |k, v| {
                                 solve_data.insert(k, v);
                             },

@@ -535,6 +535,44 @@ pub fn solve_scl_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::
     )
 }
 
+/// Pure AddClauses variant of [`solve_scl_with_encoding_and_settings`].
+///
+/// Uses `SatBoundMode::AddClauses` instead of `Assumptions`: each cost-bound
+/// query is enforced by adding *permanent* hard clauses to the formula
+/// rather than via temporary assumption literals. Suitable when:
+/// - The DDD upper bound is known to monotonically tighten (typical case)
+/// - You want to avoid per-call selector-variable overhead
+/// - Comparing against the assumption-based pattern for benchmarking
+///
+/// Backend: Glucose (via `NativeSolver`/`rustsat_glucose`). Precedence
+/// encoding: SCL hybrid. Cost encoding: chosen by the `encoding` argument
+/// (Scpb / IncrementalTotalizer / BitTotalizer).
+pub fn solve_scl_addclauses_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+    mk_env: impl Fn() -> grb::Env + Send + 'static,
+    _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
+    problem: &Problem,
+    timeout: f64,
+    delay_cost_type: DelayCostType,
+    encoding: SatObjectiveEncoding,
+    settings: SatDddSettings,
+    output_stats: impl FnMut(String, serde_json::Value),
+) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    let mode = SatBoundMode::AddClauses;
+    solve_native_debug_with_mode(
+        mk_env,
+        problem,
+        timeout,
+        delay_cost_type,
+        encoding,
+        settings,
+        mode,
+        SatPrecEncoding::Scl,
+        SatSearchMode::UbSearch,
+        |_| {},
+        output_stats,
+    )
+}
+
 pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,

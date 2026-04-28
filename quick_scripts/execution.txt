@@ -16,8 +16,8 @@
 ./target/release/ddd \
   -s maxsat_ddd_ladder \
   --txt-instances \
-  --objective finsteps123 \
-  --json-output results_maxsat_finsteps123_120s.json
+  --objective infsteps180 \
+  --json-output results_maxsat_infsteps180_120s.json
 
 ./target/release/ddd \
   -s sat_ddd_scl_totalizer \
@@ -42,12 +42,6 @@
   --satddd-use-precedence-graph false \
   --json-output results_sat_scl_totalizer_infsteps180_cost_fix.json
 
-./target/release/ddd \
-  -s sat_ddd_scl_totalizer \
-  --satddd-use-interval-graph-conflicts false \
-  --objective infsteps180 \
-  --txt-instances
-
   BIN=./target/release/ddd \
 SOLVER=sat_ddd_scl_totalizer \
 OBJECTIVE=cont \
@@ -63,7 +57,7 @@ SOLVER=sat_ddd_scl_totalizer \
 OBJECTIVE=cont \
 SATDDD_OBJECTIVE_ENCODING=totalizer \
 SATDDD_USE_PRECEDENCE_GRAPH=true \
-JSON_OUT=results_sat_scl_cont_totalizer_prec.json \
+JSON_OUT=results_sat_scl_cont_totalizer_cost_fix_120s.json \
 INSTANCE_TIMEOUT_SECS=150 \
 RAM_LIMIT_KB=15000000 \
 bash quick_scripts/run_all_txt_instances_limited.sh
@@ -71,6 +65,26 @@ bash quick_scripts/run_all_txt_instances_limited.sh
 ./target/release/ddd \
   -s maxsat_ddd_ladder_scl \
   --txt-instances \
-  --objective finsteps123 \
-  --maxsatddd-ladder-scl-use-precedence-graph true \
-  --json-output results_maxsat_scl_finsteps123.json
+  --objective cont \
+  --maxsatddd-ladder-scl-use-precedence-graph false \
+  --json-output results_maxsat_scl_cont.json
+
+  ./target/release/ddd \
+  -s maxsat_ddd_ladder_scl \
+  --txt-instances \
+  --objective infsteps180 \
+  --maxsatddd-ladder-scl-use-interval-tree false \
+  --maxsatddd-ladder-scl-use-precedence-graph false \
+  --json-output results_maxsat_scl_infsteps180_pairwise.json
+
+  ./target/release/ddd \
+  -s sat_ddd_scl_totalizer \
+  --txt-instances \
+  --objective cont \
+  --json-output results_sat_cont_fastpath.json
+
+  ./target/release/ddd \
+  -s sat_ddd_scl_totalizer \
+  --txt-instances \
+  --objective cont \
+  --json-output results_sat_cont_fastpath.json

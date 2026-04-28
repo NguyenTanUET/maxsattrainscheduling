@@ -1,0 +1,142 @@
+[
+  {
+    "avg_tracks": 20.931034088134766,
+    "conflicting_visit_pairs": 5915,
+    "conflicts": 33,
+    "delay_cost_type": "InfiniteSteps180",
+    "index": 0,
+    "name": "trackA1",
+    "solves": [
+      {
+        "algorithm_time": 0.8250414480000003,
+        "avg_time_points": 10.696701528559936,
+        "cost": 60,
+        "delay_cost_type": "InfiniteSteps180",
+        "iterations": 385,
+        "lb": 60,
+        "max_time_points": 125,
+        "num_conflicts": 663,
+        "num_time_points": 13296,
+        "num_traveltime": 6972,
+        "objective_iters": 385,
+        "resource_iters": 3,
+        "sol_time": 4337.158525999999,
+        "solver_name": "SatDddSclAddClauses",
+        "solver_time": 3.481059458,
+        "status": "ok",
+        "time_to_best_value_ms": 4206.555122,
+        "time_to_first_solution_ms": 566.786722,
+        "time_to_optimality_ms": 4305.497651,
+        "time_to_prove_best_value_ms": 4305.497651,
+        "total_time": 4.306100531,
+        "travel_and_resource_iters": 214,
+        "travel_iters": 165,
+        "ub": 60,
+        "value_trace": [
+          {
+            "elapsed_ms": 566.786722,
+            "event": "initial_incumbent",
+            "incumbent": 63,
+            "lower_bound": 0,
+            "value": 63
+          },
+          {
+            "elapsed_ms": 1489.654176,
+            "event": "incumbent",
+            "incumbent": 62,
+            "iteration": 175,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 62
+          },
+          {
+            "elapsed_ms": 1699.524651,
+            "event": "incumbent",
+            "incumbent": 61,
+            "iteration": 192,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 61
+          },
+          {
+            "elapsed_ms": 4206.555122,
+            "event": "incumbent",
+            "incumbent": 60,
+            "iteration": 385,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 60
+          },
+          {
+            "elapsed_ms": 4305.497651,
+            "event": "lower_bound",
+            "incumbent": 60,
+            "iteration": 385,
+            "lower_bound": 60,
+            "note": "unsat_bound",
+            "value": 59
+          },
+          {
+            "elapsed_ms": 4305.822655,
+            "event": "optimal",
+            "incumbent": 60,
+            "iteration": 385,
+            "lower_bound": 60,
+            "value": 60
+          }
+        ],
+        "value_trace_version": 1
+      },
+      {
+        "algorithm_time": 66.96662239399998,
+        "avg_time_points": 18.293644408688657,
+        "delay_cost_type": "InfiniteSteps180",
+        "iterations": 781,
+        "lb": 0,
+        "max_time_points": 151,
+        "num_conflicts": 1579,
+        "num_time_points": 22739,
+        "num_traveltime": 14201,
+        "objective_iters": 780,
+        "resource_iters": 2,
+        "sol_time": 120252.01760400001,
+        "solver_name": "SatDddSclFreshAddClauses",
+        "solver_time": 53.192380765,
+        "status": "timeout",
+        "time_to_best_value_ms": 117341.269658,
+        "time_to_first_solution_ms": 22.072964,
+        "total_time": 120.159002961,
+        "travel_and_resource_iters": 555,
+        "travel_iters": 222,
+        "ub": 62,
+        "value_trace": [
+          {
+            "elapsed_ms": 22.072964,
+            "event": "initial_incumbent",
+            "incumbent": 63,
+            "lower_bound": 0,
+            "value": 63
+          },
+          {
+            "elapsed_ms": 117341.269658,
+            "event": "incumbent",
+            "incumbent": 62,
+            "iteration": 774,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 62
+          },
+          {
+            "elapsed_ms": 120158.992517,
+            "event": "timeout",
+            "incumbent": 62,
+            "iteration": 781,
+            "lower_bound": 0
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 29
+  }
+]
