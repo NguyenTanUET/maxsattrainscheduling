@@ -829,17 +829,13 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         for &visit_id in &resource_visits[resource] {
                             let (train_idx, visit_idx) = visits[visit_id];
                             let start = occupations[visit_id].incumbent_time();
-                            let next_visit: Option<VisitId> =
-                                if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                                    Some((usize::from(visit_id) + 1).into())
-                                } else {
-                                    None
-                                };
-                            let end = next_visit
-                                .map(|nx| occupations[nx].incumbent_time())
-                                .unwrap_or(
-                                    start + problem.trains[train_idx].visits[visit_idx].travel_time,
-                                );
+                            // The occupation interval of a visit on a resource is
+                            // [start, start + travel_time).  Do NOT use the next
+                            // visit's incumbent_time() here — that value includes
+                            // slack accumulated during DDD iterations and inflates
+                            // the interval, producing wrong clique membership.
+                            let end =
+                                start + problem.trains[train_idx].visits[visit_idx].travel_time;
                             if end <= start {
                                 continue;
                             }
@@ -1025,7 +1021,25 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             active_lits.push(lit);
                         }
 
-                        add_hybrid_amo(&mut solver, &active_lits);
+                        // BIS(K_{a,b}) for 2-train cliques; hybrid AMO for 3+.
+                        let mut seen_trains: Vec<usize> = Vec::new();
+                        for m in &members {
+                            if !seen_trains.contains(&m.train_idx) {
+                                seen_trains.push(m.train_idx);
+                            }
+                        }
+                        if seen_trains.len() == 2 {
+                            let train_a = seen_trains[0];
+                            let (side_a, side_b): (Vec<_>, Vec<_>) = members
+                                .iter()
+                                .zip(active_lits.iter())
+                                .partition(|(m, _)| m.train_idx == train_a);
+                            let side_a: Vec<Bool<L>> = side_a.into_iter().map(|(_, &l)| l).collect();
+                            let side_b: Vec<Bool<L>> = side_b.into_iter().map(|(_, &l)| l).collect();
+                            add_bipartite_amo(&mut solver, &side_a, &side_b);
+                        } else {
+                            add_hybrid_amo(&mut solver, &active_lits);
+                        }
                     }
                     n_conflict_constraints += 1;
                     cliques_processed += 1;
@@ -2116,37 +2130,57 @@ fn build_active_lit<L: satcoder::Lit>(
     };
 
     let active = solver.new_var();
-    // For AMO clique soundness we only need the CONVERSE direction:
-    //   (!delay_start ∧ delay_end) → active
-    // i.e. when a visit is genuinely occupying the resource at τ, its
-    // `active` literal must be true; the AMO over `active`s then forces
-    // all other actives in the clique to false, which (by their own
-    // converse clauses) constrains their delay literals correctly.
-    //
-    // The two forward clauses
-    //   active → !delay_start
-    //   active → delay_end
-    // make the encoding a full biconditional `active ↔ (!delay_start ∧ delay_end)`,
-    // giving the solver the ability to propagate from `active` back to
-    // delay literals. They are NOT required for soundness — a `true`
-    // assignment to `active` without the corresponding delay literals
-    // does not break AMO. They only help propagation strength.
-    //
-    // Toggle this const off to A/B-test whether the forward clauses are
-    // actually buying us search speedup or are over-tightening (extra
-    // propagation that pulls the solver down unhelpful branches).
-    const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = true;
-    if ENCODE_ACTIVE_FORWARD_DIRECTION {
-        // active → !delay_start
-        solver.add_clause(vec![!active, !delay_start]);
-        // active → delay_end
-        solver.add_clause(vec![!active, delay_end]);
-    }
-    // (!delay_start ∧ delay_end) → active   — required for soundness.
+    // active → !delay_start
+    solver.add_clause(vec![!active, !delay_start]);
+    // active → delay_end
+    solver.add_clause(vec![!active, delay_end]);
+    // (!delay_start ∧ delay_end) → active
     solver.add_clause(vec![active, delay_start, !delay_end]);
 
     active_cache.insert((visit_id, tau_plus_1), active);
     active
+=======
+/// BIS(K_{a,b}) encoding — Subercaseaux (2025), Equation 5.
+///
+/// For a bipartite clique with sides A and B:
+///   introduce one aux variable y, then add:
+///     ∀ l ∈ A : ¬l ∨ y          (any A selected ⇒ y)
+///     ∀ l ∈ B : ¬y ∨ ¬l          (y ⇒ no B selected)
+///
+/// Uses |A|+|B| clauses.  Falls back to pairwise when one side is a
+/// singleton (no auxiliary variable needed).
+fn add_bipartite_amo<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    side_a: &[Bool<L>],
+    side_b: &[Bool<L>],
+) {
+    match (side_a.len(), side_b.len()) {
+        (0, _) | (_, 0) => { /* nothing to constrain */ }
+        (1, 1) => {
+            solver.add_clause(vec![!side_a[0], !side_b[0]]);
+        }
+        (1, _) => {
+            for &lb in side_b {
+                solver.add_clause(vec![!side_a[0], !lb]);
+            }
+        }
+        (_, 1) => {
+            for &la in side_a {
+                solver.add_clause(vec![!la, !side_b[0]]);
+            }
+        }
+        _ => {
+            // General BIS: introduce y = “some A-literal is true”.
+            let y = solver.new_var();
+            for &la in side_a {
+                solver.add_clause(vec![!la, y]);   // ¬la ∨ y
+            }
+            for &lb in side_b {
+                solver.add_clause(vec![!y, !lb]);  // ¬y ∨ ¬lb
+            }
+        }
+    }
+>>>>>>> 4d74b905 (update bis encoding)
 }
 
 /// Add a fixed precedence row for one chosen time point and return the

@@ -6,7 +6,7 @@ use ddd::{
     solvers::{
         bigm, ddd as ddd_solvers,
         greedy::{self, default_heuristic},
-        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
+        heuristic, maxsat_ddd, maxsat_ddd_recommend, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
         maxsatddd_ladder_scl, milp_ti, SolverError,
     },
 };
@@ -292,6 +292,12 @@ enum SolverType {
     MaxSatDddIncrementalNoProp,
     MaxSatDddPairwiseCustomRc2,
     MaxSatDddPairwiseCustomRc2NoProp,
+    /// `maxsat_ddd_recommend.rs` variant — sweep-line clique covering + BIS
+    /// encoding (Subercaseaux 2025 §4.1). Uses CustomRC2 on minisat (same
+    /// backend as `MaxSatDddPairwiseCustomRc2`, which is the right A/B
+    /// baseline). Avoids IPAMIR/UWrMaxSat to sidestep its hang on some
+    /// `finsteps123` instances.
+    MaxSatDddRecommend,
 }
 
 const TIMEOUT: f64 = 120.0;
@@ -353,6 +359,7 @@ fn main() {
             "maxsat_ddd_incremental_noprop" => SolverType::MaxSatDddIncrementalNoProp,
             "maxsat_ddd_pairwise_customrc2" => SolverType::MaxSatDddPairwiseCustomRc2,
             "maxsat_ddd_pairwise_customrc2_noprop" => SolverType::MaxSatDddPairwiseCustomRc2NoProp,
+            "maxsat_ddd_recommend" => SolverType::MaxSatDddRecommend,
             _ => panic!("unknown solver type"),
         })
         .collect::<Vec<_>>();
@@ -417,6 +424,7 @@ fn main() {
                 | SolverType::MaxSatDddIncrementalNoProp
                 | SolverType::MaxSatDddPairwiseCustomRc2
                 | SolverType::MaxSatDddPairwiseCustomRc2NoProp
+                | SolverType::MaxSatDddRecommend
                 | SolverType::BinarizedBigMEager10Sec
                 | SolverType::BinarizedBigMEager30Sec
                 | SolverType::BinarizedBigMEager60Sec
@@ -601,6 +609,31 @@ fn main() {
                         },
                     )
                     .map(|(v, _)| v),
+                    SolverType::MaxSatDddRecommend => {
+                        // Routes through `maxsat_ddd_recommend.rs` (sweep-line
+                        // clique covering + BIS encoding for conflicts). Uses
+                        // CustomRC2 on minisat — same backend as
+                        // `MaxSatDddPairwiseCustomRc2`, which is the right A/B
+                        // baseline for the encoding change. We avoid IPAMIR /
+                        // UWrMaxSat: that backend has been observed to hang on
+                        // some `finsteps123` instances.
+                        maxsat_ddd_recommend::solve_incremental(
+                            || {
+                                maxsatsolver::CustomRC2Incremental::new(
+                                    satcoder::solvers::minisat::Solver::new(),
+                                )
+                            },
+                            get_env(),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            true,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
                     SolverType::MaxSatDddIncrementalNoProp => maxsat_ddd::solve_incremental(
                         || maxsatsolver::Incremental::new(),
                         get_env(),
