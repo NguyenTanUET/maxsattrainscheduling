@@ -1,0 +1,35 @@
+[
+  {
+    "avg_tracks": 19.88888931274414,
+    "conflicting_visit_pairs": 4862,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 0,
+    "name": "trackA8",
+    "solves": [
+      {
+        "algorithm_time": 0.06057306100000001,
+        "avg_time_points": 10.407811080835604,
+        "cost": 34,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 171,
+        "lb": 34,
+        "max_time_points": 67,
+        "num_conflicts": 6580,
+        "num_time_points": 11459,
+        "num_traveltime": 6580,
+        "objective_iters": 34,
+        "resource_iters": 1,
+        "sol_time": 145.584168,
+        "solver_name": "MaxSatDddLadderScl",
+        "solver_time": 0.083891946,
+        "status": "ok",
+        "total_time": 0.144464349,
+        "travel_and_resource_iters": 113,
+        "travel_iters": 22,
+        "ub": 34
+      }
+    ],
+    "trains": 27
+  }
+]

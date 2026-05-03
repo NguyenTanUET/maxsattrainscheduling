@@ -1112,34 +1112,49 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 if t1_is_new {
                                     new_time_points.push((visit_id, delay_t1, t2_out));
                                 }
-                                let _ = add_fixed_precedence_row(
-                                    &mut solver,
-                                    problem,
-                                    &visits,
-                                    &mut occupations,
-                                    &mut new_time_points,
-                                    &mut fixed_prec_rows,
-                                    visit_id,
-                                    delay_t1,
-                                    t2_out,
-                                    settings.use_scl_fixed_precedence,
-                                );
-
                                 if t2_is_new {
                                     new_time_points.push((other_visit, delay_t2, t1_out));
                                 }
-                                let _ = add_fixed_precedence_row(
-                                    &mut solver,
-                                    problem,
-                                    &visits,
-                                    &mut occupations,
-                                    &mut new_time_points,
-                                    &mut fixed_prec_rows,
-                                    other_visit,
-                                    delay_t2,
-                                    t1_out,
-                                    settings.use_scl_fixed_precedence,
-                                );
+
+                                // Eager SCL-style precedence propagation: pre-emptively add a
+                                // fixed-precedence row at the new time point (delay_t1, delay_t2)
+                                // for the train's NEXT visit, propagating travel time forward.
+                                //
+                                // Gated on `use_scl_fixed_precedence` so that this entire block
+                                // is a no-op when the flag is OFF — that yields semantics
+                                // equivalent to `maxsatddd_ladder.rs` (which only enforces travel
+                                // time lazily in the dedicated travel-time-conflict branch above).
+                                //
+                                // With the flag ON we keep the previous eager behaviour: better
+                                // unit propagation, but +50–70% more time points per benchmark
+                                // (see scl-vs-ladder analysis).
+                                if settings.use_scl_fixed_precedence {
+                                    let _ = add_fixed_precedence_row(
+                                        &mut solver,
+                                        problem,
+                                        &visits,
+                                        &mut occupations,
+                                        &mut new_time_points,
+                                        &mut fixed_prec_rows,
+                                        visit_id,
+                                        delay_t1,
+                                        t2_out,
+                                        settings.use_scl_fixed_precedence,
+                                    );
+
+                                    let _ = add_fixed_precedence_row(
+                                        &mut solver,
+                                        problem,
+                                        &visits,
+                                        &mut occupations,
+                                        &mut new_time_points,
+                                        &mut fixed_prec_rows,
+                                        other_visit,
+                                        delay_t2,
+                                        t1_out,
+                                        settings.use_scl_fixed_precedence,
+                                    );
+                                }
 
                                 let t1_out_lit = next_visit
                                     .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
@@ -2135,7 +2150,7 @@ fn build_active_lit<L: satcoder::Lit>(
     // Toggle this const off to A/B-test whether the forward clauses are
     // actually buying us search speedup or are over-tightening (extra
     // propagation that pulls the solver down unhelpful branches).
-    const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = true;
+    const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
     if ENCODE_ACTIVE_FORWARD_DIRECTION {
         // active → !delay_start
         solver.add_clause(vec![!active, !delay_start]);
