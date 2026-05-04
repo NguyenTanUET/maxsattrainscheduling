@@ -918,6 +918,85 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 // configurations where small overlaps matter for feasibility.
                 clique_candidates.sort_by(|a, b| b.0.cmp(&a.0));
 
+                // ─── SCAMO Phase 1: detect compatible-clique groups ─────────
+                // Diagnostic output to determine whether the staircase
+                // pattern actually appears in DDD train scheduling.
+                if settings.use_scamo_encoding {
+                    const MIN_SCAMO_OVERLAP: usize = 1; // most permissive
+
+                    // Index cliques by resource pair; sort by τ within each.
+                    let mut by_pair: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+                    for (idx, c) in clique_candidates.iter().enumerate() {
+                        by_pair.entry((c.3, c.4)).or_default().push(idx);
+                    }
+                    for indices in by_pair.values_mut() {
+                        indices.sort_by_key(|&i| clique_candidates[i].2);
+                    }
+
+                    // Verbose stats per resource pair.
+                    let pairs_with_multi = by_pair.values().filter(|v| v.len() >= 2).count();
+                    let mut overlap_distribution: BTreeMap<usize, usize> = BTreeMap::new();
+
+                    let mut group_count: usize = 0;
+                    let mut groups_by_size: BTreeMap<usize, usize> = BTreeMap::new();
+                    let mut total_in_groups: usize = 0;
+                    for indices in by_pair.values() {
+                        if indices.len() < 2 {
+                            continue;
+                        }
+                        let mut current_group: Vec<usize> = vec![indices[0]];
+                        for &next_idx in &indices[1..] {
+                            let prev_idx = *current_group.last().unwrap();
+                            let prev_set: HashSet<VisitId> = clique_candidates[prev_idx]
+                                .1
+                                .iter()
+                                .map(|m| m.visit_id)
+                                .collect();
+                            let next_set: HashSet<VisitId> = clique_candidates[next_idx]
+                                .1
+                                .iter()
+                                .map(|m| m.visit_id)
+                                .collect();
+                            let overlap = prev_set.intersection(&next_set).count();
+                            *overlap_distribution.entry(overlap).or_insert(0) += 1;
+                            if overlap >= MIN_SCAMO_OVERLAP {
+                                current_group.push(next_idx);
+                            } else {
+                                if current_group.len() >= 2 {
+                                    group_count += 1;
+                                    *groups_by_size
+                                        .entry(current_group.len())
+                                        .or_insert(0) += 1;
+                                    total_in_groups += current_group.len();
+                                }
+                                current_group = vec![next_idx];
+                            }
+                        }
+                        if current_group.len() >= 2 {
+                            group_count += 1;
+                            *groups_by_size
+                                .entry(current_group.len())
+                                .or_insert(0) += 1;
+                            total_in_groups += current_group.len();
+                        }
+                    }
+
+                    if !clique_candidates.is_empty() {
+                        eprintln!(
+                            "[SCAMO-PH1] iter={} candidates={} pairs_total={} pairs_multi={} overlap_dist={:?} groups={} cliques_in_groups={} group_sizes={:?}",
+                            iteration,
+                            clique_candidates.len(),
+                            by_pair.len(),
+                            pairs_with_multi,
+                            overlap_distribution,
+                            group_count,
+                            total_in_groups,
+                            groups_by_size,
+                        );
+                    }
+                }
+                // ────────────────────────────────────────────────────────────
+
                 // Per-iteration budget to prevent combinatorial blowup when many
                 // cliques are detected at once. Remaining cliques will be re-detected
                 // and processed in subsequent iterations (smart dedup via

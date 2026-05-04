@@ -71,6 +71,13 @@ struct Opt {
     #[structopt(long)]
     maxsatddd_ladder_scl_use_interval_tree: Option<bool>,
 
+    /// **Experimental**: enable TRUE SCAMO encoding (Truong/Kieu/To, ICAART
+    /// 2025). Currently only Phase 1 (group detection + stats) is wired in;
+    /// the encoding itself still uses `add_hybrid_amo`. Use this to inspect
+    /// whether the staircase pattern is worth the rewrite.
+    #[structopt(long)]
+    maxsatddd_ladder_scl_use_scamo: Option<bool>,
+
     /// Objective encoding for `sat_ddd*` solvers: `scpb`, `totalizer`, or `bit_totalizer` (`nsc` accepted as alias).
     #[structopt(long)]
     satddd_objective_encoding: Option<String>,
@@ -387,7 +394,7 @@ fn main() {
             .or(opt.maxsatddd_ladder_scl_use_interval_graph)
             .unwrap_or(true),
         seed_scl_from_earliest: true,
-        use_scamo_encoding: false, // experimental, see field doc
+        use_scamo_encoding: opt.maxsatddd_ladder_scl_use_scamo.unwrap_or(false),
     };
     println!(
         "MaxSatDddLadderScl settings {:?}",
