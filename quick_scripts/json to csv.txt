@@ -8,7 +8,7 @@
 
 # Compact (old format)
 python3 quick_scripts/json_results_to_csv_batch.py \
-  results_maxsat_scl_cont_phaseC.json \
+  results_maxsat_ladder_infsteps180.json \
   --format compact --overwrite
 
 # Trace (expand value_trace)
@@ -18,6 +18,6 @@ python3 quick_scripts/json_results_to_csv_batch.py \
 
 # Convert multiple at once
 python3 quick_scripts/json_results_to_csv_batch.py \
-  results_*.json \
+  results_repeated/*.json \
   --format compact --overwrite
 

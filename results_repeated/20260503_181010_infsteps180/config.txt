@@ -1,0 +1,13 @@
+=== Repeated Benchmark ===
+Timestamp:        20260503_181010
+Output dir:       results_repeated/20260503_181010_infsteps180
+Binary:           ./target/release/ddd
+Objective:        infsteps180
+
+SCL solver:       maxsat_ddd_ladder_scl
+SCL extra args:   --maxsatddd-ladder-scl-use-precedence-graph false --maxsatddd-ladder-scl-use-scl false --maxsatddd-ladder-scl-use-interval-graph false
+SCL reps:         10
+
+LADDER solver:    maxsat_ddd_ladder
+LADDER extra:     
+LADDER reps:      10

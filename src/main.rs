@@ -387,6 +387,7 @@ fn main() {
             .or(opt.maxsatddd_ladder_scl_use_interval_graph)
             .unwrap_or(true),
         seed_scl_from_earliest: true,
+        use_scamo_encoding: false, // experimental, see field doc
     };
     println!(
         "MaxSatDddLadderScl settings {:?}",
