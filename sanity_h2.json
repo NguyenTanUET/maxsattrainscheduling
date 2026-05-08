@@ -1,0 +1,57 @@
+[
+  {
+    "avg_tracks": 19.88888931274414,
+    "conflicting_visit_pairs": 4862,
+    "conflicts": 33,
+    "delay_cost_type": "InfiniteSteps180",
+    "index": 0,
+    "name": "trackA8",
+    "solves": [
+      {
+        "algorithm_time": 0.10033949199999981,
+        "avg_time_points": 18.099000908265214,
+        "cost": 146,
+        "delay_cost_type": "InfiniteSteps180",
+        "iterations": 400,
+        "lb": 146,
+        "max_time_points": 102,
+        "num_conflicts": 16087,
+        "num_time_points": 19927,
+        "num_traveltime": 16087,
+        "objective_iters": 73,
+        "resource_iters": 7,
+        "sol_time": 13055.948102,
+        "solver_name": "MaxSatDddLadderRC2",
+        "solver_time": 12.953973228,
+        "status": "ok",
+        "total_time": 13.054311627,
+        "travel_and_resource_iters": 285,
+        "travel_iters": 34,
+        "ub": 146
+      },
+      {
+        "algorithm_time": 0.12486456899999965,
+        "avg_time_points": 25.70027247956403,
+        "cost": 146,
+        "delay_cost_type": "InfiniteSteps180",
+        "iterations": 314,
+        "lb": 146,
+        "max_time_points": 193,
+        "num_conflicts": 15442,
+        "num_time_points": 28296,
+        "num_traveltime": 15442,
+        "objective_iters": 73,
+        "resource_iters": 1,
+        "sol_time": 26438.826788,
+        "solver_name": "MaxSatDddLadderScl",
+        "solver_time": 26.311998374,
+        "status": "ok",
+        "total_time": 26.436862309,
+        "travel_and_resource_iters": 238,
+        "travel_iters": 1,
+        "ub": 146
+      }
+    ],
+    "trains": 27
+  }
+]

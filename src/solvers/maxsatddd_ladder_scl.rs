@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     time::Instant,
 };
 
@@ -122,10 +122,10 @@ pub struct MaxSatDddLadderSclSettings {
 impl Default for MaxSatDddLadderSclSettings {
     fn default() -> Self {
         Self {
-            use_precedence_graph: true,
-            use_scl_fixed_precedence: true,
-            use_interval_graph_conflicts: true,
-            seed_scl_from_earliest: true,
+            use_precedence_graph: false,
+            use_scl_fixed_precedence: false,
+            use_interval_graph_conflicts: false,
+            seed_scl_from_earliest: false,
             use_scamo_encoding: false, // experimental, see field doc
         }
     }
@@ -918,11 +918,25 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 // configurations where small overlaps matter for feasibility.
                 clique_candidates.sort_by(|a, b| b.0.cmp(&a.0));
 
-                // ─── SCAMO Phase 1: detect compatible-clique groups ─────────
-                // Diagnostic output to determine whether the staircase
-                // pattern actually appears in DDD train scheduling.
+                // ─── SCAMO eligibility detection ────────────────────────────
+                // Mark cliques eligible for the SCAMO per-block AMO encoding:
+                // a clique is eligible when it sits in a group of ≥
+                // PHASE2_MIN_GROUP_SIZE consecutive cliques on the same
+                // resource pair where every consecutive pair shares ≥
+                // PHASE2_MIN_OVERLAP visits. Eligible cliques are routed to
+                // `encode_scamo_amo_block` instead of `add_hybrid_amo` in
+                // the main processing loop below.
+                //
+                // Each clique is encoded as a full AMO block (paper formulas
+                // 1–4) rather than mixing in AMZ blocks: in DDD each clique
+                // is an independent AMO requirement, and the paper's
+                // AMZ-plus-connection trick depends on a sliding-window
+                // structure that is not present at the variable level here.
+                let mut scamo_eligible: HashSet<usize> = HashSet::new();
                 if settings.use_scamo_encoding {
-                    const MIN_SCAMO_OVERLAP: usize = 1; // most permissive
+                    const MIN_OVERLAP: usize = 1;
+                    const PHASE2_MIN_GROUP_SIZE: usize = 4;
+                    const PHASE2_MIN_OVERLAP: usize = 2;
 
                     // Index cliques by resource pair; sort by τ within each.
                     let mut by_pair: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
@@ -933,18 +947,26 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         indices.sort_by_key(|&i| clique_candidates[i].2);
                     }
 
-                    // Verbose stats per resource pair.
-                    let pairs_with_multi = by_pair.values().filter(|v| v.len() >= 2).count();
-                    let mut overlap_distribution: BTreeMap<usize, usize> = BTreeMap::new();
+                    // Promote a closed group to "eligible" if it meets the
+                    // Phase-2 bar (size and overlap thresholds).
+                    let mut flush_group = |current_group: &Vec<usize>,
+                                           current_min_overlap: usize,
+                                           scamo_eligible: &mut HashSet<usize>| {
+                        if current_group.len() >= PHASE2_MIN_GROUP_SIZE
+                            && current_min_overlap >= PHASE2_MIN_OVERLAP
+                        {
+                            for &idx in current_group {
+                                scamo_eligible.insert(idx);
+                            }
+                        }
+                    };
 
-                    let mut group_count: usize = 0;
-                    let mut groups_by_size: BTreeMap<usize, usize> = BTreeMap::new();
-                    let mut total_in_groups: usize = 0;
                     for indices in by_pair.values() {
                         if indices.len() < 2 {
                             continue;
                         }
                         let mut current_group: Vec<usize> = vec![indices[0]];
+                        let mut current_min_overlap = usize::MAX;
                         for &next_idx in &indices[1..] {
                             let prev_idx = *current_group.last().unwrap();
                             let prev_set: HashSet<VisitId> = clique_candidates[prev_idx]
@@ -958,41 +980,20 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 .map(|m| m.visit_id)
                                 .collect();
                             let overlap = prev_set.intersection(&next_set).count();
-                            *overlap_distribution.entry(overlap).or_insert(0) += 1;
-                            if overlap >= MIN_SCAMO_OVERLAP {
+                            if overlap >= MIN_OVERLAP {
                                 current_group.push(next_idx);
+                                current_min_overlap = current_min_overlap.min(overlap);
                             } else {
-                                if current_group.len() >= 2 {
-                                    group_count += 1;
-                                    *groups_by_size
-                                        .entry(current_group.len())
-                                        .or_insert(0) += 1;
-                                    total_in_groups += current_group.len();
-                                }
+                                flush_group(
+                                    &current_group,
+                                    current_min_overlap,
+                                    &mut scamo_eligible,
+                                );
                                 current_group = vec![next_idx];
+                                current_min_overlap = usize::MAX;
                             }
                         }
-                        if current_group.len() >= 2 {
-                            group_count += 1;
-                            *groups_by_size
-                                .entry(current_group.len())
-                                .or_insert(0) += 1;
-                            total_in_groups += current_group.len();
-                        }
-                    }
-
-                    if !clique_candidates.is_empty() {
-                        eprintln!(
-                            "[SCAMO-PH1] iter={} candidates={} pairs_total={} pairs_multi={} overlap_dist={:?} groups={} cliques_in_groups={} group_sizes={:?}",
-                            iteration,
-                            clique_candidates.len(),
-                            by_pair.len(),
-                            pairs_with_multi,
-                            overlap_distribution,
-                            group_count,
-                            total_in_groups,
-                            groups_by_size,
-                        );
+                        flush_group(&current_group, current_min_overlap, &mut scamo_eligible);
                     }
                 }
                 // ────────────────────────────────────────────────────────────
@@ -1004,11 +1005,14 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 const MAX_CLIQUES_PER_ITER: usize = 100;
                 let mut cliques_processed = 0usize;
 
-                for (_severity, members, _tau, _resource_a, _resource_b) in clique_candidates {
+                for (clique_idx, (_severity, members, _tau, _resource_a, _resource_b)) in
+                    clique_candidates.into_iter().enumerate()
+                {
                     if cliques_processed >= MAX_CLIQUES_PER_ITER {
                         found_resource_conflict = true;
                         break;
                     }
+                    let is_scamo_eligible = scamo_eligible.contains(&clique_idx);
 
                     let mut member_key: Vec<(VisitId, i32, i32)> = members
                         .iter()
@@ -1048,7 +1052,12 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     // scheduling): emit a direct pairwise monotone clause
                     // instead of Tseitin-encoded `active_i(tau)` aux vars + AMO.
                     // Saves 6 Tseitin clauses + 2 aux vars per clique.
-                    if members.len() == 2 {
+                    //
+                    // SCAMO-eligible cliques bypass the fast-path: the goal of
+                    // the eligibility check is to encode every clique in the
+                    // group consistently with paper §3.1's SC AMO block, so
+                    // we always go through the active-lit + SC encoding path.
+                    if members.len() == 2 && !is_scamo_eligible {
                         let mi = members[0];
                         let mj = members[1];
 
@@ -1117,7 +1126,29 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             active_lits.push(lit);
                         }
 
-                        add_hybrid_amo(&mut solver, &active_lits);
+                        if is_scamo_eligible {
+                            // SCAMO Phase 2: route eligible cliques through the
+                            // paper §3.1 SC AMO block (formulas 1–4 in full).
+                            // This is sound for DDD because each clique still
+                            // gets its own complete AMO block — we do NOT add
+                            // paper's connection clauses (those rely on the
+                            // anti-bandwidth sliding-window structure that
+                            // does not appear in our cliques).
+                            //
+                            // Practical effect vs. `add_hybrid_amo`:
+                            //   • size ≤ 5 cliques: SC instead of pairwise
+                            //     (more clauses, more aux vars, stronger
+                            //     unit-propagation potential)
+                            //   • size > 5 cliques: identical (both call SC)
+                            //
+                            // The register bits returned are not (yet) shared
+                            // with neighbouring cliques in the group; that is
+                            // a future optimisation requiring careful variable
+                            // ordering and a `..._with_prefix` SC variant.
+                            let _bits = encode_scamo_amo_block(&mut solver, &active_lits);
+                        } else {
+                            add_hybrid_amo(&mut solver, &active_lits);
+                        }
                     }
                     n_conflict_constraints += 1;
                     cliques_processed += 1;
@@ -1132,6 +1163,233 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 touched_intervals = new_touched;
             } else {
                 let mut deconflicted_train_pairs: HashSet<(usize, usize)> = HashSet::new();
+
+                // ───────── SCAMO encoding for pair-based branch ─────────
+                // When `use_scamo_encoding` is on, detect SCAMO-eligible
+                // clique groups and skip emitting the pair-based "delay one
+                // of them" clauses for pairs covered by an eligible clique;
+                // the post-retain SCAMO AMO block is the sole encoding for
+                // those pairs. When the flag is off, this branch falls back
+                // to the original pure pair-based path.
+                //
+                // Local 4-tuple to mirror the if-branch's `ActiveInterval`
+                // (lifted later when both branches share a helper).
+                #[derive(Clone, Copy)]
+                struct PbActive {
+                    visit_id: VisitId,
+                    train_idx: usize,
+                    start: i32,
+                    end: i32,
+                }
+
+                // Cliques eligible for SCAMO encoding. Filled when
+                // use_scamo_encoding is on, encoded after `retain` finishes.
+                let mut scamo_eligible_to_encode: Vec<(Vec<PbActive>, i32)> = Vec::new();
+
+                // Pairs covered by an eligible SCAMO clique — the pair-based
+                // retain closure skips emitting its "delay one of them"
+                // clause for these (the SCAMO AMO block emitted post-retain
+                // is the sole encoding for them). Empty when SCAMO is off.
+                let mut pair_skip_set: HashSet<(VisitId, VisitId)> = HashSet::new();
+
+                if settings.use_scamo_encoding {
+                    // Snapshot touched_intervals before retain mutates it;
+                    // SCAMO clique detection needs the full pre-retain set.
+                    let touched_set: HashSet<VisitId> =
+                        touched_intervals.iter().copied().collect();
+
+                    // Replicate the if-branch's relevant_resource_pairs
+                    // computation: any resource that conflicts with a
+                    // touched visit's resource (BTreeSet for deterministic
+                    // iteration order = reproducibility).
+                    let mut relevant_resource_pairs: BTreeSet<(usize, usize)> =
+                        BTreeSet::new();
+                    for &visit_id in touched_intervals.iter() {
+                        let (train_idx, visit_idx) = visits[visit_id];
+                        let resource =
+                            problem.trains[train_idx].visits[visit_idx].resource_id;
+                        if let Some(conflicting) = conflicts.get(&resource) {
+                            for &other in conflicting {
+                                if resource <= other {
+                                    relevant_resource_pairs.insert((resource, other));
+                                } else {
+                                    relevant_resource_pairs.insert((other, resource));
+                                }
+                            }
+                        }
+                    }
+
+                    // Build clique_candidates for the SCAMO detection pass.
+                    let mut clique_candidates: Vec<(
+                        i64,
+                        Vec<PbActive>,
+                        i32,
+                        usize,
+                        usize,
+                    )> = Vec::new();
+                    for (resource_a, resource_b) in relevant_resource_pairs.into_iter() {
+                        if resource_a >= resource_visits.len()
+                            || resource_b >= resource_visits.len()
+                            || resource_visits[resource_a].is_empty()
+                            || resource_visits[resource_b].is_empty()
+                        {
+                            continue;
+                        }
+                        let mut group_intervals: Vec<PbActive> = Vec::new();
+                        for &resource in [resource_a, resource_b].iter() {
+                            if resource >= resource_visits.len() {
+                                continue;
+                            }
+                            if resource == resource_b
+                                && resource_a == resource_b
+                                && !group_intervals.is_empty()
+                            {
+                                continue;
+                            }
+                            for &visit_id in &resource_visits[resource] {
+                                let (train_idx, visit_idx) = visits[visit_id];
+                                let start = occupations[visit_id].incumbent_time();
+                                let next_visit: Option<VisitId> = if visit_idx + 1
+                                    < problem.trains[train_idx].visits.len()
+                                {
+                                    Some((usize::from(visit_id) + 1).into())
+                                } else {
+                                    None
+                                };
+                                let end = next_visit
+                                    .map(|nx| occupations[nx].incumbent_time())
+                                    .unwrap_or(
+                                        start
+                                            + problem.trains[train_idx].visits[visit_idx]
+                                                .travel_time,
+                                    );
+                                if end <= start {
+                                    continue;
+                                }
+                                group_intervals.push(PbActive {
+                                    visit_id,
+                                    train_idx,
+                                    start,
+                                    end,
+                                });
+                            }
+                        }
+                        if group_intervals.len() < 2 {
+                            continue;
+                        }
+                        let mut taus: Vec<i32> =
+                            group_intervals.iter().map(|it| it.start).collect();
+                        taus.sort_unstable();
+                        taus.dedup();
+                        for tau in taus {
+                            let members: Vec<PbActive> = group_intervals
+                                .iter()
+                                .copied()
+                                .filter(|it| it.start <= tau && tau < it.end)
+                                .collect();
+                            if members.len() <= 1 {
+                                continue;
+                            }
+                            if !members.iter().any(|m| touched_set.contains(&m.visit_id)) {
+                                continue;
+                            }
+                            let mut trains_in_clique: HashSet<usize> = HashSet::new();
+                            for m in &members {
+                                trains_in_clique.insert(m.train_idx);
+                            }
+                            if trains_in_clique.len() <= 1 {
+                                continue;
+                            }
+                            let overlap_min_end =
+                                members.iter().map(|m| m.end).min().unwrap();
+                            let overlap_length = (overlap_min_end - tau).max(1) as i64;
+                            let severity = (members.len() as i64) * overlap_length;
+                            clique_candidates.push((
+                                severity, members, tau, resource_a, resource_b,
+                            ));
+                        }
+                    }
+                    // Severity sort to match if-branch ordering — also makes
+                    // pair_skip_set population deterministic.
+                    clique_candidates.sort_by(|a, b| b.0.cmp(&a.0));
+
+                    // ─── SCAMO eligibility detection (mirror of if-branch) ───
+                    const MIN_OVERLAP: usize = 1;
+                    const PHASE2_MIN_GROUP_SIZE: usize = 4;
+                    const PHASE2_MIN_OVERLAP: usize = 2;
+
+                    let mut by_pair: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+                    for (idx, c) in clique_candidates.iter().enumerate() {
+                        by_pair.entry((c.3, c.4)).or_default().push(idx);
+                    }
+                    for indices in by_pair.values_mut() {
+                        indices.sort_by_key(|&i| clique_candidates[i].2);
+                    }
+
+                    let mut scamo_eligible: HashSet<usize> = HashSet::new();
+                    for indices in by_pair.values() {
+                        if indices.len() < 2 {
+                            continue;
+                        }
+                        let mut current_group: Vec<usize> = vec![indices[0]];
+                        let mut current_min_overlap = usize::MAX;
+                        for &next_idx in &indices[1..] {
+                            let prev_idx = *current_group.last().unwrap();
+                            let prev_set: HashSet<VisitId> = clique_candidates[prev_idx]
+                                .1
+                                .iter()
+                                .map(|m| m.visit_id)
+                                .collect();
+                            let next_set: HashSet<VisitId> = clique_candidates[next_idx]
+                                .1
+                                .iter()
+                                .map(|m| m.visit_id)
+                                .collect();
+                            let overlap = prev_set.intersection(&next_set).count();
+                            if overlap >= MIN_OVERLAP {
+                                current_group.push(next_idx);
+                                current_min_overlap = current_min_overlap.min(overlap);
+                            } else {
+                                if current_group.len() >= PHASE2_MIN_GROUP_SIZE
+                                    && current_min_overlap >= PHASE2_MIN_OVERLAP
+                                {
+                                    for &i in &current_group {
+                                        scamo_eligible.insert(i);
+                                    }
+                                }
+                                current_group = vec![next_idx];
+                                current_min_overlap = usize::MAX;
+                            }
+                        }
+                        if current_group.len() >= PHASE2_MIN_GROUP_SIZE
+                            && current_min_overlap >= PHASE2_MIN_OVERLAP
+                        {
+                            for &i in &current_group {
+                                scamo_eligible.insert(i);
+                            }
+                        }
+                    }
+
+                    // Stash eligible clique data for post-retain encoding
+                    // and populate pair_skip_set so the pair-based loop
+                    // skips emitting redundant clauses for these pairs.
+                    for idx in &scamo_eligible {
+                        let (_severity, members, _tau, _, _) = &clique_candidates[*idx];
+                        let tau_plus_1 =
+                            members.iter().map(|m| m.end).min().unwrap();
+                        for i in 0..members.len() {
+                            for j in (i + 1)..members.len() {
+                                let a = members[i].visit_id;
+                                let b = members[j].visit_id;
+                                let (lo, hi) = if a.0 <= b.0 { (a, b) } else { (b, a) };
+                                pair_skip_set.insert((lo, hi));
+                            }
+                        }
+                        scamo_eligible_to_encode.push((members.clone(), tau_plus_1));
+                    }
+                }
+                // ──────────────────────────────────────────────────────
+
                 touched_intervals.retain(|visit_id| {
                     let visit_id = *visit_id;
                     let (train_idx, visit_idx) = visits[visit_id];
@@ -1189,6 +1447,23 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                     || !deconflicted_train_pairs
                                         .insert((other_train_idx, train_idx))
                                 {
+                                    retain = true;
+                                    continue;
+                                }
+
+                                // SCAMO REPLACE: when this pair is covered
+                                // by an eligible SCAMO clique, the post-retain
+                                // SCAMO AMO block is the sole encoding —
+                                // skip the pair-based "delay one of them"
+                                // clause. Empty (no-op) when SCAMO is off.
+                                let (lo, hi) = if visit_id.0 <= other_visit.0 {
+                                    (visit_id, other_visit)
+                                } else {
+                                    (other_visit, visit_id)
+                                };
+                                if pair_skip_set.contains(&(lo, hi)) {
+                                    found_resource_conflict = true;
+                                    stats.n_conflict += 1;
                                     retain = true;
                                     continue;
                                 }
@@ -1266,6 +1541,44 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     }
                     retain
                 });
+
+                // ───────── SCAMO encoding (post-retain) ─────────
+                // After the pair-based loop emits its "delay one of them"
+                // clauses for non-skipped pairs, emit the paper §3.1 SC
+                // AMO block for each SCAMO-eligible clique. Because the
+                // pair-based loop skipped pairs covered by an eligible
+                // clique (pair_skip_set), the AMO block is the sole
+                // encoding for those pairs.
+                //
+                // Per-iteration cache for `active_lit` so visits shared
+                // across multiple eligible cliques only emit the Tseitin
+                // definition once per (visit, τ).
+                if settings.use_scamo_encoding && !scamo_eligible_to_encode.is_empty() {
+                    let mut active_lit_cache_pb: HashMap<(VisitId, i32), Bool<L>> =
+                        HashMap::new();
+                    for (members, tau_plus_1) in &scamo_eligible_to_encode {
+                        let mut active_lits: Vec<Bool<L>> =
+                            Vec::with_capacity(members.len());
+                        for m in members {
+                            let lit = build_active_lit(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut fixed_prec_rows,
+                                &mut active_lit_cache_pb,
+                                settings.use_scl_fixed_precedence,
+                                m.visit_id,
+                                *tau_plus_1,
+                            );
+                            active_lits.push(lit);
+                        }
+                        let _bits = encode_scamo_amo_block(&mut solver, &active_lits);
+                        n_conflict_constraints += 1;
+                    }
+                }
+                // ──────────────────────────────────────────────────────
             }
 
             // touched_intervals.clear();
