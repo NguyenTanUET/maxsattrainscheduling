@@ -1,5 +1,6 @@
 pub mod common;
 pub mod costtree;
+pub mod extended_precedence;
 pub mod incremental_sat;
 pub mod maxsat_rc2;
 pub mod puresat;

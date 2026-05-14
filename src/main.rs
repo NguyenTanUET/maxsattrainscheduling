@@ -51,9 +51,10 @@ struct Opt {
     #[structopt(long)]
     json_output: Option<String>,
 
-    /// Toggle precedence-graph preprocessing/propagation in `sat_ddd*` solvers (true/false).
+    /// Toggle extended-precedence-graph + unary energetic-reasoning
+    /// preprocessing in `sat_ddd*` solvers (true/false).
     #[structopt(long)]
-    satddd_use_precedence_graph: Option<bool>,
+    satddd_use_extended_precedence_graph: Option<bool>,
 
     /// Toggle SCL fixed-precedence rows in `maxsat_ddd_ladder_scl` (true/false).
     #[structopt(long)]
@@ -408,7 +409,9 @@ fn main() {
         .unwrap_or(ddd_solvers::incremental_sat::SatObjectiveEncoding::Scpb);
     println!("SatDdd objective encoding {:?}", satddd_objective_encoding);
     let satddd_settings = ddd_solvers::incremental_sat::SatDddSettings {
-        use_precedence_graph: opt.satddd_use_precedence_graph.unwrap_or(true),
+        use_extended_precedence_graph: opt
+            .satddd_use_extended_precedence_graph
+            .unwrap_or(true),
     };
     println!("SatDdd settings {:?}", satddd_settings);
 
@@ -859,7 +862,10 @@ fn main() {
                             }
                         };
                         let pure_settings = ddd_solvers::puresat::SatDddSettings {
-                            use_precedence_graph: satddd_settings.use_precedence_graph,
+                            // puresat still uses the simple within-train chain; map the
+                            // incremental_sat flag onto it for now until puresat is also
+                            // upgraded to extended precedence + energetic reasoning.
+                            use_precedence_graph: satddd_settings.use_extended_precedence_graph,
                         };
                         ddd_solvers::puresat::solve_scl_fresh_addclauses_with_encoding_and_settings(
                             &mk_env,

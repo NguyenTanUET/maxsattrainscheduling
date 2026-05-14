@@ -78,13 +78,17 @@ pub enum SatObjectiveEncoding {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SatDddSettings {
-    pub use_precedence_graph: bool,
+    /// Run extended-precedence + unary energetic-reasoning preprocessing
+    /// (see [`super::extended_precedence`]) to tighten per-visit earliest
+    /// start times before building the SAT formula and to seed
+    /// fixed-precedence rows for the lower-bound chain.
+    pub use_extended_precedence_graph: bool,
 }
 
 impl Default for SatDddSettings {
     fn default() -> Self {
         Self {
-            use_precedence_graph: true,
+            use_extended_precedence_graph: true,
         }
     }
 }
@@ -1157,26 +1161,6 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
-fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
-    let mut effective = Vec::with_capacity(problem.trains.len());
-
-    for train in &problem.trains {
-        let mut train_bounds = Vec::with_capacity(train.visits.len());
-        let mut propagated_lb: Option<i32> = None;
-
-        for visit in &train.visits {
-            let lb = propagated_lb.map_or(visit.earliest, |prev_lb| prev_lb.max(visit.earliest));
-            train_bounds.push(lb);
-            propagated_lb = Some(lb + visit.travel_time);
-        }
-
-        effective.push(train_bounds);
-    }
-
-    effective
-}
-
-
 fn add_sequential_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
@@ -1422,9 +1406,15 @@ fn solve_native_debug_with_mode(
     let mut touched_intervals = Vec::new();
     let mut conflicts: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut new_time_points: Vec<(VisitId, Bool<NativeLit>, i32)> = Vec::new();
-    let effective_earliest = settings
-        .use_precedence_graph
-        .then(|| compute_effective_earliest(problem));
+    let effective_earliest = if settings.use_extended_precedence_graph {
+        let ep = super::extended_precedence::compute(problem);
+        if ep.infeasible {
+            return Err(SolverError::NoSolution);
+        }
+        Some(ep.est)
+    } else {
+        None
+    };
 
     let mut iteration_types: BTreeMap<IterationType, usize> = BTreeMap::new();
 
@@ -1507,7 +1497,7 @@ fn solve_native_debug_with_mode(
                 continue;
             }
             let (in_var, in_t) = occupations[visit_id].delays[0];
-            if settings.use_precedence_graph {
+            if settings.use_extended_precedence_graph {
                 propagate_precedence(
                     &mut solver,
                     problem,
