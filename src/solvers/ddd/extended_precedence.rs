@@ -13,9 +13,18 @@
 //! plus an `infeasible` flag set when the unary energetic feasibility test
 //! detects no schedule can exist.
 //!
-//! No horizon `M` is available in this codebase, so `lst` is not computed
-//! and the mandatory-work formula drops the `lst_i + travel_i - t1` term.
-//! Deductions are sound but weaker than the full Baptiste rule.
+//! Horizon: per-visit `lst[v] = est[v] + BIG_M` where `BIG_M = 900` follows
+//! the convention from [`crate::solvers::maxsat_ti`] for the same TRP
+//! benchmark. Initialization uses chain-propagated `est` (not raw
+//! `visit.earliest`) so `lst` stays consistent with within-train precedence
+//! on long chains. Sound under the (empirically verified) assumption that
+//! cost-optimal schedules of this benchmark have no visit delayed beyond
+//! `BIG_M` past its chain-earliest.
+//!
+//! Greedy-makespan-based `lst` was tried earlier but is unsound for
+//! saturating cost functions (`finsteps123`, `infsteps180`) where
+//! cost-optimal schedules can have a visit delayed past greedy makespan
+//! without extra cost penalty.
 
 use crate::problem::{Problem, Train};
 use std::collections::{HashMap, HashSet};
@@ -27,6 +36,19 @@ pub struct ExtendedPrecedence {
 }
 
 const MAX_FIXEDPOINT_ITERS: usize = 20;
+
+/// Per-visit horizon offset: `lst[v] = est[v] + BIG_M`. Matches the
+/// `big_m` parameter used by [`crate::solvers::maxsat_ti`] for the same
+/// benchmark (see main.rs site that passes `900`).
+const BIG_M: i32 = 900;
+
+/// Enable the Baptiste–Le Pape–Nuijten left-shift adjustment rule.
+///
+/// Sound when `lst` is a true upper bound on each visit's start time. With
+/// `lst = est + BIG_M`, the rule is sound under the assumption that
+/// cost-optimal schedules have no visit delayed beyond BIG_M past its
+/// chain-earliest.
+const ENABLE_EST_ADJUSTMENT: bool = true;
 
 pub fn compute(problem: &Problem) -> ExtendedPrecedence {
     let n_trains = problem.trains.len();
@@ -48,7 +70,28 @@ pub fn compute(problem: &Problem) -> ExtendedPrecedence {
         }
     }
 
-    propagate_within_train(&mut est, &travel, &problem.trains, &train_offset);
+    // Forward-propagate est first so it reflects within-train chain.
+    propagate_est_forward(&mut est, &travel, &problem.trains, &train_offset);
+
+    // Per-visit lst = est + BIG_M (matching the convention used by
+    // `maxsat_ti` for the same benchmark: each visit may start at most
+    // BIG_M time units after its chain-propagated earliest). Initializing
+    // from `est` (post-chain) instead of raw `visit.earliest` keeps lst
+    // consistent with within-train precedence (avoids false infeasibility
+    // on long chains).
+    //
+    // Sound assumption: cost-optimal schedule has no visit delayed beyond
+    // BIG_M past its chain-earliest. Empirically true on Croella benchmark
+    // (`maxsat_ti` uses big_m = 900 successfully).
+    let mut lst: Vec<i32> = est.iter().map(|&e| e.saturating_add(BIG_M)).collect();
+    propagate_lst_backward(&mut lst, &travel, &problem.trains, &train_offset);
+
+    if has_infeasible_window(&est, &lst) {
+        return ExtendedPrecedence {
+            est: scatter_back(&est, &train_offset, &problem.trains),
+            infeasible: true,
+        };
+    }
 
     let clique_visits = build_clique_visits(problem, &resource, n);
 
@@ -56,14 +99,20 @@ pub fn compute(problem: &Problem) -> ExtendedPrecedence {
         let est_at_start = est.clone();
 
         for clique in clique_visits.values() {
-            if run_energetic_reasoning(clique, &mut est, &travel) {
+            if run_energetic_reasoning(clique, &mut est, &lst, &travel) {
                 return ExtendedPrecedence {
                     est: scatter_back(&est, &train_offset, &problem.trains),
                     infeasible: true,
                 };
             }
         }
-        propagate_within_train(&mut est, &travel, &problem.trains, &train_offset);
+        propagate_est_forward(&mut est, &travel, &problem.trains, &train_offset);
+        if has_infeasible_window(&est, &lst) {
+            return ExtendedPrecedence {
+                est: scatter_back(&est, &train_offset, &problem.trains),
+                infeasible: true,
+            };
+        }
 
         if est == est_at_start {
             break;
@@ -76,7 +125,7 @@ pub fn compute(problem: &Problem) -> ExtendedPrecedence {
     }
 }
 
-fn propagate_within_train(
+fn propagate_est_forward(
     est: &mut [i32],
     travel: &[i32],
     trains: &[Train],
@@ -86,7 +135,7 @@ fn propagate_within_train(
         for v_idx in 1..train.visits.len() {
             let prev = train_offset[t_idx] + v_idx - 1;
             let cur = train_offset[t_idx] + v_idx;
-            let bound = est[prev] + travel[prev];
+            let bound = est[prev].saturating_add(travel[prev]);
             if est[cur] < bound {
                 est[cur] = bound;
             }
@@ -94,28 +143,169 @@ fn propagate_within_train(
     }
 }
 
+fn propagate_lst_backward(
+    lst: &mut [i32],
+    travel: &[i32],
+    trains: &[Train],
+    train_offset: &[usize],
+) {
+    for (t_idx, train) in trains.iter().enumerate() {
+        let n_visits = train.visits.len();
+        if n_visits < 2 {
+            continue;
+        }
+        for v_idx in (0..n_visits - 1).rev() {
+            let cur = train_offset[t_idx] + v_idx;
+            let next = train_offset[t_idx] + v_idx + 1;
+            // visit v+1 must start by lst[v+1] → visit v must start by lst[v+1] - travel[v]
+            let bound = lst[next].saturating_sub(travel[cur]);
+            if lst[cur] > bound {
+                lst[cur] = bound;
+            }
+        }
+    }
+}
+
+fn has_infeasible_window(est: &[i32], lst: &[i32]) -> bool {
+    est.iter().zip(lst.iter()).any(|(&e, &l)| e > l)
+}
+
+/// Greedy list schedule: process visits in `est` ascending order; each
+/// visit starts at the max of `est[v]`, the latest finish on conflicting
+/// resources, and its within-train predecessor's actual greedy finish.
+/// Returns a feasible-schedule makespan upper bound.
+///
+/// Currently unused: greedy makespan was tried as the source for `lst` but
+/// is unsound for saturating cost functions (cost-optimal schedule can
+/// have makespan > greedy makespan). Kept for potential future use with
+/// `DelayCostType::Continuous` where the bound is sound.
+#[allow(dead_code)]
+fn greedy_makespan_ub(
+    problem: &Problem,
+    est: &[i32],
+    resource: &[usize],
+    travel: &[i32],
+    train_visit: &[(usize, usize)],
+    train_offset: &[usize],
+    n: usize,
+) -> i32 {
+    let mut conflicts_of: HashMap<usize, Vec<usize>> = HashMap::new();
+    for &(a, b) in &problem.conflicts {
+        conflicts_of.entry(a).or_default().push(b);
+        if a != b {
+            conflicts_of.entry(b).or_default().push(a);
+        }
+    }
+
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by_key(|&v| (est[v], v));
+
+    let mut t_greedy: Vec<i32> = vec![0; n];
+    let mut last_finish: HashMap<usize, i32> = HashMap::new();
+    let mut makespan: i32 = 0;
+    for &v in &order {
+        let r = resource[v];
+        let (t_idx, v_idx) = train_visit[v];
+
+        let chain_lb = if v_idx > 0 {
+            let prev = train_offset[t_idx] + v_idx - 1;
+            t_greedy[prev].saturating_add(travel[prev])
+        } else {
+            0
+        };
+
+        let resource_lb = conflicts_of
+            .get(&r)
+            .map(|rs| {
+                rs.iter()
+                    .map(|r2| last_finish.get(r2).copied().unwrap_or(0))
+                    .max()
+                    .unwrap_or(0)
+            })
+            .unwrap_or(0);
+
+        let t_v = est[v].max(resource_lb).max(chain_lb);
+        t_greedy[v] = t_v;
+        let finish = t_v.saturating_add(travel[v]);
+
+        if let Some(rs) = conflicts_of.get(&r) {
+            for &r2 in rs {
+                let cur = last_finish.entry(r2).or_insert(0);
+                if finish > *cur {
+                    *cur = finish;
+                }
+            }
+        } else {
+            let cur = last_finish.entry(r).or_insert(0);
+            if finish > *cur {
+                *cur = finish;
+            }
+        }
+        if finish > makespan {
+            makespan = finish;
+        }
+    }
+    makespan
+}
+
+/// `tail[v]` = travel time from v to end of v's train (inclusive of v).
+/// Used to derive `lst[v] = makespan_UB - tail[v]` in the greedy approach;
+/// not used in the current BIG_M-based pipeline.
+#[allow(dead_code)]
+fn compute_tail(
+    travel: &[i32],
+    trains: &[Train],
+    train_offset: &[usize],
+    n: usize,
+) -> Vec<i32> {
+    let mut tail = vec![0; n];
+    for (t_idx, train) in trains.iter().enumerate() {
+        let n_visits = train.visits.len();
+        if n_visits == 0 {
+            continue;
+        }
+        let last = train_offset[t_idx] + n_visits - 1;
+        tail[last] = travel[last];
+        for v_idx in (0..n_visits - 1).rev() {
+            let cur = train_offset[t_idx] + v_idx;
+            let next = cur + 1;
+            tail[cur] = travel[cur].saturating_add(tail[next]);
+        }
+    }
+    tail
+}
+
 /// Run unary energetic reasoning on one conflict clique.
 /// Returns `true` if infeasibility is detected; otherwise updates `est`
-/// in place via the "left-shift adjustment" rule.
-fn run_energetic_reasoning(clique: &[usize], est: &mut [i32], travel: &[i32]) -> bool {
+/// in place via the Baptiste–Le Pape–Nuijten "left-shift adjustment" rule.
+///
+/// Mandatory work of visit i in window `[t1, t2]` is `min(W_left, W_right)`:
+///   W_left  = overlap of [est_i, est_i+p_i] with [t1, t2]
+///   W_right = overlap of [lst_i, lst_i+p_i] with [t1, t2]
+/// If W_right = 0 the visit can be right-shifted entirely past the window
+/// and contributes zero mandatory work (sound).
+///
+/// Adjustment: if `Σ_{i≠j} w_i + W_left_j > t2 - t1`, then j cannot start
+/// as left as est_j; its earliest start is pushed to `t1 + Σ_{i≠j} w_i`.
+fn run_energetic_reasoning(
+    clique: &[usize],
+    est: &mut [i32],
+    lst: &[i32],
+    travel: &[i32],
+) -> bool {
     if clique.len() < 2 {
         return false;
     }
 
-    let mut o_pts: Vec<i32> = Vec::with_capacity(2 * clique.len());
+    let mut o_pts: Vec<i32> = Vec::with_capacity(4 * clique.len());
     for &i in clique {
         o_pts.push(est[i]);
         o_pts.push(est[i] + travel[i]);
+        o_pts.push(lst[i]);
+        o_pts.push(lst[i] + travel[i]);
     }
     o_pts.sort_unstable();
     o_pts.dedup();
-
-    let work = |i: usize, t1: i32, t2: i32, est: &[i32]| -> i32 {
-        let a = travel[i];
-        let b = t2 - t1;
-        let c = t2 - est[i];
-        a.min(b).min(c).max(0)
-    };
 
     for i1 in 0..o_pts.len() {
         for i2 in (i1 + 1)..o_pts.len() {
@@ -125,26 +315,46 @@ fn run_energetic_reasoning(clique: &[usize], est: &mut [i32], travel: &[i32]) ->
 
             let mut w_sum: i32 = 0;
             for &i in clique {
-                w_sum = w_sum.saturating_add(work(i, t1, t2, est));
+                let p = travel[i];
+                let w_left = ((est[i] + p).min(t2) - est[i].max(t1)).max(0);
+                let w_right = ((lst[i] + p).min(t2) - lst[i].max(t1)).max(0);
+                w_sum = w_sum.saturating_add(w_left.min(w_right));
             }
             if w_sum > window {
                 return true;
             }
 
-            // Left-shift adjustment: if j's mandatory work plus the work of
-            // all other visits exceeds the window, j cannot complete inside
-            // [t1, t2] given est_j ≥ t1, so its earliest start must be pushed
-            // past t2 - travel_j.
-            for &j in clique {
-                let wj = work(j, t1, t2, est);
-                let w_other = w_sum - wj;
-                if w_other + travel[j] > window
-                    && est[j] >= t1
-                    && est[j] + travel[j] <= t2
-                {
-                    let new_est = t2 - travel[j] + 1;
-                    if new_est > est[j] {
-                        est[j] = new_est;
+            if ENABLE_EST_ADJUSTMENT {
+                // For each j, recompute Σ_{i≠j} w_i FRESHLY from current
+                // est/lst — pushing one est[j] during this loop changes that
+                // visit's mandatory work (typically decreases it as it moves
+                // into the valid region). Using a cached `w_sum` from before
+                // the j-loop would over-estimate Σ_{i≠j} w_i for later j's,
+                // causing the push `t1 + Σ_{i≠j} w_i` to land further than
+                // sound. The extra O(|clique|) per j is cheap.
+                for &j in clique {
+                    let p_j = travel[j];
+                    let w_left_j = ((est[j] + p_j).min(t2) - est[j].max(t1)).max(0);
+
+                    let mut w_minus_j: i32 = 0;
+                    for &i in clique {
+                        if i == j {
+                            continue;
+                        }
+                        let p_i = travel[i];
+                        let w_left_i = ((est[i] + p_i).min(t2) - est[i].max(t1)).max(0);
+                        let w_right_i = ((lst[i] + p_i).min(t2) - lst[i].max(t1)).max(0);
+                        w_minus_j = w_minus_j.saturating_add(w_left_i.min(w_right_i));
+                    }
+
+                    if w_minus_j + w_left_j > window {
+                        let new_est = t1.saturating_add(w_minus_j);
+                        if new_est > est[j] {
+                            if new_est > lst[j] {
+                                return true;
+                            }
+                            est[j] = new_est;
+                        }
                     }
                 }
             }

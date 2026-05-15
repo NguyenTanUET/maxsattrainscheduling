@@ -1000,7 +1000,7 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 }
 
 
-fn add_sequential_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
+fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
         2 => {
@@ -1037,7 +1037,7 @@ fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bo
     if lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
-        add_sequential_amo(solver, lits);
+        add_scl_amo(solver, lits);
     }
 }
 

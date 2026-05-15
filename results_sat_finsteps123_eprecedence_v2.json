@@ -1,0 +1,6481 @@
+[
+  {
+    "avg_tracks": 20.931034088134766,
+    "conflicting_visit_pairs": 5915,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 0,
+    "name": "origA1",
+    "solves": [
+      {
+        "algorithm_time": 0.14334703799999998,
+        "avg_time_points": 3.3169750603378922,
+        "cost": 11,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 409,
+        "lb": 11,
+        "max_time_points": 13,
+        "num_conflicts": 132,
+        "num_time_points": 4123,
+        "num_traveltime": 2314,
+        "objective_iters": 409,
+        "resource_iters": 3,
+        "sol_time": 219.526176,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.075315534,
+        "status": "ok",
+        "time_to_best_value_ms": 217.563445,
+        "time_to_first_solution_ms": 131.64025800000002,
+        "time_to_optimality_ms": 218.63597000000001,
+        "time_to_prove_best_value_ms": 218.63597000000001,
+        "total_time": 0.218662295,
+        "travel_and_resource_iters": 101,
+        "travel_iters": 299,
+        "ub": 11,
+        "value_trace": [
+          {
+            "elapsed_ms": 131.64025800000002,
+            "event": "incumbent",
+            "incumbent": 51,
+            "iteration": 236,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 51
+          },
+          {
+            "elapsed_ms": 209.281133,
+            "event": "incumbent",
+            "incumbent": 24,
+            "iteration": 398,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 217.563445,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 406,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 217.856145,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 406,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 218.194055,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 407,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 218.389643,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 408,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 218.63597000000001,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 409,
+            "lower_bound": 11,
+            "note": "unsat_bound",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 218.64649699999998,
+            "event": "optimal",
+            "incumbent": 11,
+            "iteration": 409,
+            "lower_bound": 11,
+            "value": 11
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 29
+  },
+  {
+    "avg_tracks": 19.0,
+    "conflicting_visit_pairs": 3735,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 1,
+    "name": "origA2",
+    "solves": [
+      {
+        "algorithm_time": 0.011472386000000001,
+        "avg_time_points": 2.0358974358974358,
+        "cost": 25,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 122,
+        "lb": 25,
+        "max_time_points": 21,
+        "num_conflicts": 90,
+        "num_time_points": 1985,
+        "num_traveltime": 635,
+        "objective_iters": 121,
+        "resource_iters": 3,
+        "sol_time": 24.05437,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.012397907,
+        "status": "ok",
+        "time_to_best_value_ms": 23.860773,
+        "time_to_first_solution_ms": 12.862973,
+        "time_to_optimality_ms": 23.860773,
+        "time_to_prove_best_value_ms": 17.481738,
+        "total_time": 0.023870039,
+        "travel_and_resource_iters": 50,
+        "travel_iters": 63,
+        "ub": 25,
+        "value_trace": [
+          {
+            "elapsed_ms": 12.862973,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 57,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 13.133784,
+            "event": "lower_bound",
+            "incumbent": 30,
+            "iteration": 57,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 13.260777,
+            "event": "lower_bound",
+            "incumbent": 30,
+            "iteration": 58,
+            "lower_bound": 23,
+            "note": "unsat_bound",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 17.187374,
+            "event": "incumbent",
+            "incumbent": 26,
+            "iteration": 82,
+            "lower_bound": 23,
+            "note": "sat_solution",
+            "value": 26
+          },
+          {
+            "elapsed_ms": 17.481738,
+            "event": "lower_bound",
+            "incumbent": 26,
+            "iteration": 83,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 23.860773,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 122,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 23.862109999999998,
+            "event": "optimal",
+            "incumbent": 25,
+            "iteration": 122,
+            "lower_bound": 25,
+            "value": 25
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 22.375,
+    "conflicting_visit_pairs": 2061,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 2,
+    "name": "origA3",
+    "solves": [
+      {
+        "algorithm_time": 0.010545698000000003,
+        "avg_time_points": 2.366120218579235,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 192,
+        "lb": 10,
+        "max_time_points": 13,
+        "num_conflicts": 41,
+        "num_time_points": 1732,
+        "num_traveltime": 802,
+        "objective_iters": 192,
+        "resource_iters": 1,
+        "sol_time": 29.045279999999998,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.01832805,
+        "status": "ok",
+        "time_to_best_value_ms": 28.745869,
+        "time_to_first_solution_ms": 14.473018000000001,
+        "time_to_optimality_ms": 28.863316,
+        "time_to_prove_best_value_ms": 28.863316,
+        "total_time": 0.028873513,
+        "travel_and_resource_iters": 32,
+        "travel_iters": 155,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 14.473018000000001,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 98,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 16.669199,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 110,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 24.995057000000003,
+            "event": "incumbent",
+            "incumbent": 12,
+            "iteration": 164,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 28.745869,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 192,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 28.863316,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 192,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 28.864533,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 192,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 16
+  },
+  {
+    "avg_tracks": 19.214284896850586,
+    "conflicting_visit_pairs": 1175,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 3,
+    "name": "origA4",
+    "solves": [
+      {
+        "algorithm_time": 0.007542492,
+        "avg_time_points": 2.347826086956522,
+        "cost": 17,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 174,
+        "lb": 17,
+        "max_time_points": 8,
+        "num_conflicts": 26,
+        "num_time_points": 1296,
+        "num_traveltime": 610,
+        "objective_iters": 174,
+        "resource_iters": 1,
+        "sol_time": 22.721262999999997,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.015044381,
+        "status": "ok",
+        "time_to_best_value_ms": 22.238771,
+        "time_to_first_solution_ms": 9.78122,
+        "time_to_optimality_ms": 22.577305,
+        "time_to_prove_best_value_ms": 22.577305,
+        "total_time": 0.022586543,
+        "travel_and_resource_iters": 20,
+        "travel_iters": 148,
+        "ub": 17,
+        "value_trace": [
+          {
+            "elapsed_ms": 9.78122,
+            "event": "incumbent",
+            "incumbent": 23,
+            "iteration": 80,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 9.956831,
+            "event": "lower_bound",
+            "incumbent": 23,
+            "iteration": 80,
+            "lower_bound": 12,
+            "note": "unsat_bound",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 22.238771,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 172,
+            "lower_bound": 12,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 22.344912,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 172,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 22.471432,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 173,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 22.577305,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 174,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 22.578014,
+            "event": "optimal",
+            "incumbent": 17,
+            "iteration": 174,
+            "lower_bound": 17,
+            "value": 17
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 14
+  },
+  {
+    "avg_tracks": 19.25,
+    "conflicting_visit_pairs": 876,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 4,
+    "name": "origA5",
+    "solves": [
+      {
+        "algorithm_time": 0.008378278,
+        "avg_time_points": 3.0168776371308015,
+        "cost": 15,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 200,
+        "lb": 15,
+        "max_time_points": 12,
+        "num_conflicts": 31,
+        "num_time_points": 1430,
+        "num_traveltime": 810,
+        "objective_iters": 199,
+        "resource_iters": 1,
+        "sol_time": 25.189538000000002,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.016664987,
+        "status": "ok",
+        "time_to_best_value_ms": 25.034691000000002,
+        "time_to_first_solution_ms": 15.462633,
+        "time_to_optimality_ms": 25.034691000000002,
+        "time_to_prove_best_value_ms": 23.72171,
+        "total_time": 0.025042987,
+        "travel_and_resource_iters": 23,
+        "travel_iters": 170,
+        "ub": 15,
+        "value_trace": [
+          {
+            "elapsed_ms": 15.462633,
+            "event": "incumbent",
+            "incumbent": 23,
+            "iteration": 135,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 15.689659000000002,
+            "event": "lower_bound",
+            "incumbent": 23,
+            "iteration": 135,
+            "lower_bound": 12,
+            "note": "unsat_bound",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 23.493639,
+            "event": "incumbent",
+            "incumbent": 16,
+            "iteration": 189,
+            "lower_bound": 12,
+            "note": "sat_solution",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 23.613138999999997,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 189,
+            "lower_bound": 14,
+            "note": "unsat_bound",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 23.72171,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 190,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 25.034691000000002,
+            "event": "incumbent",
+            "incumbent": 15,
+            "iteration": 200,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 25.035632,
+            "event": "optimal",
+            "incumbent": 15,
+            "iteration": 200,
+            "lower_bound": 15,
+            "value": 15
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 12
+  },
+  {
+    "avg_tracks": 18.625,
+    "conflicting_visit_pairs": 307,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 5,
+    "name": "origA6",
+    "solves": [
+      {
+        "algorithm_time": 0.00210213,
+        "avg_time_points": 1.4869281045751634,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 66,
+        "lb": 10,
+        "max_time_points": 5,
+        "num_conflicts": 4,
+        "num_time_points": 455,
+        "num_traveltime": 118,
+        "objective_iters": 66,
+        "resource_iters": 1,
+        "sol_time": 6.629093,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00442262,
+        "status": "ok",
+        "time_to_best_value_ms": 6.435198,
+        "time_to_first_solution_ms": 6.0331969999999995,
+        "time_to_optimality_ms": 6.51556,
+        "time_to_prove_best_value_ms": 6.51556,
+        "total_time": 0.006524473,
+        "travel_and_resource_iters": 1,
+        "travel_iters": 60,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.0331969999999995,
+            "event": "incumbent",
+            "incumbent": 12,
+            "iteration": 62,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 6.141227,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 62,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 6.2211929999999995,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 63,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 6.435198,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 66,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 6.51556,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 66,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 6.516592,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 66,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 12.625,
+    "conflicting_visit_pairs": 126,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 6,
+    "name": "origA7",
+    "solves": [
+      {
+        "algorithm_time": 0.001420597,
+        "avg_time_points": 1.5714285714285714,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 45,
+        "lb": 10,
+        "max_time_points": 4,
+        "num_conflicts": 6,
+        "num_time_points": 330,
+        "num_traveltime": 82,
+        "objective_iters": 45,
+        "resource_iters": 1,
+        "sol_time": 4.152458,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.002660036,
+        "status": "ok",
+        "time_to_best_value_ms": 3.78167,
+        "time_to_first_solution_ms": 3.78167,
+        "time_to_optimality_ms": 4.07301,
+        "time_to_prove_best_value_ms": 4.07301,
+        "total_time": 0.004080386,
+        "travel_and_resource_iters": 2,
+        "travel_iters": 38,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 3.78167,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 42,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 3.879655,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 42,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 3.945438,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 43,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 4.005291000000001,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 44,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 4.07301,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 45,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 4.073645,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 45,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 19.214284896850586,
+    "conflicting_visit_pairs": 4877,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 7,
+    "name": "origA8",
+    "solves": [
+      {
+        "algorithm_time": 0.038902012,
+        "avg_time_points": 5.545289855072464,
+        "cost": 31,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 259,
+        "lb": 31,
+        "max_time_points": 22,
+        "num_conflicts": 367,
+        "num_time_points": 6122,
+        "num_traveltime": 3647,
+        "objective_iters": 258,
+        "resource_iters": 1,
+        "sol_time": 105.426168,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.066094721,
+        "status": "ok",
+        "time_to_best_value_ms": 104.986146,
+        "time_to_first_solution_ms": 42.72225,
+        "time_to_optimality_ms": 104.986146,
+        "time_to_prove_best_value_ms": 92.999023,
+        "total_time": 0.104996487,
+        "travel_and_resource_iters": 124,
+        "travel_iters": 128,
+        "ub": 31,
+        "value_trace": [
+          {
+            "elapsed_ms": 42.72225,
+            "event": "incumbent",
+            "incumbent": 56,
+            "iteration": 125,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 56
+          },
+          {
+            "elapsed_ms": 44.227441,
+            "event": "lower_bound",
+            "incumbent": 56,
+            "iteration": 126,
+            "lower_bound": 28,
+            "note": "unsat_bound",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 80.740077,
+            "event": "incumbent",
+            "incumbent": 40,
+            "iteration": 204,
+            "lower_bound": 28,
+            "note": "sat_solution",
+            "value": 40
+          },
+          {
+            "elapsed_ms": 92.065888,
+            "event": "incumbent",
+            "incumbent": 33,
+            "iteration": 230,
+            "lower_bound": 28,
+            "note": "sat_solution",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 92.999023,
+            "event": "lower_bound",
+            "incumbent": 33,
+            "iteration": 230,
+            "lower_bound": 31,
+            "note": "unsat_bound",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 104.986146,
+            "event": "incumbent",
+            "incumbent": 31,
+            "iteration": 259,
+            "lower_bound": 31,
+            "note": "sat_solution",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 104.987598,
+            "event": "optimal",
+            "incumbent": 31,
+            "iteration": 259,
+            "lower_bound": 31,
+            "value": 31
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 28
+  },
+  {
+    "avg_tracks": 20.049999237060547,
+    "conflicting_visit_pairs": 2616,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 8,
+    "name": "origA9",
+    "solves": [
+      {
+        "algorithm_time": 0.015383161999999999,
+        "avg_time_points": 2.940389294403893,
+        "cost": 18,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 253,
+        "lb": 18,
+        "max_time_points": 13,
+        "num_conflicts": 80,
+        "num_time_points": 2417,
+        "num_traveltime": 1264,
+        "objective_iters": 252,
+        "resource_iters": 1,
+        "sol_time": 45.384703,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.029822514,
+        "status": "ok",
+        "time_to_best_value_ms": 45.195291,
+        "time_to_first_solution_ms": 12.629649,
+        "time_to_optimality_ms": 45.195291,
+        "time_to_prove_best_value_ms": 44.802858,
+        "total_time": 0.045205372,
+        "travel_and_resource_iters": 54,
+        "travel_iters": 192,
+        "ub": 18,
+        "value_trace": [
+          {
+            "elapsed_ms": 12.629649,
+            "event": "incumbent",
+            "incumbent": 29,
+            "iteration": 64,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 12.873016,
+            "event": "lower_bound",
+            "incumbent": 29,
+            "iteration": 64,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 44.720333000000004,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 250,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 44.802858,
+            "event": "lower_bound",
+            "incumbent": 21,
+            "iteration": 250,
+            "lower_bound": 18,
+            "note": "unsat_bound",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 44.993429,
+            "event": "incumbent",
+            "incumbent": 19,
+            "iteration": 252,
+            "lower_bound": 18,
+            "note": "sat_solution",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 45.195291,
+            "event": "incumbent",
+            "incumbent": 18,
+            "iteration": 253,
+            "lower_bound": 18,
+            "note": "sat_solution",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 45.196508,
+            "event": "optimal",
+            "incumbent": 18,
+            "iteration": 253,
+            "lower_bound": 18,
+            "value": 18
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 18.176469802856445,
+    "conflicting_visit_pairs": 1632,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 9,
+    "name": "origA10",
+    "solves": [
+      {
+        "algorithm_time": 0.014823481,
+        "avg_time_points": 4.390551181102362,
+        "cost": 17,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 221,
+        "lb": 17,
+        "max_time_points": 17,
+        "num_conflicts": 95,
+        "num_time_points": 2788,
+        "num_traveltime": 1762,
+        "objective_iters": 220,
+        "resource_iters": 1,
+        "sol_time": 41.601766,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.02657653,
+        "status": "ok",
+        "time_to_best_value_ms": 41.389791,
+        "time_to_first_solution_ms": 11.073269999999999,
+        "time_to_optimality_ms": 41.389791,
+        "time_to_prove_best_value_ms": 41.2031,
+        "total_time": 0.041399771,
+        "travel_and_resource_iters": 64,
+        "travel_iters": 150,
+        "ub": 17,
+        "value_trace": [
+          {
+            "elapsed_ms": 11.073269999999999,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 67,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 11.271863,
+            "event": "lower_bound",
+            "incumbent": 30,
+            "iteration": 67,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 33.942062,
+            "event": "incumbent",
+            "incumbent": 22,
+            "iteration": 182,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 41.12242,
+            "event": "incumbent",
+            "incumbent": 18,
+            "iteration": 219,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 41.2031,
+            "event": "lower_bound",
+            "incumbent": 18,
+            "iteration": 219,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 41.389791,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 221,
+            "lower_bound": 17,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 41.390749,
+            "event": "optimal",
+            "incumbent": 17,
+            "iteration": 221,
+            "lower_bound": 17,
+            "value": 17
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 17
+  },
+  {
+    "avg_tracks": 19.83333396911621,
+    "conflicting_visit_pairs": 6162,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 10,
+    "name": "origA11",
+    "solves": [
+      {
+        "algorithm_time": 0.053366022,
+        "avg_time_points": 5.780327868852459,
+        "cost": 23,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 249,
+        "lb": 23,
+        "max_time_points": 24,
+        "num_conflicts": 396,
+        "num_time_points": 7052,
+        "num_traveltime": 4362,
+        "objective_iters": 248,
+        "resource_iters": 1,
+        "sol_time": 137.532441,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.083692845,
+        "status": "ok",
+        "time_to_best_value_ms": 137.048083,
+        "time_to_first_solution_ms": 41.451089,
+        "time_to_optimality_ms": 137.048083,
+        "time_to_prove_best_value_ms": 129.183705,
+        "total_time": 0.137058619,
+        "travel_and_resource_iters": 131,
+        "travel_iters": 110,
+        "ub": 23,
+        "value_trace": [
+          {
+            "elapsed_ms": 41.451089,
+            "event": "incumbent",
+            "incumbent": 57,
+            "iteration": 97,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 57
+          },
+          {
+            "elapsed_ms": 103.85794600000001,
+            "event": "incumbent",
+            "incumbent": 28,
+            "iteration": 201,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 28
+          },
+          {
+            "elapsed_ms": 104.092745,
+            "event": "lower_bound",
+            "incumbent": 28,
+            "iteration": 201,
+            "lower_bound": 14,
+            "note": "unsat_bound",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 105.285494,
+            "event": "lower_bound",
+            "incumbent": 28,
+            "iteration": 202,
+            "lower_bound": 21,
+            "note": "unsat_bound",
+            "value": 20
+          },
+          {
+            "elapsed_ms": 125.068638,
+            "event": "incumbent",
+            "incumbent": 24,
+            "iteration": 241,
+            "lower_bound": 21,
+            "note": "sat_solution",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 129.183705,
+            "event": "lower_bound",
+            "incumbent": 24,
+            "iteration": 241,
+            "lower_bound": 23,
+            "note": "unsat_bound",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 137.048083,
+            "event": "incumbent",
+            "incumbent": 23,
+            "iteration": 249,
+            "lower_bound": 23,
+            "note": "sat_solution",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 137.049723,
+            "event": "optimal",
+            "incumbent": 23,
+            "iteration": 249,
+            "lower_bound": 23,
+            "value": 23
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 30
+  },
+  {
+    "avg_tracks": 21.714284896850586,
+    "conflicting_visit_pairs": 6393,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 11,
+    "name": "origA12",
+    "solves": [
+      {
+        "algorithm_time": 0.043000969,
+        "avg_time_points": 4.886655948553055,
+        "cost": 24,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 293,
+        "lb": 24,
+        "max_time_points": 17,
+        "num_conflicts": 288,
+        "num_time_points": 6079,
+        "num_traveltime": 3744,
+        "objective_iters": 292,
+        "resource_iters": 2,
+        "sol_time": 132.62443199999998,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.089217355,
+        "status": "ok",
+        "time_to_best_value_ms": 132.207491,
+        "time_to_first_solution_ms": 45.917266999999995,
+        "time_to_optimality_ms": 132.207491,
+        "time_to_prove_best_value_ms": 122.768263,
+        "total_time": 0.132218036,
+        "travel_and_resource_iters": 119,
+        "travel_iters": 165,
+        "ub": 24,
+        "value_trace": [
+          {
+            "elapsed_ms": 45.917266999999995,
+            "event": "incumbent",
+            "incumbent": 52,
+            "iteration": 144,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 52
+          },
+          {
+            "elapsed_ms": 111.686939,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 269,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 111.89322899999999,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 269,
+            "lower_bound": 13,
+            "note": "unsat_bound",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 112.516835,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 270,
+            "lower_bound": 19,
+            "note": "unsat_bound",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 114.87911000000001,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 271,
+            "lower_bound": 22,
+            "note": "unsat_bound",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 122.768263,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 272,
+            "lower_bound": 24,
+            "note": "unsat_bound",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 132.207491,
+            "event": "incumbent",
+            "incumbent": 24,
+            "iteration": 293,
+            "lower_bound": 24,
+            "note": "sat_solution",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 132.209141,
+            "event": "optimal",
+            "incumbent": 24,
+            "iteration": 293,
+            "lower_bound": 24,
+            "value": 24
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 28
+  },
+  {
+    "avg_tracks": 17.33333396911621,
+    "conflicting_visit_pairs": 2022,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 12,
+    "name": "origB1",
+    "solves": [
+      {
+        "algorithm_time": 0.003299287,
+        "avg_time_points": 1.3317757009345794,
+        "cost": 4,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 54,
+        "lb": 4,
+        "max_time_points": 7,
+        "num_conflicts": 6,
+        "num_time_points": 855,
+        "num_traveltime": 137,
+        "objective_iters": 53,
+        "resource_iters": 1,
+        "sol_time": 6.8003919999999995,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.003420379,
+        "status": "ok",
+        "time_to_best_value_ms": 6.711938,
+        "time_to_first_solution_ms": 6.419806,
+        "time_to_optimality_ms": 6.711938,
+        "time_to_prove_best_value_ms": 6.565351,
+        "total_time": 0.00671944,
+        "travel_and_resource_iters": 4,
+        "travel_iters": 46,
+        "ub": 4,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.419806,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 52,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 6.565351,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 52,
+            "lower_bound": 4,
+            "note": "unsat_bound",
+            "value": 3
+          },
+          {
+            "elapsed_ms": 6.711938,
+            "event": "incumbent",
+            "incumbent": 4,
+            "iteration": 54,
+            "lower_bound": 4,
+            "note": "sat_solution",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 6.71322,
+            "event": "optimal",
+            "incumbent": 4,
+            "iteration": 54,
+            "lower_bound": 4,
+            "value": 4
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 18
+  },
+  {
+    "avg_tracks": 14.800000190734863,
+    "conflicting_visit_pairs": 87,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 13,
+    "name": "origB2",
+    "solves": [
+      {
+        "algorithm_time": 0.000219444,
+        "avg_time_points": 1.065359477124183,
+        "cost": 5,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 3,
+        "lb": 5,
+        "max_time_points": 4,
+        "num_conflicts": 0,
+        "num_time_points": 163,
+        "num_traveltime": 0,
+        "objective_iters": 3,
+        "resource_iters": 0,
+        "sol_time": 0.487844,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00022258,
+        "status": "ok",
+        "time_to_best_value_ms": 0.133657,
+        "time_to_first_solution_ms": 0.133657,
+        "time_to_optimality_ms": 0.435344,
+        "time_to_prove_best_value_ms": 0.435344,
+        "total_time": 0.00044174,
+        "travel_and_resource_iters": 0,
+        "travel_iters": 0,
+        "ub": 5,
+        "value_trace": [
+          {
+            "elapsed_ms": 0.133657,
+            "event": "incumbent",
+            "incumbent": 5,
+            "iteration": 1,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 0.26225499999999996,
+            "event": "lower_bound",
+            "incumbent": 5,
+            "iteration": 1,
+            "lower_bound": 3,
+            "note": "unsat_bound",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 0.35579500000000003,
+            "event": "lower_bound",
+            "incumbent": 5,
+            "iteration": 2,
+            "lower_bound": 4,
+            "note": "unsat_bound",
+            "value": 3
+          },
+          {
+            "elapsed_ms": 0.435344,
+            "event": "lower_bound",
+            "incumbent": 5,
+            "iteration": 3,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 0.435839,
+            "event": "optimal",
+            "incumbent": 5,
+            "iteration": 3,
+            "lower_bound": 5,
+            "value": 5
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 16.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 20,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 14,
+    "name": "origB3",
+    "solves": [
+      {
+        "algorithm_time": 0.0020159639999999994,
+        "avg_time_points": 2.554913294797688,
+        "cost": 5,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 81,
+        "lb": 5,
+        "max_time_points": 6,
+        "num_conflicts": 8,
+        "num_time_points": 442,
+        "num_traveltime": 226,
+        "objective_iters": 80,
+        "resource_iters": 1,
+        "sol_time": 7.149451,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00508115,
+        "status": "ok",
+        "time_to_best_value_ms": 7.0903279999999995,
+        "time_to_first_solution_ms": 4.9767600000000005,
+        "time_to_optimality_ms": 7.0903279999999995,
+        "time_to_prove_best_value_ms": 5.066685,
+        "total_time": 0.007096878,
+        "travel_and_resource_iters": 5,
+        "travel_iters": 71,
+        "ub": 5,
+        "value_trace": [
+          {
+            "elapsed_ms": 4.9767600000000005,
+            "event": "incumbent",
+            "incumbent": 9,
+            "iteration": 59,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 5.066685,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 59,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 6.293956,
+            "event": "incumbent",
+            "incumbent": 6,
+            "iteration": 73,
+            "lower_bound": 5,
+            "note": "sat_solution",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 7.0903279999999995,
+            "event": "incumbent",
+            "incumbent": 5,
+            "iteration": 81,
+            "lower_bound": 5,
+            "note": "sat_solution",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 7.0909830000000005,
+            "event": "optimal",
+            "incumbent": 5,
+            "iteration": 81,
+            "lower_bound": 5,
+            "value": 5
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.949999809265137,
+    "conflicting_visit_pairs": 2246,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 15,
+    "name": "origB4",
+    "solves": [
+      {
+        "algorithm_time": 0.011022611000000002,
+        "avg_time_points": 2.683890577507599,
+        "cost": 16,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 249,
+        "lb": 16,
+        "max_time_points": 15,
+        "num_conflicts": 70,
+        "num_time_points": 1766,
+        "num_traveltime": 787,
+        "objective_iters": 248,
+        "resource_iters": 2,
+        "sol_time": 37.725025,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.026570913,
+        "status": "ok",
+        "time_to_best_value_ms": 37.583819,
+        "time_to_first_solution_ms": 15.374492,
+        "time_to_optimality_ms": 37.583819,
+        "time_to_prove_best_value_ms": 37.435701,
+        "total_time": 0.037593199,
+        "travel_and_resource_iters": 34,
+        "travel_iters": 207,
+        "ub": 16,
+        "value_trace": [
+          {
+            "elapsed_ms": 15.374492,
+            "event": "incumbent",
+            "incumbent": 29,
+            "iteration": 98,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 15.617471,
+            "event": "lower_bound",
+            "incumbent": 29,
+            "iteration": 98,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 21.767924,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 138,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 25.972081,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 167,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 37.435701,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 247,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 37.583819,
+            "event": "incumbent",
+            "incumbent": 16,
+            "iteration": 249,
+            "lower_bound": 16,
+            "note": "sat_solution",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 37.585119,
+            "event": "optimal",
+            "incumbent": 16,
+            "iteration": 249,
+            "lower_bound": 16,
+            "value": 16
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 17.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 16,
+    "name": "origB5",
+    "solves": [
+      {
+        "algorithm_time": 0.0018321879999999994,
+        "avg_time_points": 1.715846994535519,
+        "cost": 2,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 82,
+        "lb": 2,
+        "max_time_points": 5,
+        "num_conflicts": 3,
+        "num_time_points": 314,
+        "num_traveltime": 105,
+        "objective_iters": 81,
+        "resource_iters": 1,
+        "sol_time": 6.933515000000001,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.005052222,
+        "status": "ok",
+        "time_to_best_value_ms": 6.877417,
+        "time_to_first_solution_ms": 4.314749,
+        "time_to_optimality_ms": 6.877417,
+        "time_to_prove_best_value_ms": 4.4096079999999995,
+        "total_time": 0.006884128,
+        "travel_and_resource_iters": 2,
+        "travel_iters": 76,
+        "ub": 2,
+        "value_trace": [
+          {
+            "elapsed_ms": 4.314749,
+            "event": "incumbent",
+            "incumbent": 4,
+            "iteration": 51,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 4.4096079999999995,
+            "event": "lower_bound",
+            "incumbent": 4,
+            "iteration": 51,
+            "lower_bound": 2,
+            "note": "unsat_bound",
+            "value": 1
+          },
+          {
+            "elapsed_ms": 6.877417,
+            "event": "incumbent",
+            "incumbent": 2,
+            "iteration": 82,
+            "lower_bound": 2,
+            "note": "sat_solution",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 6.878,
+            "event": "optimal",
+            "incumbent": 2,
+            "iteration": 82,
+            "lower_bound": 2,
+            "value": 2
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.199999809265137,
+    "conflicting_visit_pairs": 93,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 17,
+    "name": "origB6",
+    "solves": [
+      {
+        "algorithm_time": 0.0006175099999999999,
+        "avg_time_points": 1.2356687898089171,
+        "cost": 2,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 23,
+        "lb": 2,
+        "max_time_points": 4,
+        "num_conflicts": 1,
+        "num_time_points": 194,
+        "num_traveltime": 20,
+        "objective_iters": 23,
+        "resource_iters": 1,
+        "sol_time": 2.110206,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00144978,
+        "status": "ok",
+        "time_to_best_value_ms": 1.906406,
+        "time_to_first_solution_ms": 1.906406,
+        "time_to_optimality_ms": 2.060969,
+        "time_to_prove_best_value_ms": 2.060969,
+        "total_time": 0.002066942,
+        "travel_and_resource_iters": 0,
+        "travel_iters": 20,
+        "ub": 2,
+        "value_trace": [
+          {
+            "elapsed_ms": 1.906406,
+            "event": "incumbent",
+            "incumbent": 2,
+            "iteration": 22,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 1.9720990000000003,
+            "event": "lower_bound",
+            "incumbent": 2,
+            "iteration": 22,
+            "lower_bound": 1,
+            "note": "unsat_bound",
+            "value": 0
+          },
+          {
+            "elapsed_ms": 2.060969,
+            "event": "lower_bound",
+            "incumbent": 2,
+            "iteration": 23,
+            "lower_bound": 2,
+            "note": "unsat_bound",
+            "value": 1
+          },
+          {
+            "elapsed_ms": 2.0613799999999998,
+            "event": "optimal",
+            "incumbent": 2,
+            "iteration": 23,
+            "lower_bound": 2,
+            "value": 2
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.25,
+    "conflicting_visit_pairs": 2865,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 18,
+    "name": "origB7",
+    "solves": [
+      {
+        "algorithm_time": 0.021070223,
+        "avg_time_points": 5.304232804232805,
+        "cost": 25,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 333,
+        "lb": 25,
+        "max_time_points": 39,
+        "num_conflicts": 326,
+        "num_time_points": 4010,
+        "num_traveltime": 2075,
+        "objective_iters": 332,
+        "resource_iters": 2,
+        "sol_time": 83.449124,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.06209041,
+        "status": "ok",
+        "time_to_best_value_ms": 83.15132799999999,
+        "time_to_first_solution_ms": 22.207721,
+        "time_to_optimality_ms": 83.15132799999999,
+        "time_to_prove_best_value_ms": 77.848635,
+        "total_time": 0.083160361,
+        "travel_and_resource_iters": 104,
+        "travel_iters": 221,
+        "ub": 25,
+        "value_trace": [
+          {
+            "elapsed_ms": 22.207721,
+            "event": "incumbent",
+            "incumbent": 45,
+            "iteration": 86,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 45
+          },
+          {
+            "elapsed_ms": 22.592688,
+            "event": "lower_bound",
+            "incumbent": 45,
+            "iteration": 86,
+            "lower_bound": 23,
+            "note": "unsat_bound",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 38.702332999999996,
+            "event": "incumbent",
+            "incumbent": 31,
+            "iteration": 153,
+            "lower_bound": 23,
+            "note": "sat_solution",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 62.091516999999996,
+            "event": "incumbent",
+            "incumbent": 26,
+            "iteration": 255,
+            "lower_bound": 23,
+            "note": "sat_solution",
+            "value": 26
+          },
+          {
+            "elapsed_ms": 77.848635,
+            "event": "lower_bound",
+            "incumbent": 26,
+            "iteration": 312,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 83.15132799999999,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 333,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 83.15288799999999,
+            "event": "optimal",
+            "incumbent": 25,
+            "iteration": 333,
+            "lower_bound": 25,
+            "value": 25
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 24
+  },
+  {
+    "avg_tracks": 13.399999618530273,
+    "conflicting_visit_pairs": 72,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 19,
+    "name": "origB8",
+    "solves": [
+      {
+        "algorithm_time": 0.000776545,
+        "avg_time_points": 1.3021582733812949,
+        "cost": 6,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 33,
+        "lb": 6,
+        "max_time_points": 4,
+        "num_conflicts": 1,
+        "num_time_points": 181,
+        "num_traveltime": 29,
+        "objective_iters": 33,
+        "resource_iters": 1,
+        "sol_time": 2.737676,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.001919446,
+        "status": "ok",
+        "time_to_best_value_ms": 2.454029,
+        "time_to_first_solution_ms": 2.454029,
+        "time_to_optimality_ms": 2.689033,
+        "time_to_prove_best_value_ms": 2.689033,
+        "total_time": 0.002695712,
+        "travel_and_resource_iters": 0,
+        "travel_iters": 29,
+        "ub": 6,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.454029,
+            "event": "incumbent",
+            "incumbent": 6,
+            "iteration": 31,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 2.543161,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 31,
+            "lower_bound": 3,
+            "note": "unsat_bound",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 2.620727,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 32,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 2.689033,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 33,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 2.68933,
+            "event": "optimal",
+            "incumbent": 6,
+            "iteration": 33,
+            "lower_bound": 6,
+            "value": 6
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 13.571428298950195,
+    "conflicting_visit_pairs": 150,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 20,
+    "name": "origB9",
+    "solves": [
+      {
+        "algorithm_time": 0.0035398879999999997,
+        "avg_time_points": 3.5431472081218276,
+        "cost": 7,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 113,
+        "lb": 7,
+        "max_time_points": 9,
+        "num_conflicts": 21,
+        "num_time_points": 698,
+        "num_traveltime": 402,
+        "objective_iters": 112,
+        "resource_iters": 1,
+        "sol_time": 12.135605,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.008511146,
+        "status": "ok",
+        "time_to_best_value_ms": 12.04237,
+        "time_to_first_solution_ms": 3.639871,
+        "time_to_optimality_ms": 12.04237,
+        "time_to_prove_best_value_ms": 7.448914,
+        "total_time": 0.012050767,
+        "travel_and_resource_iters": 15,
+        "travel_iters": 93,
+        "ub": 7,
+        "value_trace": [
+          {
+            "elapsed_ms": 3.639871,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 37,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 7.448914,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 70,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 11.924406,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 112,
+            "lower_bound": 7,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 12.04237,
+            "event": "incumbent",
+            "incumbent": 7,
+            "iteration": 113,
+            "lower_bound": 7,
+            "note": "sat_solution",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 12.043039,
+            "event": "optimal",
+            "incumbent": 7,
+            "iteration": 113,
+            "lower_bound": 7,
+            "value": 7
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 7
+  },
+  {
+    "avg_tracks": 11.375,
+    "conflicting_visit_pairs": 130,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 21,
+    "name": "origB10",
+    "solves": [
+      {
+        "algorithm_time": 0.0020914309999999995,
+        "avg_time_points": 3.0105263157894737,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 61,
+        "lb": 10,
+        "max_time_points": 8,
+        "num_conflicts": 17,
+        "num_time_points": 572,
+        "num_traveltime": 301,
+        "objective_iters": 60,
+        "resource_iters": 1,
+        "sol_time": 6.339498,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.004177786,
+        "status": "ok",
+        "time_to_best_value_ms": 6.2613,
+        "time_to_first_solution_ms": 4.590256,
+        "time_to_optimality_ms": 6.2613,
+        "time_to_prove_best_value_ms": 6.045067,
+        "total_time": 0.006268921,
+        "travel_and_resource_iters": 10,
+        "travel_iters": 46,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 4.590256,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 45,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 4.698071,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 45,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 6.045067,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 58,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 6.2613,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 61,
+            "lower_bound": 10,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 6.262073,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 61,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 15.399999618530273,
+    "conflicting_visit_pairs": 3202,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 22,
+    "name": "origB11",
+    "solves": [
+      {
+        "algorithm_time": 0.017857953000000003,
+        "avg_time_points": 3.9987421383647797,
+        "cost": 25,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 165,
+        "lb": 25,
+        "max_time_points": 36,
+        "num_conflicts": 386,
+        "num_time_points": 3179,
+        "num_traveltime": 1021,
+        "objective_iters": 165,
+        "resource_iters": 1,
+        "sol_time": 43.670722000000005,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.02552641,
+        "status": "ok",
+        "time_to_best_value_ms": 43.306376,
+        "time_to_first_solution_ms": 22.659955999999998,
+        "time_to_optimality_ms": 43.373938,
+        "time_to_prove_best_value_ms": 43.373938,
+        "total_time": 0.043384098,
+        "travel_and_resource_iters": 96,
+        "travel_iters": 63,
+        "ub": 25,
+        "value_trace": [
+          {
+            "elapsed_ms": 22.659955999999998,
+            "event": "incumbent",
+            "incumbent": 32,
+            "iteration": 69,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 22.941502,
+            "event": "lower_bound",
+            "incumbent": 32,
+            "iteration": 69,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 23.043706,
+            "event": "lower_bound",
+            "incumbent": 32,
+            "iteration": 70,
+            "lower_bound": 24,
+            "note": "unsat_bound",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 30.785193999999997,
+            "event": "incumbent",
+            "incumbent": 27,
+            "iteration": 106,
+            "lower_bound": 24,
+            "note": "sat_solution",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 43.306376,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 165,
+            "lower_bound": 24,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 43.373938,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 165,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 43.375108000000004,
+            "event": "optimal",
+            "incumbent": 25,
+            "iteration": 165,
+            "lower_bound": 25,
+            "value": 25
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 16.214284896850586,
+    "conflicting_visit_pairs": 970,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 23,
+    "name": "origB12",
+    "solves": [
+      {
+        "algorithm_time": 0.003468612000000001,
+        "avg_time_points": 1.7777777777777777,
+        "cost": 6,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 86,
+        "lb": 6,
+        "max_time_points": 8,
+        "num_conflicts": 15,
+        "num_time_points": 832,
+        "num_traveltime": 263,
+        "objective_iters": 86,
+        "resource_iters": 1,
+        "sol_time": 9.301103999999999,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.005756447,
+        "status": "ok",
+        "time_to_best_value_ms": 9.013412,
+        "time_to_first_solution_ms": 8.818328000000001,
+        "time_to_optimality_ms": 9.216615,
+        "time_to_prove_best_value_ms": 9.216615,
+        "total_time": 0.009224817,
+        "travel_and_resource_iters": 10,
+        "travel_iters": 71,
+        "ub": 6,
+        "value_trace": [
+          {
+            "elapsed_ms": 8.818328000000001,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 83,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 9.013412,
+            "event": "incumbent",
+            "incumbent": 6,
+            "iteration": 84,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 9.085116000000001,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 84,
+            "lower_bound": 3,
+            "note": "unsat_bound",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 9.151128,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 85,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 9.216615,
+            "event": "lower_bound",
+            "incumbent": 6,
+            "iteration": 86,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 9.217547,
+            "event": "optimal",
+            "incumbent": 6,
+            "iteration": 86,
+            "lower_bound": 6,
+            "value": 6
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 14
+  },
+  {
+    "avg_tracks": 20.931034088134766,
+    "conflicting_visit_pairs": 5915,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 24,
+    "name": "trackA1",
+    "solves": [
+      {
+        "algorithm_time": 0.07418171900000001,
+        "avg_time_points": 8.7135961383749,
+        "cost": 23,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 347,
+        "lb": 23,
+        "max_time_points": 58,
+        "num_conflicts": 717,
+        "num_time_points": 10831,
+        "num_traveltime": 7063,
+        "objective_iters": 347,
+        "resource_iters": 1,
+        "sol_time": 238.884886,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.163333394,
+        "status": "ok",
+        "time_to_best_value_ms": 233.685913,
+        "time_to_first_solution_ms": 68.06689,
+        "time_to_optimality_ms": 237.498202,
+        "time_to_prove_best_value_ms": 237.498202,
+        "total_time": 0.237514849,
+        "travel_and_resource_iters": 242,
+        "travel_iters": 98,
+        "ub": 23,
+        "value_trace": [
+          {
+            "elapsed_ms": 68.06689,
+            "event": "incumbent",
+            "incumbent": 64,
+            "iteration": 139,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 64
+          },
+          {
+            "elapsed_ms": 139.489577,
+            "event": "incumbent",
+            "incumbent": 31,
+            "iteration": 238,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 140.335624,
+            "event": "lower_bound",
+            "incumbent": 31,
+            "iteration": 238,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 233.685913,
+            "event": "incumbent",
+            "incumbent": 23,
+            "iteration": 345,
+            "lower_bound": 16,
+            "note": "sat_solution",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 234.625169,
+            "event": "lower_bound",
+            "incumbent": 23,
+            "iteration": 345,
+            "lower_bound": 20,
+            "note": "unsat_bound",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 235.517522,
+            "event": "lower_bound",
+            "incumbent": 23,
+            "iteration": 346,
+            "lower_bound": 22,
+            "note": "unsat_bound",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 237.498202,
+            "event": "lower_bound",
+            "incumbent": 23,
+            "iteration": 347,
+            "lower_bound": 23,
+            "note": "unsat_bound",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 237.500131,
+            "event": "optimal",
+            "incumbent": 23,
+            "iteration": 347,
+            "lower_bound": 23,
+            "value": 23
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 29
+  },
+  {
+    "avg_tracks": 19.0,
+    "conflicting_visit_pairs": 3735,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 25,
+    "name": "trackA2",
+    "solves": [
+      {
+        "algorithm_time": 0.035768538,
+        "avg_time_points": 6.453333333333333,
+        "cost": 33,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 267,
+        "lb": 33,
+        "max_time_points": 30,
+        "num_conflicts": 341,
+        "num_time_points": 6292,
+        "num_traveltime": 4081,
+        "objective_iters": 266,
+        "resource_iters": 2,
+        "sol_time": 125.314658,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.089120424,
+        "status": "ok",
+        "time_to_best_value_ms": 124.878637,
+        "time_to_first_solution_ms": 25.578851999999998,
+        "time_to_optimality_ms": 124.878637,
+        "time_to_prove_best_value_ms": 87.263302,
+        "total_time": 0.124888723,
+        "travel_and_resource_iters": 115,
+        "travel_iters": 143,
+        "ub": 33,
+        "value_trace": [
+          {
+            "elapsed_ms": 25.578851999999998,
+            "event": "incumbent",
+            "incumbent": 55,
+            "iteration": 70,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 55
+          },
+          {
+            "elapsed_ms": 29.983386,
+            "event": "lower_bound",
+            "incumbent": 55,
+            "iteration": 76,
+            "lower_bound": 28,
+            "note": "unsat_bound",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 47.379183,
+            "event": "incumbent",
+            "incumbent": 41,
+            "iteration": 125,
+            "lower_bound": 28,
+            "note": "sat_solution",
+            "value": 41
+          },
+          {
+            "elapsed_ms": 82.532471,
+            "event": "incumbent",
+            "incumbent": 34,
+            "iteration": 195,
+            "lower_bound": 28,
+            "note": "sat_solution",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 83.804424,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 195,
+            "lower_bound": 31,
+            "note": "unsat_bound",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 87.263302,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 196,
+            "lower_bound": 33,
+            "note": "unsat_bound",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 124.878637,
+            "event": "incumbent",
+            "incumbent": 33,
+            "iteration": 267,
+            "lower_bound": 33,
+            "note": "sat_solution",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 124.879832,
+            "event": "optimal",
+            "incumbent": 33,
+            "iteration": 267,
+            "lower_bound": 33,
+            "value": 33
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 22.375,
+    "conflicting_visit_pairs": 2061,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 26,
+    "name": "trackA3",
+    "solves": [
+      {
+        "algorithm_time": 0.028103054000000002,
+        "avg_time_points": 6.758196721311475,
+        "cost": 15,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 419,
+        "lb": 15,
+        "max_time_points": 24,
+        "num_conflicts": 205,
+        "num_time_points": 4947,
+        "num_traveltime": 3444,
+        "objective_iters": 418,
+        "resource_iters": 5,
+        "sol_time": 138.262633,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.10983074,
+        "status": "ok",
+        "time_to_best_value_ms": 137.924813,
+        "time_to_first_solution_ms": 17.285946,
+        "time_to_optimality_ms": 137.924813,
+        "time_to_prove_best_value_ms": 48.333672,
+        "total_time": 0.137933557,
+        "travel_and_resource_iters": 112,
+        "travel_iters": 296,
+        "ub": 15,
+        "value_trace": [
+          {
+            "elapsed_ms": 17.285946,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 70,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 48.333672,
+            "event": "lower_bound",
+            "incumbent": 30,
+            "iteration": 163,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 77.085076,
+            "event": "incumbent",
+            "incumbent": 22,
+            "iteration": 252,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 91.917063,
+            "event": "incumbent",
+            "incumbent": 18,
+            "iteration": 291,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 105.61680199999999,
+            "event": "incumbent",
+            "incumbent": 16,
+            "iteration": 331,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 137.924813,
+            "event": "incumbent",
+            "incumbent": 15,
+            "iteration": 419,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 137.92607900000002,
+            "event": "optimal",
+            "incumbent": 15,
+            "iteration": 419,
+            "lower_bound": 15,
+            "value": 15
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 16
+  },
+  {
+    "avg_tracks": 19.214284896850586,
+    "conflicting_visit_pairs": 1175,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 27,
+    "name": "trackA4",
+    "solves": [
+      {
+        "algorithm_time": 0.010756259,
+        "avg_time_points": 4.141304347826087,
+        "cost": 15,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 173,
+        "lb": 15,
+        "max_time_points": 20,
+        "num_conflicts": 101,
+        "num_time_points": 2286,
+        "num_traveltime": 1358,
+        "objective_iters": 173,
+        "resource_iters": 1,
+        "sol_time": 32.257943,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.021337549,
+        "status": "ok",
+        "time_to_best_value_ms": 31.808573,
+        "time_to_first_solution_ms": 10.835763,
+        "time_to_optimality_ms": 32.085478,
+        "time_to_prove_best_value_ms": 32.085478,
+        "total_time": 0.032093579,
+        "travel_and_resource_iters": 55,
+        "travel_iters": 112,
+        "ub": 15,
+        "value_trace": [
+          {
+            "elapsed_ms": 10.835763,
+            "event": "incumbent",
+            "incumbent": 26,
+            "iteration": 60,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 26
+          },
+          {
+            "elapsed_ms": 11.168158,
+            "event": "lower_bound",
+            "incumbent": 26,
+            "iteration": 60,
+            "lower_bound": 13,
+            "note": "unsat_bound",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 23.559675,
+            "event": "incumbent",
+            "incumbent": 19,
+            "iteration": 133,
+            "lower_bound": 13,
+            "note": "sat_solution",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 31.808573,
+            "event": "incumbent",
+            "incumbent": 15,
+            "iteration": 172,
+            "lower_bound": 13,
+            "note": "sat_solution",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 31.957048,
+            "event": "lower_bound",
+            "incumbent": 15,
+            "iteration": 172,
+            "lower_bound": 14,
+            "note": "unsat_bound",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 32.085478,
+            "event": "lower_bound",
+            "incumbent": 15,
+            "iteration": 173,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 32.085848,
+            "event": "optimal",
+            "incumbent": 15,
+            "iteration": 173,
+            "lower_bound": 15,
+            "value": 15
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 14
+  },
+  {
+    "avg_tracks": 19.25,
+    "conflicting_visit_pairs": 876,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 28,
+    "name": "trackA5",
+    "solves": [
+      {
+        "algorithm_time": 0.006425681000000001,
+        "avg_time_points": 2.7468354430379747,
+        "cost": 12,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 143,
+        "lb": 12,
+        "max_time_points": 13,
+        "num_conflicts": 47,
+        "num_time_points": 1302,
+        "num_traveltime": 629,
+        "objective_iters": 142,
+        "resource_iters": 1,
+        "sol_time": 19.552687,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.013011737,
+        "status": "ok",
+        "time_to_best_value_ms": 19.427951999999998,
+        "time_to_first_solution_ms": 6.116278,
+        "time_to_optimality_ms": 19.427951999999998,
+        "time_to_prove_best_value_ms": 12.740891000000001,
+        "total_time": 0.019437151,
+        "travel_and_resource_iters": 28,
+        "travel_iters": 108,
+        "ub": 12,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.116278,
+            "event": "incumbent",
+            "incumbent": 18,
+            "iteration": 44,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 6.2643439999999995,
+            "event": "lower_bound",
+            "incumbent": 18,
+            "iteration": 44,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 12.517667,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 93,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 12.643521,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 93,
+            "lower_bound": 11,
+            "note": "unsat_bound",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 12.740891000000001,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 94,
+            "lower_bound": 12,
+            "note": "unsat_bound",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 19.427951999999998,
+            "event": "incumbent",
+            "incumbent": 12,
+            "iteration": 143,
+            "lower_bound": 12,
+            "note": "sat_solution",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 19.428886,
+            "event": "optimal",
+            "incumbent": 12,
+            "iteration": 143,
+            "lower_bound": 12,
+            "value": 12
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 12
+  },
+  {
+    "avg_tracks": 18.625,
+    "conflicting_visit_pairs": 307,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 29,
+    "name": "trackA6",
+    "solves": [
+      {
+        "algorithm_time": 0.0029903839999999996,
+        "avg_time_points": 2.156862745098039,
+        "cost": 8,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 88,
+        "lb": 8,
+        "max_time_points": 8,
+        "num_conflicts": 14,
+        "num_time_points": 660,
+        "num_traveltime": 284,
+        "objective_iters": 88,
+        "resource_iters": 1,
+        "sol_time": 9.393057,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.006324482,
+        "status": "ok",
+        "time_to_best_value_ms": 9.125881000000001,
+        "time_to_first_solution_ms": 6.651296,
+        "time_to_optimality_ms": 9.305364,
+        "time_to_prove_best_value_ms": 9.305364,
+        "total_time": 0.009314599,
+        "travel_and_resource_iters": 8,
+        "travel_iters": 75,
+        "ub": 8,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.651296,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 65,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 6.8295639999999995,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 65,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 9.125881000000001,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 87,
+            "lower_bound": 6,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 9.214073999999998,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 87,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 9.305364,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 88,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 9.306224,
+            "event": "optimal",
+            "incumbent": 8,
+            "iteration": 88,
+            "lower_bound": 8,
+            "value": 8
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 12.625,
+    "conflicting_visit_pairs": 126,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 30,
+    "name": "trackA7",
+    "solves": [
+      {
+        "algorithm_time": 0.00261778,
+        "avg_time_points": 2.9904761904761905,
+        "cost": 8,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 79,
+        "lb": 8,
+        "max_time_points": 9,
+        "num_conflicts": 17,
+        "num_time_points": 628,
+        "num_traveltime": 332,
+        "objective_iters": 79,
+        "resource_iters": 1,
+        "sol_time": 8.700892999999999,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.006006308,
+        "status": "ok",
+        "time_to_best_value_ms": 8.42064,
+        "time_to_first_solution_ms": 6.4056310000000005,
+        "time_to_optimality_ms": 8.616098000000001,
+        "time_to_prove_best_value_ms": 8.616098000000001,
+        "total_time": 0.008623837,
+        "travel_and_resource_iters": 11,
+        "travel_iters": 63,
+        "ub": 8,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.4056310000000005,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 60,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 6.552123,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 60,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 8.42064,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 78,
+            "lower_bound": 6,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 8.512559,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 78,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 8.616098000000001,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 79,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 8.616659,
+            "event": "optimal",
+            "incumbent": 8,
+            "iteration": 79,
+            "lower_bound": 8,
+            "value": 8
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 19.88888931274414,
+    "conflicting_visit_pairs": 4862,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 31,
+    "name": "trackA8",
+    "solves": [
+      {
+        "algorithm_time": 0.16262328199999998,
+        "avg_time_points": 27.097184377838328,
+        "cost": 34,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 662,
+        "lb": 34,
+        "max_time_points": 135,
+        "num_conflicts": 3238,
+        "num_time_points": 29834,
+        "num_traveltime": 18228,
+        "objective_iters": 661,
+        "resource_iters": 3,
+        "sol_time": 1221.302497,
+        "solver_name": "SatDddScl",
+        "solver_time": 1.056711401,
+        "status": "ok",
+        "time_to_best_value_ms": 1219.324023,
+        "time_to_first_solution_ms": 96.16274399999999,
+        "time_to_optimality_ms": 1219.324023,
+        "time_to_prove_best_value_ms": 280.67204499999997,
+        "total_time": 1.219334461,
+        "travel_and_resource_iters": 501,
+        "travel_iters": 152,
+        "ub": 34,
+        "value_trace": [
+          {
+            "elapsed_ms": 96.16274399999999,
+            "event": "incumbent",
+            "incumbent": 67,
+            "iteration": 130,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 67
+          },
+          {
+            "elapsed_ms": 280.67204499999997,
+            "event": "lower_bound",
+            "incumbent": 67,
+            "iteration": 186,
+            "lower_bound": 34,
+            "note": "unsat_bound",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 439.301347,
+            "event": "incumbent",
+            "incumbent": 49,
+            "iteration": 292,
+            "lower_bound": 34,
+            "note": "sat_solution",
+            "value": 49
+          },
+          {
+            "elapsed_ms": 733.14587,
+            "event": "incumbent",
+            "incumbent": 40,
+            "iteration": 456,
+            "lower_bound": 34,
+            "note": "sat_solution",
+            "value": 40
+          },
+          {
+            "elapsed_ms": 1144.0263289999998,
+            "event": "incumbent",
+            "incumbent": 36,
+            "iteration": 625,
+            "lower_bound": 34,
+            "note": "sat_solution",
+            "value": 36
+          },
+          {
+            "elapsed_ms": 1219.324023,
+            "event": "incumbent",
+            "incumbent": 34,
+            "iteration": 662,
+            "lower_bound": 34,
+            "note": "sat_solution",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 1219.3258739999999,
+            "event": "optimal",
+            "incumbent": 34,
+            "iteration": 662,
+            "lower_bound": 34,
+            "value": 34
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 27
+  },
+  {
+    "avg_tracks": 20.049999237060547,
+    "conflicting_visit_pairs": 2616,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 32,
+    "name": "trackA9",
+    "solves": [
+      {
+        "algorithm_time": 0.023096490999999997,
+        "avg_time_points": 4.954987834549878,
+        "cost": 25,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 279,
+        "lb": 25,
+        "max_time_points": 20,
+        "num_conflicts": 185,
+        "num_time_points": 4073,
+        "num_traveltime": 2492,
+        "objective_iters": 279,
+        "resource_iters": 1,
+        "sol_time": 72.344961,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.048984283,
+        "status": "ok",
+        "time_to_best_value_ms": 71.331737,
+        "time_to_first_solution_ms": 20.160425999999998,
+        "time_to_optimality_ms": 72.07043300000001,
+        "time_to_prove_best_value_ms": 72.07043300000001,
+        "total_time": 0.072080504,
+        "travel_and_resource_iters": 87,
+        "travel_iters": 185,
+        "ub": 25,
+        "value_trace": [
+          {
+            "elapsed_ms": 20.160425999999998,
+            "event": "incumbent",
+            "incumbent": 42,
+            "iteration": 90,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 42
+          },
+          {
+            "elapsed_ms": 23.007922999999998,
+            "event": "lower_bound",
+            "incumbent": 42,
+            "iteration": 97,
+            "lower_bound": 21,
+            "note": "unsat_bound",
+            "value": 20
+          },
+          {
+            "elapsed_ms": 49.35562,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 207,
+            "lower_bound": 21,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 71.331737,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 277,
+            "lower_bound": 21,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 71.569354,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 277,
+            "lower_bound": 23,
+            "note": "unsat_bound",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 71.740149,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 278,
+            "lower_bound": 24,
+            "note": "unsat_bound",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 72.07043300000001,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 279,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 72.070884,
+            "event": "optimal",
+            "incumbent": 25,
+            "iteration": 279,
+            "lower_bound": 25,
+            "value": 25
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 18.176469802856445,
+    "conflicting_visit_pairs": 1632,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 33,
+    "name": "trackA10",
+    "solves": [
+      {
+        "algorithm_time": 0.011871645,
+        "avg_time_points": 4.036220472440945,
+        "cost": 17,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 165,
+        "lb": 17,
+        "max_time_points": 19,
+        "num_conflicts": 143,
+        "num_time_points": 2563,
+        "num_traveltime": 1384,
+        "objective_iters": 165,
+        "resource_iters": 1,
+        "sol_time": 33.992664999999995,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.021935465,
+        "status": "ok",
+        "time_to_best_value_ms": 33.491878,
+        "time_to_first_solution_ms": 14.247776,
+        "time_to_optimality_ms": 33.798654,
+        "time_to_prove_best_value_ms": 33.798654,
+        "total_time": 0.033806779,
+        "travel_and_resource_iters": 70,
+        "travel_iters": 89,
+        "ub": 17,
+        "value_trace": [
+          {
+            "elapsed_ms": 14.247776,
+            "event": "incumbent",
+            "incumbent": 29,
+            "iteration": 69,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 14.498472,
+            "event": "lower_bound",
+            "incumbent": 29,
+            "iteration": 69,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 23.803262,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 118,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 33.491878,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 164,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 33.644372,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 164,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 33.798654,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 165,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 33.799152,
+            "event": "optimal",
+            "incumbent": 17,
+            "iteration": 165,
+            "lower_bound": 17,
+            "value": 17
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 17
+  },
+  {
+    "avg_tracks": 20.482759475708008,
+    "conflicting_visit_pairs": 6144,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 34,
+    "name": "trackA11",
+    "solves": [
+      {
+        "algorithm_time": 0.12577180700000007,
+        "avg_time_points": 20.37140509449466,
+        "cost": 34,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 378,
+        "lb": 34,
+        "max_time_points": 112,
+        "num_conflicts": 3012,
+        "num_time_points": 24792,
+        "num_traveltime": 13760,
+        "objective_iters": 378,
+        "resource_iters": 1,
+        "sol_time": 579.435506,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.452019731,
+        "status": "ok",
+        "time_to_best_value_ms": 544.858913,
+        "time_to_first_solution_ms": 173.25068800000003,
+        "time_to_optimality_ms": 577.774028,
+        "time_to_prove_best_value_ms": 577.774028,
+        "total_time": 0.577791266,
+        "travel_and_resource_iters": 325,
+        "travel_iters": 45,
+        "ub": 34,
+        "value_trace": [
+          {
+            "elapsed_ms": 173.25068800000003,
+            "event": "incumbent",
+            "incumbent": 70,
+            "iteration": 203,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 70
+          },
+          {
+            "elapsed_ms": 544.858913,
+            "event": "incumbent",
+            "incumbent": 34,
+            "iteration": 373,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 544.958076,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 373,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 546.12937,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 374,
+            "lower_bound": 26,
+            "note": "unsat_bound",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 547.6474890000001,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 375,
+            "lower_bound": 30,
+            "note": "unsat_bound",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 552.054574,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 376,
+            "lower_bound": 32,
+            "note": "unsat_bound",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 561.700551,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 377,
+            "lower_bound": 33,
+            "note": "unsat_bound",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 577.774028,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 378,
+            "lower_bound": 34,
+            "note": "unsat_bound",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 577.775747,
+            "event": "optimal",
+            "incumbent": 34,
+            "iteration": 378,
+            "lower_bound": 34,
+            "value": 34
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 29
+  },
+  {
+    "avg_tracks": 21.714284896850586,
+    "conflicting_visit_pairs": 6393,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 35,
+    "name": "trackA12",
+    "solves": [
+      {
+        "algorithm_time": 0.1433656069999999,
+        "avg_time_points": 22.65032154340836,
+        "cost": 36,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 358,
+        "lb": 36,
+        "max_time_points": 174,
+        "num_conflicts": 3102,
+        "num_time_points": 28177,
+        "num_traveltime": 16289,
+        "objective_iters": 357,
+        "resource_iters": 1,
+        "sol_time": 776.337549,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.631107056,
+        "status": "ok",
+        "time_to_best_value_ms": 774.460955,
+        "time_to_first_solution_ms": 97.453396,
+        "time_to_optimality_ms": 774.460955,
+        "time_to_prove_best_value_ms": 719.230082,
+        "total_time": 0.774472403,
+        "travel_and_resource_iters": 300,
+        "travel_iters": 49,
+        "ub": 36,
+        "value_trace": [
+          {
+            "elapsed_ms": 97.453396,
+            "event": "incumbent",
+            "incumbent": 76,
+            "iteration": 102,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 76
+          },
+          {
+            "elapsed_ms": 679.203799,
+            "event": "incumbent",
+            "incumbent": 37,
+            "iteration": 325,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 37
+          },
+          {
+            "elapsed_ms": 679.3027109999999,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 325,
+            "lower_bound": 19,
+            "note": "unsat_bound",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 680.490686,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 326,
+            "lower_bound": 28,
+            "note": "unsat_bound",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 683.43813,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 327,
+            "lower_bound": 33,
+            "note": "unsat_bound",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 692.4841809999999,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 328,
+            "lower_bound": 35,
+            "note": "unsat_bound",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 719.230082,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 329,
+            "lower_bound": 36,
+            "note": "unsat_bound",
+            "value": 35
+          },
+          {
+            "elapsed_ms": 774.460955,
+            "event": "incumbent",
+            "incumbent": 36,
+            "iteration": 358,
+            "lower_bound": 36,
+            "note": "sat_solution",
+            "value": 36
+          },
+          {
+            "elapsed_ms": 774.462483,
+            "event": "optimal",
+            "incumbent": 36,
+            "iteration": 358,
+            "lower_bound": 36,
+            "value": 36
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 28
+  },
+  {
+    "avg_tracks": 17.33333396911621,
+    "conflicting_visit_pairs": 2022,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 36,
+    "name": "trackB1",
+    "solves": [
+      {
+        "algorithm_time": 0.011441022000000002,
+        "avg_time_points": 3.11993769470405,
+        "cost": 13,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 148,
+        "lb": 13,
+        "max_time_points": 10,
+        "num_conflicts": 67,
+        "num_time_points": 2003,
+        "num_traveltime": 1046,
+        "objective_iters": 147,
+        "resource_iters": 1,
+        "sol_time": 29.909557,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.018314338,
+        "status": "ok",
+        "time_to_best_value_ms": 29.74767,
+        "time_to_first_solution_ms": 12.398215,
+        "time_to_optimality_ms": 29.74767,
+        "time_to_prove_best_value_ms": 26.892711,
+        "total_time": 0.029755078,
+        "travel_and_resource_iters": 35,
+        "travel_iters": 109,
+        "ub": 13,
+        "value_trace": [
+          {
+            "elapsed_ms": 12.398215,
+            "event": "incumbent",
+            "incumbent": 25,
+            "iteration": 64,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 26.892711,
+            "event": "lower_bound",
+            "incumbent": 25,
+            "iteration": 132,
+            "lower_bound": 13,
+            "note": "unsat_bound",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 29.74767,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 148,
+            "lower_bound": 13,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 29.748683,
+            "event": "optimal",
+            "incumbent": 13,
+            "iteration": 148,
+            "lower_bound": 13,
+            "value": 13
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 18
+  },
+  {
+    "avg_tracks": 14.800000190734863,
+    "conflicting_visit_pairs": 87,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 37,
+    "name": "trackB2",
+    "solves": [
+      {
+        "algorithm_time": 0.0010633820000000003,
+        "avg_time_points": 1.5359477124183007,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 41,
+        "lb": 10,
+        "max_time_points": 4,
+        "num_conflicts": 5,
+        "num_time_points": 235,
+        "num_traveltime": 55,
+        "objective_iters": 40,
+        "resource_iters": 1,
+        "sol_time": 3.6699200000000003,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.002554426,
+        "status": "ok",
+        "time_to_best_value_ms": 3.6099550000000002,
+        "time_to_first_solution_ms": 3.298108,
+        "time_to_optimality_ms": 3.6099550000000002,
+        "time_to_prove_best_value_ms": 3.5401019999999996,
+        "total_time": 0.003617569,
+        "travel_and_resource_iters": 1,
+        "travel_iters": 34,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 3.298108,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 37,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 3.3888640000000003,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 37,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 3.463431,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 38,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 3.5401019999999996,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 39,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 3.6099550000000002,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 41,
+            "lower_bound": 10,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 3.6109240000000002,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 41,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 16.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 20,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 38,
+    "name": "trackB3",
+    "solves": [
+      {
+        "algorithm_time": 0.0022429190000000003,
+        "avg_time_points": 3.0346820809248554,
+        "cost": 4,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 74,
+        "lb": 4,
+        "max_time_points": 9,
+        "num_conflicts": 16,
+        "num_time_points": 525,
+        "num_traveltime": 276,
+        "objective_iters": 73,
+        "resource_iters": 1,
+        "sol_time": 7.3360710000000005,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.005023054,
+        "status": "ok",
+        "time_to_best_value_ms": 7.25811,
+        "time_to_first_solution_ms": 2.7195679999999998,
+        "time_to_optimality_ms": 7.25811,
+        "time_to_prove_best_value_ms": 4.818995,
+        "total_time": 0.007265713,
+        "travel_and_resource_iters": 11,
+        "travel_iters": 58,
+        "ub": 4,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.7195679999999998,
+            "event": "incumbent",
+            "incumbent": 5,
+            "iteration": 28,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 2.812971,
+            "event": "lower_bound",
+            "incumbent": 5,
+            "iteration": 28,
+            "lower_bound": 3,
+            "note": "unsat_bound",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 4.818995,
+            "event": "lower_bound",
+            "incumbent": 5,
+            "iteration": 50,
+            "lower_bound": 4,
+            "note": "unsat_bound",
+            "value": 3
+          },
+          {
+            "elapsed_ms": 7.25811,
+            "event": "incumbent",
+            "incumbent": 4,
+            "iteration": 74,
+            "lower_bound": 4,
+            "note": "sat_solution",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 7.25881,
+            "event": "optimal",
+            "incumbent": 4,
+            "iteration": 74,
+            "lower_bound": 4,
+            "value": 4
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.949999809265137,
+    "conflicting_visit_pairs": 2246,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 39,
+    "name": "trackB4",
+    "solves": [
+      {
+        "algorithm_time": 0.018355189,
+        "avg_time_points": 5.901215805471125,
+        "cost": 19,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 191,
+        "lb": 19,
+        "max_time_points": 37,
+        "num_conflicts": 261,
+        "num_time_points": 3883,
+        "num_traveltime": 2237,
+        "objective_iters": 191,
+        "resource_iters": 1,
+        "sol_time": 51.695405,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.033050901,
+        "status": "ok",
+        "time_to_best_value_ms": 51.212478,
+        "time_to_first_solution_ms": 13.841215,
+        "time_to_optimality_ms": 51.395711,
+        "time_to_prove_best_value_ms": 51.395711,
+        "total_time": 0.051405817,
+        "travel_and_resource_iters": 88,
+        "travel_iters": 97,
+        "ub": 19,
+        "value_trace": [
+          {
+            "elapsed_ms": 13.841215,
+            "event": "incumbent",
+            "incumbent": 33,
+            "iteration": 65,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 14.082263,
+            "event": "lower_bound",
+            "incumbent": 33,
+            "iteration": 65,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 33.346162,
+            "event": "incumbent",
+            "incumbent": 24,
+            "iteration": 134,
+            "lower_bound": 17,
+            "note": "sat_solution",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 51.212478,
+            "event": "incumbent",
+            "incumbent": 19,
+            "iteration": 190,
+            "lower_bound": 17,
+            "note": "sat_solution",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 51.311747999999994,
+            "event": "lower_bound",
+            "incumbent": 19,
+            "iteration": 190,
+            "lower_bound": 18,
+            "note": "unsat_bound",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 51.395711,
+            "event": "lower_bound",
+            "incumbent": 19,
+            "iteration": 191,
+            "lower_bound": 19,
+            "note": "unsat_bound",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 51.396972,
+            "event": "optimal",
+            "incumbent": 19,
+            "iteration": 191,
+            "lower_bound": 19,
+            "value": 19
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 17.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 40,
+    "name": "trackB5",
+    "solves": [
+      {
+        "algorithm_time": 0.0019695979999999995,
+        "avg_time_points": 2.3333333333333335,
+        "cost": 8,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 74,
+        "lb": 8,
+        "max_time_points": 6,
+        "num_conflicts": 12,
+        "num_time_points": 427,
+        "num_traveltime": 189,
+        "objective_iters": 74,
+        "resource_iters": 1,
+        "sol_time": 6.788896,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.004762119,
+        "status": "ok",
+        "time_to_best_value_ms": 5.287631999999999,
+        "time_to_first_solution_ms": 5.075214,
+        "time_to_optimality_ms": 6.722903,
+        "time_to_prove_best_value_ms": 6.722903,
+        "total_time": 0.006731378,
+        "travel_and_resource_iters": 9,
+        "travel_iters": 60,
+        "ub": 8,
+        "value_trace": [
+          {
+            "elapsed_ms": 5.075214,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 59,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 5.159619,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 59,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 5.287631999999999,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 61,
+            "lower_bound": 6,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 5.362314,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 61,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 6.722903,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 74,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 6.723436,
+            "event": "optimal",
+            "incumbent": 8,
+            "iteration": 74,
+            "lower_bound": 8,
+            "value": 8
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.199999809265137,
+    "conflicting_visit_pairs": 93,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 41,
+    "name": "trackB6",
+    "solves": [
+      {
+        "algorithm_time": 0.000789133,
+        "avg_time_points": 1.4904458598726114,
+        "cost": 2,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 27,
+        "lb": 2,
+        "max_time_points": 4,
+        "num_conflicts": 3,
+        "num_time_points": 234,
+        "num_traveltime": 50,
+        "objective_iters": 26,
+        "resource_iters": 1,
+        "sol_time": 2.513535,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.001677628,
+        "status": "ok",
+        "time_to_best_value_ms": 2.456096,
+        "time_to_first_solution_ms": 2.302785,
+        "time_to_optimality_ms": 2.456096,
+        "time_to_prove_best_value_ms": 2.380667,
+        "total_time": 0.002466494,
+        "travel_and_resource_iters": 1,
+        "travel_iters": 22,
+        "ub": 2,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.302785,
+            "event": "incumbent",
+            "incumbent": 3,
+            "iteration": 25,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 3
+          },
+          {
+            "elapsed_ms": 2.380667,
+            "event": "lower_bound",
+            "incumbent": 3,
+            "iteration": 25,
+            "lower_bound": 2,
+            "note": "unsat_bound",
+            "value": 1
+          },
+          {
+            "elapsed_ms": 2.456096,
+            "event": "incumbent",
+            "incumbent": 2,
+            "iteration": 27,
+            "lower_bound": 2,
+            "note": "sat_solution",
+            "value": 2
+          },
+          {
+            "elapsed_ms": 2.456817,
+            "event": "optimal",
+            "incumbent": 2,
+            "iteration": 27,
+            "lower_bound": 2,
+            "value": 2
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.25,
+    "conflicting_visit_pairs": 2865,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 42,
+    "name": "trackB7",
+    "solves": [
+      {
+        "algorithm_time": 0.023431475000000004,
+        "avg_time_points": 3.2764550264550265,
+        "cost": 30,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 219,
+        "lb": 30,
+        "max_time_points": 17,
+        "num_conflicts": 100,
+        "num_time_points": 2477,
+        "num_traveltime": 1292,
+        "objective_iters": 218,
+        "resource_iters": 1,
+        "sol_time": 49.703508,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.02596198,
+        "status": "ok",
+        "time_to_best_value_ms": 49.383241,
+        "time_to_first_solution_ms": 28.149796000000002,
+        "time_to_optimality_ms": 49.383241,
+        "time_to_prove_best_value_ms": 36.077218,
+        "total_time": 0.049393192,
+        "travel_and_resource_iters": 53,
+        "travel_iters": 159,
+        "ub": 30,
+        "value_trace": [
+          {
+            "elapsed_ms": 28.149796000000002,
+            "event": "incumbent",
+            "incumbent": 48,
+            "iteration": 121,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 48
+          },
+          {
+            "elapsed_ms": 28.53479,
+            "event": "lower_bound",
+            "incumbent": 48,
+            "iteration": 121,
+            "lower_bound": 24,
+            "note": "unsat_bound",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 35.854392,
+            "event": "incumbent",
+            "incumbent": 35,
+            "iteration": 158,
+            "lower_bound": 24,
+            "note": "sat_solution",
+            "value": 35
+          },
+          {
+            "elapsed_ms": 36.077218,
+            "event": "lower_bound",
+            "incumbent": 35,
+            "iteration": 158,
+            "lower_bound": 30,
+            "note": "unsat_bound",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 45.205138,
+            "event": "incumbent",
+            "incumbent": 31,
+            "iteration": 199,
+            "lower_bound": 30,
+            "note": "sat_solution",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 49.383241,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 219,
+            "lower_bound": 30,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 49.384754,
+            "event": "optimal",
+            "incumbent": 30,
+            "iteration": 219,
+            "lower_bound": 30,
+            "value": 30
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 24
+  },
+  {
+    "avg_tracks": 13.399999618530273,
+    "conflicting_visit_pairs": 72,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 43,
+    "name": "trackB8",
+    "solves": [
+      {
+        "algorithm_time": 0.0030408020000000004,
+        "avg_time_points": 3.8129496402877696,
+        "cost": 9,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 121,
+        "lb": 9,
+        "max_time_points": 10,
+        "num_conflicts": 18,
+        "num_time_points": 530,
+        "num_traveltime": 309,
+        "objective_iters": 120,
+        "resource_iters": 1,
+        "sol_time": 12.026187,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.008917366,
+        "status": "ok",
+        "time_to_best_value_ms": 11.949853,
+        "time_to_first_solution_ms": 5.016494,
+        "time_to_optimality_ms": 11.949853,
+        "time_to_prove_best_value_ms": 9.292850999999999,
+        "total_time": 0.011957903,
+        "travel_and_resource_iters": 15,
+        "travel_iters": 100,
+        "ub": 9,
+        "value_trace": [
+          {
+            "elapsed_ms": 5.016494,
+            "event": "incumbent",
+            "incumbent": 14,
+            "iteration": 57,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 5.1176520000000005,
+            "event": "lower_bound",
+            "incumbent": 14,
+            "iteration": 57,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 9.179444,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 96,
+            "lower_bound": 7,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 9.292850999999999,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 96,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 11.949853,
+            "event": "incumbent",
+            "incumbent": 9,
+            "iteration": 121,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 11.950867,
+            "event": "optimal",
+            "incumbent": 9,
+            "iteration": 121,
+            "lower_bound": 9,
+            "value": 9
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 13.571428298950195,
+    "conflicting_visit_pairs": 150,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 44,
+    "name": "trackB9",
+    "solves": [
+      {
+        "algorithm_time": 0.005266521999999999,
+        "avg_time_points": 9.050761421319796,
+        "cost": 9,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 115,
+        "lb": 9,
+        "max_time_points": 37,
+        "num_conflicts": 171,
+        "num_time_points": 1783,
+        "num_traveltime": 961,
+        "objective_iters": 115,
+        "resource_iters": 1,
+        "sol_time": 19.382742,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.01395698,
+        "status": "ok",
+        "time_to_best_value_ms": 18.770207,
+        "time_to_first_solution_ms": 6.092285,
+        "time_to_optimality_ms": 19.215406,
+        "time_to_prove_best_value_ms": 19.215406,
+        "total_time": 0.019223229,
+        "travel_and_resource_iters": 72,
+        "travel_iters": 37,
+        "ub": 9,
+        "value_trace": [
+          {
+            "elapsed_ms": 6.092285,
+            "event": "incumbent",
+            "incumbent": 19,
+            "iteration": 44,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 18.770207,
+            "event": "incumbent",
+            "incumbent": 9,
+            "iteration": 112,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 18.860453,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 112,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 18.988759,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 113,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 19.091482,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 114,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 19.215406,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 115,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 19.215817,
+            "event": "optimal",
+            "incumbent": 9,
+            "iteration": 115,
+            "lower_bound": 9,
+            "value": 9
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 7
+  },
+  {
+    "avg_tracks": 12.857142448425293,
+    "conflicting_visit_pairs": 126,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 45,
+    "name": "trackB10",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 0.111331,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 7
+  },
+  {
+    "avg_tracks": 15.399999618530273,
+    "conflicting_visit_pairs": 3202,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 46,
+    "name": "trackB11",
+    "solves": [
+      {
+        "algorithm_time": 0.025001632999999995,
+        "avg_time_points": 3.140880503144654,
+        "cost": 34,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 185,
+        "lb": 34,
+        "max_time_points": 17,
+        "num_conflicts": 115,
+        "num_time_points": 2497,
+        "num_traveltime": 1209,
+        "objective_iters": 185,
+        "resource_iters": 1,
+        "sol_time": 49.86403,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.024675186,
+        "status": "ok",
+        "time_to_best_value_ms": 49.420326,
+        "time_to_first_solution_ms": 29.740171999999998,
+        "time_to_optimality_ms": 49.666438,
+        "time_to_prove_best_value_ms": 49.666438,
+        "total_time": 0.049676511,
+        "travel_and_resource_iters": 63,
+        "travel_iters": 115,
+        "ub": 34,
+        "value_trace": [
+          {
+            "elapsed_ms": 29.740171999999998,
+            "event": "incumbent",
+            "incumbent": 51,
+            "iteration": 96,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 51
+          },
+          {
+            "elapsed_ms": 30.061781,
+            "event": "lower_bound",
+            "incumbent": 51,
+            "iteration": 96,
+            "lower_bound": 26,
+            "note": "unsat_bound",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 40.409761,
+            "event": "incumbent",
+            "incumbent": 38,
+            "iteration": 144,
+            "lower_bound": 26,
+            "note": "sat_solution",
+            "value": 38
+          },
+          {
+            "elapsed_ms": 40.614297,
+            "event": "lower_bound",
+            "incumbent": 38,
+            "iteration": 144,
+            "lower_bound": 32,
+            "note": "unsat_bound",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 49.420326,
+            "event": "incumbent",
+            "incumbent": 34,
+            "iteration": 184,
+            "lower_bound": 32,
+            "note": "sat_solution",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 49.516239,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 184,
+            "lower_bound": 33,
+            "note": "unsat_bound",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 49.666438,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 185,
+            "lower_bound": 34,
+            "note": "unsat_bound",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 49.667904,
+            "event": "optimal",
+            "incumbent": 34,
+            "iteration": 185,
+            "lower_bound": 34,
+            "value": 34
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 16.214284896850586,
+    "conflicting_visit_pairs": 970,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 47,
+    "name": "trackB12",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 0.827897,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 14
+  },
+  {
+    "avg_tracks": 20.931034088134766,
+    "conflicting_visit_pairs": 5915,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 48,
+    "name": "stationA1",
+    "solves": [
+      {
+        "algorithm_time": 0.07878822800000002,
+        "avg_time_points": 9.26387771520515,
+        "cost": 37,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 425,
+        "lb": 37,
+        "max_time_points": 43,
+        "num_conflicts": 710,
+        "num_time_points": 11515,
+        "num_traveltime": 7714,
+        "objective_iters": 425,
+        "resource_iters": 3,
+        "sol_time": 477.204834,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.397666288,
+        "status": "ok",
+        "time_to_best_value_ms": 412.12756099999996,
+        "time_to_first_solution_ms": 55.762947,
+        "time_to_optimality_ms": 476.440414,
+        "time_to_prove_best_value_ms": 476.440414,
+        "total_time": 0.476454271,
+        "travel_and_resource_iters": 179,
+        "travel_iters": 238,
+        "ub": 37,
+        "value_trace": [
+          {
+            "elapsed_ms": 55.762947,
+            "event": "incumbent",
+            "incumbent": 71,
+            "iteration": 111,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 71
+          },
+          {
+            "elapsed_ms": 188.46275300000002,
+            "event": "lower_bound",
+            "incumbent": 71,
+            "iteration": 151,
+            "lower_bound": 36,
+            "note": "unsat_bound",
+            "value": 35
+          },
+          {
+            "elapsed_ms": 261.59338399999996,
+            "event": "incumbent",
+            "incumbent": 52,
+            "iteration": 235,
+            "lower_bound": 36,
+            "note": "sat_solution",
+            "value": 52
+          },
+          {
+            "elapsed_ms": 305.354938,
+            "event": "incumbent",
+            "incumbent": 40,
+            "iteration": 287,
+            "lower_bound": 36,
+            "note": "sat_solution",
+            "value": 40
+          },
+          {
+            "elapsed_ms": 412.12756099999996,
+            "event": "incumbent",
+            "incumbent": 37,
+            "iteration": 425,
+            "lower_bound": 36,
+            "note": "sat_solution",
+            "value": 37
+          },
+          {
+            "elapsed_ms": 476.440414,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 425,
+            "lower_bound": 37,
+            "note": "unsat_bound",
+            "value": 36
+          },
+          {
+            "elapsed_ms": 476.442206,
+            "event": "optimal",
+            "incumbent": 37,
+            "iteration": 425,
+            "lower_bound": 37,
+            "value": 37
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 29
+  },
+  {
+    "avg_tracks": 19.0,
+    "conflicting_visit_pairs": 3735,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 49,
+    "name": "stationA2",
+    "solves": [
+      {
+        "algorithm_time": 0.06689204500000001,
+        "avg_time_points": 10.192820512820512,
+        "cost": 40,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 465,
+        "lb": 40,
+        "max_time_points": 36,
+        "num_conflicts": 613,
+        "num_time_points": 9938,
+        "num_traveltime": 6839,
+        "objective_iters": 465,
+        "resource_iters": 1,
+        "sol_time": 312.428694,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.244828006,
+        "status": "ok",
+        "time_to_best_value_ms": 293.651592,
+        "time_to_first_solution_ms": 44.021097000000005,
+        "time_to_optimality_ms": 311.699994,
+        "time_to_prove_best_value_ms": 311.699994,
+        "total_time": 0.311719792,
+        "travel_and_resource_iters": 233,
+        "travel_iters": 225,
+        "ub": 40,
+        "value_trace": [
+          {
+            "elapsed_ms": 44.021097000000005,
+            "event": "incumbent",
+            "incumbent": 65,
+            "iteration": 106,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 65
+          },
+          {
+            "elapsed_ms": 46.608716,
+            "event": "lower_bound",
+            "incumbent": 65,
+            "iteration": 107,
+            "lower_bound": 33,
+            "note": "unsat_bound",
+            "value": 32
+          },
+          {
+            "elapsed_ms": 150.74435599999998,
+            "event": "incumbent",
+            "incumbent": 48,
+            "iteration": 295,
+            "lower_bound": 33,
+            "note": "sat_solution",
+            "value": 48
+          },
+          {
+            "elapsed_ms": 293.651592,
+            "event": "incumbent",
+            "incumbent": 40,
+            "iteration": 463,
+            "lower_bound": 33,
+            "note": "sat_solution",
+            "value": 40
+          },
+          {
+            "elapsed_ms": 295.996929,
+            "event": "lower_bound",
+            "incumbent": 40,
+            "iteration": 463,
+            "lower_bound": 37,
+            "note": "unsat_bound",
+            "value": 36
+          },
+          {
+            "elapsed_ms": 301.92116899999996,
+            "event": "lower_bound",
+            "incumbent": 40,
+            "iteration": 464,
+            "lower_bound": 39,
+            "note": "unsat_bound",
+            "value": 38
+          },
+          {
+            "elapsed_ms": 311.699994,
+            "event": "lower_bound",
+            "incumbent": 40,
+            "iteration": 465,
+            "lower_bound": 40,
+            "note": "unsat_bound",
+            "value": 39
+          },
+          {
+            "elapsed_ms": 311.70203499999997,
+            "event": "optimal",
+            "incumbent": 40,
+            "iteration": 465,
+            "lower_bound": 40,
+            "value": 40
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 22.375,
+    "conflicting_visit_pairs": 2061,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 50,
+    "name": "stationA3",
+    "solves": [
+      {
+        "algorithm_time": 0.029179636999999994,
+        "avg_time_points": 6.8224043715847,
+        "cost": 20,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 329,
+        "lb": 20,
+        "max_time_points": 28,
+        "num_conflicts": 227,
+        "num_time_points": 4994,
+        "num_traveltime": 3443,
+        "objective_iters": 328,
+        "resource_iters": 1,
+        "sol_time": 115.489543,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.085964105,
+        "status": "ok",
+        "time_to_best_value_ms": 115.134074,
+        "time_to_first_solution_ms": 23.979210000000002,
+        "time_to_optimality_ms": 115.134074,
+        "time_to_prove_best_value_ms": 37.038084999999995,
+        "total_time": 0.115143478,
+        "travel_and_resource_iters": 114,
+        "travel_iters": 208,
+        "ub": 20,
+        "value_trace": [
+          {
+            "elapsed_ms": 23.979210000000002,
+            "event": "incumbent",
+            "incumbent": 40,
+            "iteration": 89,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 40
+          },
+          {
+            "elapsed_ms": 37.038084999999995,
+            "event": "lower_bound",
+            "incumbent": 40,
+            "iteration": 116,
+            "lower_bound": 20,
+            "note": "unsat_bound",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 58.094915,
+            "event": "incumbent",
+            "incumbent": 28,
+            "iteration": 177,
+            "lower_bound": 20,
+            "note": "sat_solution",
+            "value": 28
+          },
+          {
+            "elapsed_ms": 77.623947,
+            "event": "incumbent",
+            "incumbent": 23,
+            "iteration": 225,
+            "lower_bound": 20,
+            "note": "sat_solution",
+            "value": 23
+          },
+          {
+            "elapsed_ms": 98.829713,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 284,
+            "lower_bound": 20,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 115.134074,
+            "event": "incumbent",
+            "incumbent": 20,
+            "iteration": 329,
+            "lower_bound": 20,
+            "note": "sat_solution",
+            "value": 20
+          },
+          {
+            "elapsed_ms": 115.135134,
+            "event": "optimal",
+            "incumbent": 20,
+            "iteration": 329,
+            "lower_bound": 20,
+            "value": 20
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 16
+  },
+  {
+    "avg_tracks": 19.214284896850586,
+    "conflicting_visit_pairs": 1175,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 51,
+    "name": "stationA4",
+    "solves": [
+      {
+        "algorithm_time": 0.012173307999999997,
+        "avg_time_points": 4.244565217391305,
+        "cost": 17,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 213,
+        "lb": 17,
+        "max_time_points": 20,
+        "num_conflicts": 68,
+        "num_time_points": 2343,
+        "num_traveltime": 1506,
+        "objective_iters": 213,
+        "resource_iters": 1,
+        "sol_time": 39.985988,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.027619015,
+        "status": "ok",
+        "time_to_best_value_ms": 39.31557,
+        "time_to_first_solution_ms": 12.802197,
+        "time_to_optimality_ms": 39.781088,
+        "time_to_prove_best_value_ms": 39.781088,
+        "total_time": 0.039792075,
+        "travel_and_resource_iters": 41,
+        "travel_iters": 166,
+        "ub": 17,
+        "value_trace": [
+          {
+            "elapsed_ms": 12.802197,
+            "event": "incumbent",
+            "incumbent": 29,
+            "iteration": 77,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 29
+          },
+          {
+            "elapsed_ms": 13.063998999999999,
+            "event": "lower_bound",
+            "incumbent": 29,
+            "iteration": 77,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 28.029992,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 156,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 39.31557,
+            "event": "incumbent",
+            "incumbent": 17,
+            "iteration": 212,
+            "lower_bound": 15,
+            "note": "sat_solution",
+            "value": 17
+          },
+          {
+            "elapsed_ms": 39.546279,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 212,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 39.781088,
+            "event": "lower_bound",
+            "incumbent": 17,
+            "iteration": 213,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 39.781724999999994,
+            "event": "optimal",
+            "incumbent": 17,
+            "iteration": 213,
+            "lower_bound": 17,
+            "value": 17
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 14
+  },
+  {
+    "avg_tracks": 19.25,
+    "conflicting_visit_pairs": 876,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 52,
+    "name": "stationA5",
+    "solves": [
+      {
+        "algorithm_time": 0.009497068999999997,
+        "avg_time_points": 3.848101265822785,
+        "cost": 16,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 146,
+        "lb": 16,
+        "max_time_points": 19,
+        "num_conflicts": 69,
+        "num_time_points": 1824,
+        "num_traveltime": 1067,
+        "objective_iters": 146,
+        "resource_iters": 1,
+        "sol_time": 30.803937,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.021005991,
+        "status": "ok",
+        "time_to_best_value_ms": 29.691513999999998,
+        "time_to_first_solution_ms": 14.161696,
+        "time_to_optimality_ms": 30.489701,
+        "time_to_prove_best_value_ms": 30.489701,
+        "total_time": 0.030502751,
+        "travel_and_resource_iters": 38,
+        "travel_iters": 102,
+        "ub": 16,
+        "value_trace": [
+          {
+            "elapsed_ms": 14.161696,
+            "event": "incumbent",
+            "incumbent": 22,
+            "iteration": 70,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 14.356848,
+            "event": "lower_bound",
+            "incumbent": 22,
+            "iteration": 70,
+            "lower_bound": 11,
+            "note": "unsat_bound",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 29.691513999999998,
+            "event": "incumbent",
+            "incumbent": 16,
+            "iteration": 144,
+            "lower_bound": 11,
+            "note": "sat_solution",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 29.876362,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 144,
+            "lower_bound": 14,
+            "note": "unsat_bound",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 30.176246,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 145,
+            "lower_bound": 15,
+            "note": "unsat_bound",
+            "value": 14
+          },
+          {
+            "elapsed_ms": 30.489701,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 146,
+            "lower_bound": 16,
+            "note": "unsat_bound",
+            "value": 15
+          },
+          {
+            "elapsed_ms": 30.490382999999998,
+            "event": "optimal",
+            "incumbent": 16,
+            "iteration": 146,
+            "lower_bound": 16,
+            "value": 16
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 12
+  },
+  {
+    "avg_tracks": 18.625,
+    "conflicting_visit_pairs": 307,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 53,
+    "name": "stationA6",
+    "solves": [
+      {
+        "algorithm_time": 0.002573131,
+        "avg_time_points": 2.1862745098039214,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 73,
+        "lb": 10,
+        "max_time_points": 15,
+        "num_conflicts": 22,
+        "num_time_points": 669,
+        "num_traveltime": 262,
+        "objective_iters": 73,
+        "resource_iters": 2,
+        "sol_time": 7.785576,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.005134298,
+        "status": "ok",
+        "time_to_best_value_ms": 7.597549,
+        "time_to_first_solution_ms": 3.2966559999999996,
+        "time_to_optimality_ms": 7.69808,
+        "time_to_prove_best_value_ms": 7.69808,
+        "total_time": 0.007707173,
+        "travel_and_resource_iters": 14,
+        "travel_iters": 53,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 3.2966559999999996,
+            "event": "incumbent",
+            "incumbent": 12,
+            "iteration": 31,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 3.421977,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 31,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 3.5046690000000003,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 32,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 7.597549,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 73,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 7.69808,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 73,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 7.698895,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 73,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 12.625,
+    "conflicting_visit_pairs": 126,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 54,
+    "name": "stationA7",
+    "solves": [
+      {
+        "algorithm_time": 0.0029878960000000003,
+        "avg_time_points": 2.7142857142857144,
+        "cost": 13,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 107,
+        "lb": 13,
+        "max_time_points": 7,
+        "num_conflicts": 13,
+        "num_time_points": 570,
+        "num_traveltime": 296,
+        "objective_iters": 107,
+        "resource_iters": 1,
+        "sol_time": 10.919406,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00784263,
+        "status": "ok",
+        "time_to_best_value_ms": 10.707048,
+        "time_to_first_solution_ms": 5.597529000000001,
+        "time_to_optimality_ms": 10.81911,
+        "time_to_prove_best_value_ms": 10.81911,
+        "total_time": 0.01083025,
+        "travel_and_resource_iters": 8,
+        "travel_iters": 94,
+        "ub": 13,
+        "value_trace": [
+          {
+            "elapsed_ms": 5.597529000000001,
+            "event": "incumbent",
+            "incumbent": 16,
+            "iteration": 58,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 5.7188170000000005,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 58,
+            "lower_bound": 8,
+            "note": "unsat_bound",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 5.824944,
+            "event": "lower_bound",
+            "incumbent": 16,
+            "iteration": 59,
+            "lower_bound": 12,
+            "note": "unsat_bound",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 10.707048,
+            "event": "incumbent",
+            "incumbent": 13,
+            "iteration": 107,
+            "lower_bound": 12,
+            "note": "sat_solution",
+            "value": 13
+          },
+          {
+            "elapsed_ms": 10.81911,
+            "event": "lower_bound",
+            "incumbent": 13,
+            "iteration": 107,
+            "lower_bound": 13,
+            "note": "unsat_bound",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 10.820093,
+            "event": "optimal",
+            "incumbent": 13,
+            "iteration": 107,
+            "lower_bound": 13,
+            "value": 13
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 8
+  },
+  {
+    "avg_tracks": 19.88888931274414,
+    "conflicting_visit_pairs": 4862,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 55,
+    "name": "stationA8",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 2.7006259999999997,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 27
+  },
+  {
+    "avg_tracks": 20.049999237060547,
+    "conflicting_visit_pairs": 2616,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 56,
+    "name": "stationA9",
+    "solves": [
+      {
+        "algorithm_time": 0.02658023999999999,
+        "avg_time_points": 6.024330900243309,
+        "cost": 27,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 291,
+        "lb": 27,
+        "max_time_points": 29,
+        "num_conflicts": 234,
+        "num_time_points": 4952,
+        "num_traveltime": 3242,
+        "objective_iters": 291,
+        "resource_iters": 1,
+        "sol_time": 91.148938,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.064223258,
+        "status": "ok",
+        "time_to_best_value_ms": 89.72636,
+        "time_to_first_solution_ms": 31.980348999999997,
+        "time_to_optimality_ms": 90.79281999999999,
+        "time_to_prove_best_value_ms": 90.79281999999999,
+        "total_time": 0.090803248,
+        "travel_and_resource_iters": 105,
+        "travel_iters": 179,
+        "ub": 27,
+        "value_trace": [
+          {
+            "elapsed_ms": 31.980348999999997,
+            "event": "incumbent",
+            "incumbent": 50,
+            "iteration": 123,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 50
+          },
+          {
+            "elapsed_ms": 32.893209999999996,
+            "event": "lower_bound",
+            "incumbent": 50,
+            "iteration": 123,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 47.233104,
+            "event": "incumbent",
+            "incumbent": 37,
+            "iteration": 165,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 37
+          },
+          {
+            "elapsed_ms": 66.946732,
+            "event": "incumbent",
+            "incumbent": 30,
+            "iteration": 220,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 89.72636,
+            "event": "incumbent",
+            "incumbent": 27,
+            "iteration": 290,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 90.237042,
+            "event": "lower_bound",
+            "incumbent": 27,
+            "iteration": 290,
+            "lower_bound": 26,
+            "note": "unsat_bound",
+            "value": 25
+          },
+          {
+            "elapsed_ms": 90.79281999999999,
+            "event": "lower_bound",
+            "incumbent": 27,
+            "iteration": 291,
+            "lower_bound": 27,
+            "note": "unsat_bound",
+            "value": 26
+          },
+          {
+            "elapsed_ms": 90.79363699999999,
+            "event": "optimal",
+            "incumbent": 27,
+            "iteration": 291,
+            "lower_bound": 27,
+            "value": 27
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 18.176469802856445,
+    "conflicting_visit_pairs": 1632,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 57,
+    "name": "stationA10",
+    "solves": [
+      {
+        "algorithm_time": 0.015475587999999998,
+        "avg_time_points": 4.585826771653544,
+        "cost": 21,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 267,
+        "lb": 21,
+        "max_time_points": 28,
+        "num_conflicts": 122,
+        "num_time_points": 2912,
+        "num_traveltime": 1775,
+        "objective_iters": 266,
+        "resource_iters": 1,
+        "sol_time": 54.392404,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.038700456,
+        "status": "ok",
+        "time_to_best_value_ms": 54.166953,
+        "time_to_first_solution_ms": 17.288131000000003,
+        "time_to_optimality_ms": 54.166953,
+        "time_to_prove_best_value_ms": 48.883991,
+        "total_time": 0.054175786,
+        "travel_and_resource_iters": 69,
+        "travel_iters": 191,
+        "ub": 21,
+        "value_trace": [
+          {
+            "elapsed_ms": 17.288131000000003,
+            "event": "incumbent",
+            "incumbent": 34,
+            "iteration": 87,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 34
+          },
+          {
+            "elapsed_ms": 17.52596,
+            "event": "lower_bound",
+            "incumbent": 34,
+            "iteration": 87,
+            "lower_bound": 17,
+            "note": "unsat_bound",
+            "value": 16
+          },
+          {
+            "elapsed_ms": 45.685023,
+            "event": "incumbent",
+            "incumbent": 24,
+            "iteration": 228,
+            "lower_bound": 17,
+            "note": "sat_solution",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 48.883991,
+            "event": "lower_bound",
+            "incumbent": 24,
+            "iteration": 242,
+            "lower_bound": 21,
+            "note": "unsat_bound",
+            "value": 20
+          },
+          {
+            "elapsed_ms": 53.808438,
+            "event": "incumbent",
+            "incumbent": 22,
+            "iteration": 266,
+            "lower_bound": 21,
+            "note": "sat_solution",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 54.166953,
+            "event": "incumbent",
+            "incumbent": 21,
+            "iteration": 267,
+            "lower_bound": 21,
+            "note": "sat_solution",
+            "value": 21
+          },
+          {
+            "elapsed_ms": 54.167997,
+            "event": "optimal",
+            "incumbent": 21,
+            "iteration": 267,
+            "lower_bound": 21,
+            "value": 21
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 17
+  },
+  {
+    "avg_tracks": 20.482759475708008,
+    "conflicting_visit_pairs": 6144,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 58,
+    "name": "stationA11",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 11.573404,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 29
+  },
+  {
+    "avg_tracks": 21.714284896850586,
+    "conflicting_visit_pairs": 6393,
+    "conflicts": 33,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 59,
+    "name": "stationA12",
+    "solves": [
+      {
+        "algorithm_time": 0.189062434,
+        "avg_time_points": 30.926045016077172,
+        "cost": 44,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 580,
+        "lb": 44,
+        "max_time_points": 164,
+        "num_conflicts": 4747,
+        "num_time_points": 38472,
+        "num_traveltime": 21053,
+        "objective_iters": 579,
+        "resource_iters": 4,
+        "sol_time": 1473.2525759999999,
+        "solver_name": "SatDddScl",
+        "solver_time": 1.281537677,
+        "status": "ok",
+        "time_to_best_value_ms": 1470.588914,
+        "time_to_first_solution_ms": 145.796168,
+        "time_to_optimality_ms": 1470.588914,
+        "time_to_prove_best_value_ms": 1093.7994230000002,
+        "total_time": 1.470599845,
+        "travel_and_resource_iters": 476,
+        "travel_iters": 93,
+        "ub": 44,
+        "value_trace": [
+          {
+            "elapsed_ms": 145.796168,
+            "event": "incumbent",
+            "incumbent": 79,
+            "iteration": 151,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 79
+          },
+          {
+            "elapsed_ms": 281.2101,
+            "event": "lower_bound",
+            "incumbent": 79,
+            "iteration": 173,
+            "lower_bound": 40,
+            "note": "unsat_bound",
+            "value": 39
+          },
+          {
+            "elapsed_ms": 563.6504679999999,
+            "event": "incumbent",
+            "incumbent": 58,
+            "iteration": 331,
+            "lower_bound": 40,
+            "note": "sat_solution",
+            "value": 58
+          },
+          {
+            "elapsed_ms": 938.54083,
+            "event": "incumbent",
+            "incumbent": 47,
+            "iteration": 450,
+            "lower_bound": 40,
+            "note": "sat_solution",
+            "value": 47
+          },
+          {
+            "elapsed_ms": 1093.7994230000002,
+            "event": "lower_bound",
+            "incumbent": 47,
+            "iteration": 450,
+            "lower_bound": 44,
+            "note": "unsat_bound",
+            "value": 43
+          },
+          {
+            "elapsed_ms": 1378.137104,
+            "event": "incumbent",
+            "incumbent": 45,
+            "iteration": 547,
+            "lower_bound": 44,
+            "note": "sat_solution",
+            "value": 45
+          },
+          {
+            "elapsed_ms": 1470.588914,
+            "event": "incumbent",
+            "incumbent": 44,
+            "iteration": 580,
+            "lower_bound": 44,
+            "note": "sat_solution",
+            "value": 44
+          },
+          {
+            "elapsed_ms": 1470.5906309999998,
+            "event": "optimal",
+            "incumbent": 44,
+            "iteration": 580,
+            "lower_bound": 44,
+            "value": 44
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 28
+  },
+  {
+    "avg_tracks": 17.33333396911621,
+    "conflicting_visit_pairs": 2022,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 60,
+    "name": "stationB1",
+    "solves": [
+      {
+        "algorithm_time": 0.015250715000000001,
+        "avg_time_points": 4.61993769470405,
+        "cost": 19,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 172,
+        "lb": 19,
+        "max_time_points": 15,
+        "num_conflicts": 130,
+        "num_time_points": 2966,
+        "num_traveltime": 1785,
+        "objective_iters": 171,
+        "resource_iters": 1,
+        "sol_time": 46.001542,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.030531206,
+        "status": "ok",
+        "time_to_best_value_ms": 45.772164,
+        "time_to_first_solution_ms": 15.885513,
+        "time_to_optimality_ms": 45.772164,
+        "time_to_prove_best_value_ms": 24.975308000000002,
+        "total_time": 0.045781666,
+        "travel_and_resource_iters": 59,
+        "travel_iters": 106,
+        "ub": 19,
+        "value_trace": [
+          {
+            "elapsed_ms": 15.885513,
+            "event": "incumbent",
+            "incumbent": 37,
+            "iteration": 63,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 37
+          },
+          {
+            "elapsed_ms": 24.975308000000002,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 88,
+            "lower_bound": 19,
+            "note": "unsat_bound",
+            "value": 18
+          },
+          {
+            "elapsed_ms": 36.42194,
+            "event": "incumbent",
+            "incumbent": 27,
+            "iteration": 137,
+            "lower_bound": 19,
+            "note": "sat_solution",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 45.285292,
+            "event": "incumbent",
+            "incumbent": 22,
+            "iteration": 170,
+            "lower_bound": 19,
+            "note": "sat_solution",
+            "value": 22
+          },
+          {
+            "elapsed_ms": 45.540115,
+            "event": "incumbent",
+            "incumbent": 20,
+            "iteration": 171,
+            "lower_bound": 19,
+            "note": "sat_solution",
+            "value": 20
+          },
+          {
+            "elapsed_ms": 45.772164,
+            "event": "incumbent",
+            "incumbent": 19,
+            "iteration": 172,
+            "lower_bound": 19,
+            "note": "sat_solution",
+            "value": 19
+          },
+          {
+            "elapsed_ms": 45.773553,
+            "event": "optimal",
+            "incumbent": 19,
+            "iteration": 172,
+            "lower_bound": 19,
+            "value": 19
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 18
+  },
+  {
+    "avg_tracks": 14.800000190734863,
+    "conflicting_visit_pairs": 87,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 61,
+    "name": "stationB2",
+    "solves": [
+      {
+        "algorithm_time": 0.0009231059999999999,
+        "avg_time_points": 1.4052287581699345,
+        "cost": 11,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 34,
+        "lb": 11,
+        "max_time_points": 3,
+        "num_conflicts": 4,
+        "num_time_points": 215,
+        "num_traveltime": 42,
+        "objective_iters": 34,
+        "resource_iters": 1,
+        "sol_time": 3.080212,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.002104172,
+        "status": "ok",
+        "time_to_best_value_ms": 2.73237,
+        "time_to_first_solution_ms": 2.73237,
+        "time_to_optimality_ms": 3.019555,
+        "time_to_prove_best_value_ms": 3.019555,
+        "total_time": 0.003027027,
+        "travel_and_resource_iters": 1,
+        "travel_iters": 28,
+        "ub": 11,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.73237,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 31,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 2.814941,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 31,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 2.8835100000000002,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 32,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 2.9472180000000003,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 33,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 3.019555,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 34,
+            "lower_bound": 11,
+            "note": "unsat_bound",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 3.0202150000000003,
+            "event": "optimal",
+            "incumbent": 11,
+            "iteration": 34,
+            "lower_bound": 11,
+            "value": 11
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 16.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 20,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 62,
+    "name": "stationB3",
+    "solves": [
+      {
+        "algorithm_time": 0.002566947000000001,
+        "avg_time_points": 2.5260115606936417,
+        "cost": 6,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 112,
+        "lb": 6,
+        "max_time_points": 7,
+        "num_conflicts": 8,
+        "num_time_points": 437,
+        "num_traveltime": 222,
+        "objective_iters": 111,
+        "resource_iters": 2,
+        "sol_time": 9.329951,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.006704282,
+        "status": "ok",
+        "time_to_best_value_ms": 9.262492,
+        "time_to_first_solution_ms": 2.81685,
+        "time_to_optimality_ms": 9.262492,
+        "time_to_prove_best_value_ms": 9.165094,
+        "total_time": 0.009270957,
+        "travel_and_resource_iters": 4,
+        "travel_iters": 101,
+        "ub": 6,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.81685,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 33,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 2.89662,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 33,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 4.594950000000001,
+            "event": "incumbent",
+            "incumbent": 7,
+            "iteration": 55,
+            "lower_bound": 5,
+            "note": "sat_solution",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 9.165094,
+            "event": "lower_bound",
+            "incumbent": 7,
+            "iteration": 110,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 9.262492,
+            "event": "incumbent",
+            "incumbent": 6,
+            "iteration": 112,
+            "lower_bound": 6,
+            "note": "sat_solution",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 9.263250000000001,
+            "event": "optimal",
+            "incumbent": 6,
+            "iteration": 112,
+            "lower_bound": 6,
+            "value": 6
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.949999809265137,
+    "conflicting_visit_pairs": 2246,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 63,
+    "name": "stationB4",
+    "solves": [
+      {
+        "algorithm_time": 0.022046507,
+        "avg_time_points": 5.069908814589666,
+        "cost": 36,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 250,
+        "lb": 36,
+        "max_time_points": 23,
+        "num_conflicts": 176,
+        "num_time_points": 3336,
+        "num_traveltime": 1994,
+        "objective_iters": 249,
+        "resource_iters": 1,
+        "sol_time": 61.113936,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.038828043,
+        "status": "ok",
+        "time_to_best_value_ms": 60.864762000000006,
+        "time_to_first_solution_ms": 31.973032,
+        "time_to_optimality_ms": 60.864762000000006,
+        "time_to_prove_best_value_ms": 56.500743,
+        "total_time": 0.060874303,
+        "travel_and_resource_iters": 91,
+        "travel_iters": 151,
+        "ub": 36,
+        "value_trace": [
+          {
+            "elapsed_ms": 31.973032,
+            "event": "incumbent",
+            "incumbent": 50,
+            "iteration": 132,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 50
+          },
+          {
+            "elapsed_ms": 32.245927,
+            "event": "lower_bound",
+            "incumbent": 50,
+            "iteration": 132,
+            "lower_bound": 25,
+            "note": "unsat_bound",
+            "value": 24
+          },
+          {
+            "elapsed_ms": 55.97254,
+            "event": "incumbent",
+            "incumbent": 37,
+            "iteration": 230,
+            "lower_bound": 25,
+            "note": "sat_solution",
+            "value": 37
+          },
+          {
+            "elapsed_ms": 56.122202,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 230,
+            "lower_bound": 31,
+            "note": "unsat_bound",
+            "value": 30
+          },
+          {
+            "elapsed_ms": 56.271235000000004,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 231,
+            "lower_bound": 34,
+            "note": "unsat_bound",
+            "value": 33
+          },
+          {
+            "elapsed_ms": 56.500743,
+            "event": "lower_bound",
+            "incumbent": 37,
+            "iteration": 232,
+            "lower_bound": 36,
+            "note": "unsat_bound",
+            "value": 35
+          },
+          {
+            "elapsed_ms": 60.864762000000006,
+            "event": "incumbent",
+            "incumbent": 36,
+            "iteration": 250,
+            "lower_bound": 36,
+            "note": "sat_solution",
+            "value": 36
+          },
+          {
+            "elapsed_ms": 60.865863,
+            "event": "optimal",
+            "incumbent": 36,
+            "iteration": 250,
+            "lower_bound": 36,
+            "value": 36
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 20
+  },
+  {
+    "avg_tracks": 17.799999237060547,
+    "conflicting_visit_pairs": 136,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 64,
+    "name": "stationB5",
+    "solves": [
+      {
+        "algorithm_time": 0.001629555,
+        "avg_time_points": 2.1639344262295084,
+        "cost": 7,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 59,
+        "lb": 7,
+        "max_time_points": 9,
+        "num_conflicts": 10,
+        "num_time_points": 396,
+        "num_traveltime": 164,
+        "objective_iters": 58,
+        "resource_iters": 1,
+        "sol_time": 5.258741,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.003563952,
+        "status": "ok",
+        "time_to_best_value_ms": 5.185752,
+        "time_to_first_solution_ms": 4.698535000000001,
+        "time_to_optimality_ms": 5.185752,
+        "time_to_prove_best_value_ms": 5.082737000000001,
+        "total_time": 0.005193231,
+        "travel_and_resource_iters": 7,
+        "travel_iters": 46,
+        "ub": 7,
+        "value_trace": [
+          {
+            "elapsed_ms": 4.698535000000001,
+            "event": "incumbent",
+            "incumbent": 11,
+            "iteration": 54,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 11
+          },
+          {
+            "elapsed_ms": 4.796487,
+            "event": "lower_bound",
+            "incumbent": 11,
+            "iteration": 54,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 5.008816,
+            "event": "incumbent",
+            "incumbent": 8,
+            "iteration": 57,
+            "lower_bound": 6,
+            "note": "sat_solution",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 5.082737000000001,
+            "event": "lower_bound",
+            "incumbent": 8,
+            "iteration": 57,
+            "lower_bound": 7,
+            "note": "unsat_bound",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 5.185752,
+            "event": "incumbent",
+            "incumbent": 7,
+            "iteration": 59,
+            "lower_bound": 7,
+            "note": "sat_solution",
+            "value": 7
+          },
+          {
+            "elapsed_ms": 5.186445,
+            "event": "optimal",
+            "incumbent": 7,
+            "iteration": 59,
+            "lower_bound": 7,
+            "value": 7
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.199999809265137,
+    "conflicting_visit_pairs": 93,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 65,
+    "name": "stationB6",
+    "solves": [
+      {
+        "algorithm_time": 0.001472621,
+        "avg_time_points": 1.9554140127388535,
+        "cost": 5,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 56,
+        "lb": 5,
+        "max_time_points": 5,
+        "num_conflicts": 4,
+        "num_time_points": 307,
+        "num_traveltime": 120,
+        "objective_iters": 55,
+        "resource_iters": 1,
+        "sol_time": 5.077063,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.003549039,
+        "status": "ok",
+        "time_to_best_value_ms": 5.014218,
+        "time_to_first_solution_ms": 4.616258,
+        "time_to_optimality_ms": 5.014218,
+        "time_to_prove_best_value_ms": 4.7190829999999995,
+        "total_time": 0.0050214,
+        "travel_and_resource_iters": 2,
+        "travel_iters": 49,
+        "ub": 5,
+        "value_trace": [
+          {
+            "elapsed_ms": 4.616258,
+            "event": "incumbent",
+            "incumbent": 9,
+            "iteration": 52,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 4.7190829999999995,
+            "event": "lower_bound",
+            "incumbent": 9,
+            "iteration": 52,
+            "lower_bound": 5,
+            "note": "unsat_bound",
+            "value": 4
+          },
+          {
+            "elapsed_ms": 4.9268339999999995,
+            "event": "incumbent",
+            "incumbent": 6,
+            "iteration": 55,
+            "lower_bound": 5,
+            "note": "sat_solution",
+            "value": 6
+          },
+          {
+            "elapsed_ms": 5.014218,
+            "event": "incumbent",
+            "incumbent": 5,
+            "iteration": 56,
+            "lower_bound": 5,
+            "note": "sat_solution",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 5.014914,
+            "event": "optimal",
+            "incumbent": 5,
+            "iteration": 56,
+            "lower_bound": 5,
+            "value": 5
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 15.25,
+    "conflicting_visit_pairs": 2865,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 66,
+    "name": "stationB7",
+    "solves": [
+      {
+        "algorithm_time": 0.024296283999999994,
+        "avg_time_points": 5.001322751322752,
+        "cost": 44,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 191,
+        "lb": 44,
+        "max_time_points": 18,
+        "num_conflicts": 210,
+        "num_time_points": 3781,
+        "num_traveltime": 2192,
+        "objective_iters": 191,
+        "resource_iters": 1,
+        "sol_time": 64.173992,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.039606414,
+        "status": "ok",
+        "time_to_best_value_ms": 61.260173,
+        "time_to_first_solution_ms": 15.6118,
+        "time_to_optimality_ms": 63.892584,
+        "time_to_prove_best_value_ms": 63.892584,
+        "total_time": 0.063902422,
+        "travel_and_resource_iters": 82,
+        "travel_iters": 102,
+        "ub": 44,
+        "value_trace": [
+          {
+            "elapsed_ms": 15.6118,
+            "event": "incumbent",
+            "incumbent": 55,
+            "iteration": 41,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 55
+          },
+          {
+            "elapsed_ms": 15.925011,
+            "event": "lower_bound",
+            "incumbent": 55,
+            "iteration": 41,
+            "lower_bound": 28,
+            "note": "unsat_bound",
+            "value": 27
+          },
+          {
+            "elapsed_ms": 29.564690000000002,
+            "event": "lower_bound",
+            "incumbent": 55,
+            "iteration": 85,
+            "lower_bound": 42,
+            "note": "unsat_bound",
+            "value": 41
+          },
+          {
+            "elapsed_ms": 43.277464,
+            "event": "incumbent",
+            "incumbent": 48,
+            "iteration": 135,
+            "lower_bound": 42,
+            "note": "sat_solution",
+            "value": 48
+          },
+          {
+            "elapsed_ms": 61.260173,
+            "event": "incumbent",
+            "incumbent": 44,
+            "iteration": 190,
+            "lower_bound": 42,
+            "note": "sat_solution",
+            "value": 44
+          },
+          {
+            "elapsed_ms": 62.370248000000004,
+            "event": "lower_bound",
+            "incumbent": 44,
+            "iteration": 190,
+            "lower_bound": 43,
+            "note": "unsat_bound",
+            "value": 42
+          },
+          {
+            "elapsed_ms": 63.892584,
+            "event": "lower_bound",
+            "incumbent": 44,
+            "iteration": 191,
+            "lower_bound": 44,
+            "note": "unsat_bound",
+            "value": 43
+          },
+          {
+            "elapsed_ms": 63.893597,
+            "event": "optimal",
+            "incumbent": 44,
+            "iteration": 191,
+            "lower_bound": 44,
+            "value": 44
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 24
+  },
+  {
+    "avg_tracks": 13.399999618530273,
+    "conflicting_visit_pairs": 72,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 67,
+    "name": "stationB8",
+    "solves": [
+      {
+        "algorithm_time": 0.0009626869999999998,
+        "avg_time_points": 1.6115107913669064,
+        "cost": 10,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 35,
+        "lb": 10,
+        "max_time_points": 5,
+        "num_conflicts": 3,
+        "num_time_points": 224,
+        "num_traveltime": 66,
+        "objective_iters": 35,
+        "resource_iters": 1,
+        "sol_time": 3.286912,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.00228881,
+        "status": "ok",
+        "time_to_best_value_ms": 3.17859,
+        "time_to_first_solution_ms": 2.9027279999999998,
+        "time_to_optimality_ms": 3.243471,
+        "time_to_prove_best_value_ms": 3.243471,
+        "total_time": 0.003251233,
+        "travel_and_resource_iters": 1,
+        "travel_iters": 29,
+        "ub": 10,
+        "value_trace": [
+          {
+            "elapsed_ms": 2.9027279999999998,
+            "event": "incumbent",
+            "incumbent": 12,
+            "iteration": 32,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 12
+          },
+          {
+            "elapsed_ms": 3.005439,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 32,
+            "lower_bound": 6,
+            "note": "unsat_bound",
+            "value": 5
+          },
+          {
+            "elapsed_ms": 3.088374,
+            "event": "lower_bound",
+            "incumbent": 12,
+            "iteration": 33,
+            "lower_bound": 9,
+            "note": "unsat_bound",
+            "value": 8
+          },
+          {
+            "elapsed_ms": 3.17859,
+            "event": "incumbent",
+            "incumbent": 10,
+            "iteration": 35,
+            "lower_bound": 9,
+            "note": "sat_solution",
+            "value": 10
+          },
+          {
+            "elapsed_ms": 3.243471,
+            "event": "lower_bound",
+            "incumbent": 10,
+            "iteration": 35,
+            "lower_bound": 10,
+            "note": "unsat_bound",
+            "value": 9
+          },
+          {
+            "elapsed_ms": 3.243851,
+            "event": "optimal",
+            "incumbent": 10,
+            "iteration": 35,
+            "lower_bound": 10,
+            "value": 10
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 5
+  },
+  {
+    "avg_tracks": 13.571428298950195,
+    "conflicting_visit_pairs": 150,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 68,
+    "name": "stationB9",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 0.206224,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 7
+  },
+  {
+    "avg_tracks": 12.857142448425293,
+    "conflicting_visit_pairs": 126,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 69,
+    "name": "stationB10",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 0.116981,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 7
+  },
+  {
+    "avg_tracks": 15.399999618530273,
+    "conflicting_visit_pairs": 3202,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 70,
+    "name": "stationB11",
+    "solves": [
+      {
+        "algorithm_time": 0.023368879999999998,
+        "avg_time_points": 4.50062893081761,
+        "cost": 48,
+        "delay_cost_type": "FiniteSteps123",
+        "iterations": 131,
+        "lb": 48,
+        "max_time_points": 24,
+        "num_conflicts": 234,
+        "num_time_points": 3578,
+        "num_traveltime": 1889,
+        "objective_iters": 130,
+        "resource_iters": 1,
+        "sol_time": 49.652831,
+        "solver_name": "SatDddScl",
+        "solver_time": 0.026035998,
+        "status": "ok",
+        "time_to_best_value_ms": 49.396016,
+        "time_to_first_solution_ms": 25.195892,
+        "time_to_optimality_ms": 49.396016,
+        "time_to_prove_best_value_ms": 44.076589,
+        "total_time": 0.049404593,
+        "travel_and_resource_iters": 85,
+        "travel_iters": 41,
+        "ub": 48,
+        "value_trace": [
+          {
+            "elapsed_ms": 25.195892,
+            "event": "incumbent",
+            "incumbent": 64,
+            "iteration": 74,
+            "lower_bound": 0,
+            "note": "sat_solution",
+            "value": 64
+          },
+          {
+            "elapsed_ms": 25.521698,
+            "event": "lower_bound",
+            "incumbent": 64,
+            "iteration": 74,
+            "lower_bound": 32,
+            "note": "unsat_bound",
+            "value": 31
+          },
+          {
+            "elapsed_ms": 44.076589,
+            "event": "lower_bound",
+            "incumbent": 64,
+            "iteration": 113,
+            "lower_bound": 48,
+            "note": "unsat_bound",
+            "value": 47
+          },
+          {
+            "elapsed_ms": 49.396016,
+            "event": "incumbent",
+            "incumbent": 48,
+            "iteration": 131,
+            "lower_bound": 48,
+            "note": "sat_solution",
+            "value": 48
+          },
+          {
+            "elapsed_ms": 49.397284,
+            "event": "optimal",
+            "incumbent": 48,
+            "iteration": 131,
+            "lower_bound": 48,
+            "value": 48
+          }
+        ],
+        "value_trace_version": 1
+      }
+    ],
+    "trains": 25
+  },
+  {
+    "avg_tracks": 16.214284896850586,
+    "conflicting_visit_pairs": 970,
+    "conflicts": 25,
+    "delay_cost_type": "FiniteSteps123",
+    "index": 71,
+    "name": "stationB12",
+    "solves": [
+      {
+        "delay_cost_type": "FiniteSteps123",
+        "sol_time": 0.237555,
+        "solver_name": "SatDddScl",
+        "status": "no_solution"
+      }
+    ],
+    "trains": 14
+  }
+]

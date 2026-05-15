@@ -56,9 +56,12 @@ struct Opt {
     #[structopt(long)]
     satddd_use_extended_precedence_graph: Option<bool>,
 
-    /// Toggle SCL fixed-precedence rows in `maxsat_ddd_ladder_scl` (true/false).
+    /// Toggle eager chain expansion in `maxsat_ddd_ladder_scl`: expand long
+    /// travel-time precedence chains into per-step 3-literal clauses instead
+    /// of a single 2-literal implication (NOT the SCL/SCAMO AMO encoding —
+    /// see `add_scl_amo` for that). True/false.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_scl: Option<bool>,
+    maxsatddd_ladder_scl_use_eager_chain_expansion: Option<bool>,
 
     /// Toggle precedence-graph preprocessing/propagation in `maxsat_ddd_ladder_scl` (true/false).
     #[structopt(long)]
@@ -389,7 +392,9 @@ fn main() {
         use_precedence_graph: opt
             .maxsatddd_ladder_scl_use_precedence_graph
             .unwrap_or(true),
-        use_scl_fixed_precedence: opt.maxsatddd_ladder_scl_use_scl.unwrap_or(true),
+        use_eager_chain_expansion: opt
+            .maxsatddd_ladder_scl_use_eager_chain_expansion
+            .unwrap_or(true),
         use_interval_graph_conflicts: opt
             .maxsatddd_ladder_scl_use_interval_tree
             .or(opt.maxsatddd_ladder_scl_use_interval_graph)

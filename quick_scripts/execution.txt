@@ -108,12 +108,20 @@ bash quick_scripts/run_all_txt_instances_limited.sh
   --txt-instances \
   --objective infsteps180 \
   --maxsatddd-ladder-scl-use-precedence-graph false \
-  --maxsatddd-ladder-scl-use-scl false \
+  --maxsatddd-ladder-scl-use-eager-chain-expansion false \
   --maxsatddd-ladder-scl-use-interval-graph false \
   --json-output results_scl_as_ladder_infsteps180.json
 
   ./target/release/ddd \
   -s maxsat_ddd_ladder \
   --txt-instances \
-  --objective infsteps180 \
-  --json-output results_maxsat_ladder_infsteps180.json
+  --objective finsteps123 \
+  --json-output results_maxsat_no_prec.json
+
+  ./target/release/ddd \
+  -s sat_ddd_scl \
+  --satddd-objective-encoding totalizer \
+  --satddd-use-extended-precedence-graph true \
+  --txt-instances \
+  --objective finsteps123 \
+  --json-output results_sat_finsteps123_eprecedence.json

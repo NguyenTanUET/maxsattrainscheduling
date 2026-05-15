@@ -1161,7 +1161,7 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
-fn add_sequential_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
+fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
         2 => {
@@ -1198,7 +1198,7 @@ fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bo
     if lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
-        add_sequential_amo(solver, lits);
+        add_scl_amo(solver, lits);
     }
 }
 
@@ -1683,7 +1683,7 @@ fn solve_native_debug_with_mode(
         );
     }
 
-    const USE_INITIAL_HEURISTIC_UB_ONLY: bool = true;
+    const USE_INITIAL_HEURISTIC_UB_ONLY: bool = false;
     if USE_INITIAL_HEURISTIC_UB_ONLY {
         if let Some((ub_cost, ub_sol)) =
             compute_initial_heuristic_upper_bound(&mk_env, problem, delay_cost_type, &occupations)?

@@ -98,8 +98,12 @@ struct ResourceCliqueRowKey {
 pub struct MaxSatDddLadderSclSettings {
     /// Toggle precedence-graph preprocessing/queue seeding.
     pub use_precedence_graph: bool,
-    /// Use SCL-style fixed-precedence rows (d_r(t) -> d_q(t + travel)).
-    pub use_scl_fixed_precedence: bool,
+    /// Eagerly expand long travel-time precedence chains into per-step
+    /// 3-literal clauses (instead of one 2-literal implication that relies
+    /// on ladder monotonicity propagation). Historical name was
+    /// "use_scl_fixed_precedence" but this is NOT the Sequential Counter
+    /// for Ladder (SCL/SCAMO) AMO encoding — see [`add_scl_amo`] for that.
+    pub use_eager_chain_expansion: bool,
     /// Use interval-graph clique-cover conflict encoding (AMO over cliques).
     /// If false, fallback to pairwise conflict generation.
     pub use_interval_graph_conflicts: bool,
@@ -123,7 +127,7 @@ impl Default for MaxSatDddLadderSclSettings {
     fn default() -> Self {
         Self {
             use_precedence_graph: false,
-            use_scl_fixed_precedence: false,
+            use_eager_chain_expansion: false,
             use_interval_graph_conflicts: false,
             seed_scl_from_earliest: false,
             use_scamo_encoding: false, // experimental, see field doc
@@ -571,9 +575,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     visit_id,
                     in_var,
                     in_t,
-                    settings.use_scl_fixed_precedence,
+                    settings.use_eager_chain_expansion,
                 );
-            } else if settings.use_scl_fixed_precedence {
+            } else if settings.use_eager_chain_expansion {
                 let _ = add_fixed_precedence_row(
                     &mut solver,
                     problem,
@@ -584,7 +588,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     visit_id,
                     in_var,
                     in_t,
-                    settings.use_scl_fixed_precedence,
+                    settings.use_eager_chain_expansion,
                 );
             }
         }
@@ -738,7 +742,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             visit_id,
                             in_var,
                             in_t,
-                            settings.use_scl_fixed_precedence,
+                            settings.use_eager_chain_expansion,
                         );
                         stats.n_travel += 1;
                     }
@@ -1085,7 +1089,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             &mut occupations,
                             &mut new_time_points,
                             &mut fixed_prec_rows,
-                            settings.use_scl_fixed_precedence,
+                            settings.use_eager_chain_expansion,
                             mi.visit_id,
                             mj.end,
                         );
@@ -1096,7 +1100,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             &mut occupations,
                             &mut new_time_points,
                             &mut fixed_prec_rows,
-                            settings.use_scl_fixed_precedence,
+                            settings.use_eager_chain_expansion,
                             mj.visit_id,
                             mi.end,
                         );
@@ -1119,7 +1123,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 &mut new_time_points,
                                 &mut fixed_prec_rows,
                                 &mut active_lit_cache,
-                                settings.use_scl_fixed_precedence,
+                                settings.use_eager_chain_expansion,
                                 m.visit_id,
                                 tau_plus_1,
                             );
@@ -1487,7 +1491,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 // fixed-precedence row at the new time point (delay_t1, delay_t2)
                                 // for the train's NEXT visit, propagating travel time forward.
                                 //
-                                // Gated on `use_scl_fixed_precedence` so that this entire block
+                                // Gated on `use_eager_chain_expansion` so that this entire block
                                 // is a no-op when the flag is OFF — that yields semantics
                                 // equivalent to `maxsatddd_ladder.rs` (which only enforces travel
                                 // time lazily in the dedicated travel-time-conflict branch above).
@@ -1495,7 +1499,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 // With the flag ON we keep the previous eager behaviour: better
                                 // unit propagation, but +50–70% more time points per benchmark
                                 // (see scl-vs-ladder analysis).
-                                if settings.use_scl_fixed_precedence {
+                                if settings.use_eager_chain_expansion {
                                     let _ = add_fixed_precedence_row(
                                         &mut solver,
                                         problem,
@@ -1506,7 +1510,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                         visit_id,
                                         delay_t1,
                                         t2_out,
-                                        settings.use_scl_fixed_precedence,
+                                        settings.use_eager_chain_expansion,
                                     );
 
                                     let _ = add_fixed_precedence_row(
@@ -1519,7 +1523,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                         other_visit,
                                         delay_t2,
                                         t1_out,
-                                        settings.use_scl_fixed_precedence,
+                                        settings.use_eager_chain_expansion,
                                     );
                                 }
 
@@ -1568,7 +1572,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 &mut new_time_points,
                                 &mut fixed_prec_rows,
                                 &mut active_lit_cache_pb,
-                                settings.use_scl_fixed_precedence,
+                                settings.use_eager_chain_expansion,
                                 m.visit_id,
                                 *tau_plus_1,
                             );
@@ -2036,7 +2040,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 &mut occupations,
                                 &mut new_time_points,
                                 &mut fixed_prec_rows,
-                                settings.use_scl_fixed_precedence,
+                                settings.use_eager_chain_expansion,
                                 ub_sol,
                             );
                             injected_heuristic_cost = Some(*ub_cost);
@@ -2295,7 +2299,7 @@ fn inject_solution_timepoints_maxsat<L: satcoder::Lit>(
     occupations: &mut TiVec<VisitId, Occ<L>>,
     new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
     fixed_prec_rows: &mut HashSet<(VisitId, i32)>,
-    use_scl_fixed_precedence: bool,
+    use_eager_chain_expansion: bool,
     sol: &[Vec<i32>],
 ) {
     let mut flat_visit = 0usize;
@@ -2319,7 +2323,7 @@ fn inject_solution_timepoints_maxsat<L: satcoder::Lit>(
                     visit_id,
                     lit,
                     time,
-                    use_scl_fixed_precedence,
+                    use_eager_chain_expansion,
                 );
             }
         }
@@ -2403,7 +2407,7 @@ impl<L: satcoder::Lit> Occ<L> {
 /// soundness for AMO but weakened unit propagation. The added clauses are
 /// O(n) and let CDCL conclude `prefix[i]` cannot be forced true unless some
 /// `lits[k≤i]` is.
-fn add_sequential_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
+fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
         2 => {
@@ -2448,7 +2452,7 @@ fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bo
     if lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
-        add_sequential_amo(solver, lits);
+        add_scl_amo(solver, lits);
     }
 }
 
@@ -2583,7 +2587,7 @@ fn get_delay_lit_at<L: satcoder::Lit>(
     occupations: &mut TiVec<VisitId, Occ<L>>,
     new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
     fixed_prec_rows: &mut HashSet<(VisitId, i32)>,
-    use_scl_fixed_precedence: bool,
+    use_eager_chain_expansion: bool,
     visit_id: VisitId,
     t: i32,
 ) -> Bool<L> {
@@ -2610,7 +2614,7 @@ fn get_delay_lit_at<L: satcoder::Lit>(
             visit_id,
             lit,
             t,
-            use_scl_fixed_precedence,
+            use_eager_chain_expansion,
         );
     }
     lit
@@ -2631,7 +2635,7 @@ fn build_active_lit<L: satcoder::Lit>(
     new_time_points: &mut Vec<(VisitId, Bool<L>, i32)>,
     fixed_prec_rows: &mut HashSet<(VisitId, i32)>,
     active_cache: &mut HashMap<(VisitId, i32), Bool<L>>,
-    use_scl_fixed_precedence: bool,
+    use_eager_chain_expansion: bool,
     visit_id: VisitId,
     tau_plus_1: i32,
 ) -> Bool<L> {
@@ -2648,7 +2652,7 @@ fn build_active_lit<L: satcoder::Lit>(
         occupations,
         new_time_points,
         fixed_prec_rows,
-        use_scl_fixed_precedence,
+        use_eager_chain_expansion,
         visit_id,
         tau_plus_1,
     );
@@ -2662,7 +2666,7 @@ fn build_active_lit<L: satcoder::Lit>(
             occupations,
             new_time_points,
             fixed_prec_rows,
-            use_scl_fixed_precedence,
+            use_eager_chain_expansion,
             next_id,
             tau_plus_1,
         )
@@ -2675,7 +2679,7 @@ fn build_active_lit<L: satcoder::Lit>(
             occupations,
             new_time_points,
             fixed_prec_rows,
-            use_scl_fixed_precedence,
+            use_eager_chain_expansion,
             visit_id,
             tau_plus_1 - travel,
         )
@@ -2727,7 +2731,7 @@ fn add_fixed_precedence_row<L: satcoder::Lit>(
     visit_id: VisitId,
     in_var: Bool<L>,
     in_t: i32,
-    use_scl_fixed_precedence: bool,
+    use_eager_chain_expansion: bool,
 ) -> Option<(VisitId, Bool<L>, i32)> {
     if !added.insert((visit_id, in_t)) {
         return None;
@@ -2748,24 +2752,19 @@ fn add_fixed_precedence_row<L: satcoder::Lit>(
     }
 
     let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
-    if use_scl_fixed_precedence {
-        // ╭─ NOTE: misnomer ──────────────────────────────────────────────────╮
-        // │ The "SCL" name here is HISTORICAL and DOES NOT match the         │
-        // │ Sequential Counter for Ladder (SCAMO) encoding of Truong/Kieu/   │
-        // │ To, ICAART 2025. That paper introduces register-bit chains for   │
-        // │ at-most-one over a sliding window. What this branch actually     │
-        // │ does is a *ladder-monotonicity chain shortcut* for travel-time   │
-        // │ precedence — see `add_sequential_amo` for the closer SC          │
-        // │ analogue. Renaming would be cleaner; kept as-is to avoid         │
-        // │ flag-name churn in CLI / settings.                                │
-        // ╰───────────────────────────────────────────────────────────────────╯
+    if use_eager_chain_expansion {
+        // Eager chain expansion for long travel-time precedence chains.
+        // For chains ≤ threshold: a single 2-literal implication is
+        // sufficient — ladder monotonicity propagates the rest cheaply.
+        // For chains > threshold: expand into per-step 3-literal clauses
+        // so unit propagation reaches the far end in one shot rather than
+        // multi-hop through the monotonicity ladder.
         //
-        // Hybrid behaviour: for short chains (≤ threshold) use the single
-        // 2-literal implication — monotonicity propagation handles it
-        // cheaply with no formula growth. For long chains (> threshold),
-        // expand into 3-literal chain clauses through the delay ladder so
-        // unit propagation reaches the far end in one shot rather than
-        // multi-hop through monotonicity.
+        // NOTE: this is NOT the SCL / Sequential Counter for Ladder AMO
+        // encoding (Truong/Kieu/To, ICAART 2025) — that is implemented in
+        // [`add_scl_amo`]. The legacy field name `use_scl_fixed_precedence`
+        // referred to this expansion heuristic, not the paper's SC; it has
+        // been renamed to `use_eager_chain_expansion` to avoid confusion.
         const LADDER_SHORTCUT_THRESHOLD: usize = 5;
         let idx = occupations[next_visit]
             .delays
@@ -2802,7 +2801,7 @@ fn propagate_precedence<L: satcoder::Lit>(
     start_visit: VisitId,
     start_var: Bool<L>,
     start_t: i32,
-    use_scl_fixed_precedence: bool,
+    use_eager_chain_expansion: bool,
 ) {
     let mut queue = VecDeque::from([(start_visit, start_var, start_t)]);
 
@@ -2817,7 +2816,7 @@ fn propagate_precedence<L: satcoder::Lit>(
             visit_id,
             in_var,
             in_t,
-            use_scl_fixed_precedence,
+            use_eager_chain_expansion,
         ) {
             queue.push_back(next);
         }
