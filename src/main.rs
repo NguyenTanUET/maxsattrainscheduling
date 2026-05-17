@@ -6,7 +6,7 @@ use ddd::{
     solvers::{
         bigm, ddd as ddd_solvers,
         greedy::{self, default_heuristic},
-        heuristic, maxsat_ddd, maxsat_ddd_recommend, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
+        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
         maxsatddd_ladder_scl, milp_ti, SolverError,
     },
 };
@@ -56,6 +56,33 @@ struct Opt {
     #[structopt(long)]
     satddd_use_extended_precedence_graph: Option<bool>,
 
+    /// `sat_ddd*` only: pre-allocate SAT vars + monotonicity clauses for
+    /// every cost-step threshold time at INIT (before iteration 1). On
+    /// stepped objectives (e.g. `InfiniteSteps180`) this expands to up to
+    /// 100 thresholds per visit. `Continuous` returns empty → no effect.
+    /// True/false. Default false (lazy).
+    #[structopt(long)]
+    satddd_prealloc_cost_thresholds: Option<bool>,
+
+    /// `sat_ddd*` only: pre-seed fixed-precedence (travel-time) rows from
+    /// each visit's earliest time point at INIT. Reduces "travel-time
+    /// conflict" iterations at the cost of a larger initial CNF.
+    /// True/false. Default false (lazy).
+    #[structopt(long)]
+    satddd_seed_precedence_from_earliest: Option<bool>,
+
+    /// `sat_ddd*` only: pre-seed pairwise AMO conflict clauses for visit
+    /// pairs whose earliest occupation intervals overlap by ≥ 180s. Adds
+    /// ~7 clauses + 2 aux vars per pair. True/false. Default false (lazy).
+    #[structopt(long)]
+    satddd_seed_resource_conflicts: Option<bool>,
+
+    /// `sat_ddd*` only: enable SC (Sequential Counter) AMO encoding from
+    /// Truong/Kieu/To (ICAART 2025) for resource-clique AMOs of size > 5.
+    /// If false, AMOs always use pairwise. True/false. Default true.
+    #[structopt(long)]
+    satddd_use_scl_amo: Option<bool>,
+
     /// Toggle eager chain expansion in `maxsat_ddd_ladder_scl`: expand long
     /// travel-time precedence chains into per-step 3-literal clauses instead
     /// of a single 2-literal implication (NOT the SCL/SCAMO AMO encoding —
@@ -75,12 +102,44 @@ struct Opt {
     #[structopt(long)]
     maxsatddd_ladder_scl_use_interval_tree: Option<bool>,
 
+    /// Within interval-graph clique-cover encoding, use SCL/SCAMO Sequential
+    /// Counter AMO (Truong/Kieu/To ICAART 2025) for large cliques. If false,
+    /// keep pairwise AMO regardless of clique size. No effect when interval-
+    /// graph encoding is off. True/false. Default true.
+    #[structopt(long)]
+    maxsatddd_ladder_scl_use_scl_amo: Option<bool>,
+
+    /// Lite clique-AMO aggregation for the pair-based conflict path. When on,
+    /// the pair scan also accumulates (resource, tau) → visit-set; cliques
+    /// of size ≥ 3 get a single AMO encoded after the scan. Effective only
+    /// when `--use-interval-graph false`. True/false. Default false.
+    #[structopt(long)]
+    maxsatddd_ladder_scl_use_touched_clique_amo: Option<bool>,
+
     /// **Experimental**: enable TRUE SCAMO encoding (Truong/Kieu/To, ICAART
     /// 2025). Currently only Phase 1 (group detection + stats) is wired in;
     /// the encoding itself still uses `add_hybrid_amo`. Use this to inspect
     /// whether the staircase pattern is worth the rewrite.
     #[structopt(long)]
     maxsatddd_ladder_scl_use_scamo: Option<bool>,
+
+    /// Pre-seed precedence rows from each visit's earliest time point at
+    /// initialization. Eager: encodes the full forward travel-time chain
+    /// before iteration 1; reduces "travel-time conflict" iterations at the
+    /// cost of a larger initial CNF (more time points + cost variables).
+    /// Effective only when `--use-precedence-graph` or
+    /// `--use-eager-chain-expansion` is true. True/false. Default false.
+    #[structopt(long)]
+    maxsatddd_ladder_scl_seed_from_earliest: Option<bool>,
+
+    /// Pre-allocate SAT vars + monotonicity clauses for every cost-step
+    /// threshold time at INIT (before iteration 1). For stepped objectives
+    /// (e.g. `InfiniteSteps180`) this can balloon the initial CNF — up to
+    /// 100 thresholds per visit. `Continuous` returns empty so the flag has
+    /// no effect. Match `maxsatddd_ladder` lazy behaviour with `false`.
+    /// True/false. Default false.
+    #[structopt(long)]
+    maxsatddd_ladder_scl_prealloc_cost_thresholds: Option<bool>,
 
     /// Objective encoding for `sat_ddd*` solvers: `scpb`, `totalizer`, or `bit_totalizer` (`nsc` accepted as alias).
     #[structopt(long)]
@@ -303,12 +362,6 @@ enum SolverType {
     MaxSatDddIncrementalNoProp,
     MaxSatDddPairwiseCustomRc2,
     MaxSatDddPairwiseCustomRc2NoProp,
-    /// `maxsat_ddd_recommend.rs` variant — sweep-line clique covering + BIS
-    /// encoding (Subercaseaux 2025 §4.1). Uses CustomRC2 on minisat (same
-    /// backend as `MaxSatDddPairwiseCustomRc2`, which is the right A/B
-    /// baseline). Avoids IPAMIR/UWrMaxSat to sidestep its hang on some
-    /// `finsteps123` instances.
-    MaxSatDddRecommend,
 }
 
 const TIMEOUT: f64 = 120.0;
@@ -370,7 +423,6 @@ fn main() {
             "maxsat_ddd_incremental_noprop" => SolverType::MaxSatDddIncrementalNoProp,
             "maxsat_ddd_pairwise_customrc2" => SolverType::MaxSatDddPairwiseCustomRc2,
             "maxsat_ddd_pairwise_customrc2_noprop" => SolverType::MaxSatDddPairwiseCustomRc2NoProp,
-            "maxsat_ddd_recommend" => SolverType::MaxSatDddRecommend,
             _ => panic!("unknown solver type"),
         })
         .collect::<Vec<_>>();
@@ -388,19 +440,32 @@ fn main() {
         .as_deref()
         .map(parse_delay_cost_type_or_panic);
 
+    // Default config = Option B: precedence + touched-clique AMO + SC AMO,
+    // with eager-chain-expansion and full interval-graph clique cover OFF.
+    // Empirically best on this benchmark; can be overridden via the
+    // matching --maxsatddd-ladder-scl-* flags.
     let maxsatddd_ladder_scl_settings = maxsatddd_ladder_scl::MaxSatDddLadderSclSettings {
         use_precedence_graph: opt
             .maxsatddd_ladder_scl_use_precedence_graph
             .unwrap_or(true),
         use_eager_chain_expansion: opt
             .maxsatddd_ladder_scl_use_eager_chain_expansion
-            .unwrap_or(true),
+            .unwrap_or(false),
         use_interval_graph_conflicts: opt
             .maxsatddd_ladder_scl_use_interval_tree
             .or(opt.maxsatddd_ladder_scl_use_interval_graph)
+            .unwrap_or(false),
+        use_scl_amo: opt.maxsatddd_ladder_scl_use_scl_amo.unwrap_or(true),
+        use_touched_clique_amo: opt
+            .maxsatddd_ladder_scl_use_touched_clique_amo
             .unwrap_or(true),
-        seed_scl_from_earliest: true,
+        seed_scl_from_earliest: opt
+            .maxsatddd_ladder_scl_seed_from_earliest
+            .unwrap_or(false),
         use_scamo_encoding: opt.maxsatddd_ladder_scl_use_scamo.unwrap_or(false),
+        prealloc_cost_thresholds: opt
+            .maxsatddd_ladder_scl_prealloc_cost_thresholds
+            .unwrap_or(false),
     };
     println!(
         "MaxSatDddLadderScl settings {:?}",
@@ -417,6 +482,16 @@ fn main() {
         use_extended_precedence_graph: opt
             .satddd_use_extended_precedence_graph
             .unwrap_or(true),
+        prealloc_cost_thresholds: opt
+            .satddd_prealloc_cost_thresholds
+            .unwrap_or(false),
+        seed_precedence_from_earliest: opt
+            .satddd_seed_precedence_from_earliest
+            .unwrap_or(false),
+        seed_resource_conflicts: opt
+            .satddd_seed_resource_conflicts
+            .unwrap_or(false),
+        use_scl_amo: opt.satddd_use_scl_amo.unwrap_or(true),
     };
     println!("SatDdd settings {:?}", satddd_settings);
 
@@ -440,7 +515,6 @@ fn main() {
                 | SolverType::MaxSatDddIncrementalNoProp
                 | SolverType::MaxSatDddPairwiseCustomRc2
                 | SolverType::MaxSatDddPairwiseCustomRc2NoProp
-                | SolverType::MaxSatDddRecommend
                 | SolverType::BinarizedBigMEager10Sec
                 | SolverType::BinarizedBigMEager30Sec
                 | SolverType::BinarizedBigMEager60Sec
@@ -625,31 +699,6 @@ fn main() {
                         },
                     )
                     .map(|(v, _)| v),
-                    SolverType::MaxSatDddRecommend => {
-                        // Routes through `maxsat_ddd_recommend.rs` (sweep-line
-                        // clique covering + BIS encoding for conflicts). Uses
-                        // CustomRC2 on minisat — same backend as
-                        // `MaxSatDddPairwiseCustomRc2`, which is the right A/B
-                        // baseline for the encoding change. We avoid IPAMIR /
-                        // UWrMaxSat: that backend has been observed to hang on
-                        // some `finsteps123` instances.
-                        maxsat_ddd_recommend::solve_incremental(
-                            || {
-                                maxsatsolver::CustomRC2Incremental::new(
-                                    satcoder::solvers::minisat::Solver::new(),
-                                )
-                            },
-                            get_env(),
-                            &p.problem,
-                            TIMEOUT,
-                            delay_cost_type,
-                            true,
-                            |k, v| {
-                                solve_data.insert(k, v);
-                            },
-                        )
-                        .map(|(v, _)| v)
-                    }
                     SolverType::MaxSatDddIncrementalNoProp => maxsat_ddd::solve_incremental(
                         || maxsatsolver::Incremental::new(),
                         get_env(),
@@ -866,11 +915,18 @@ fn main() {
                                 ddd_solvers::puresat::SatObjectiveEncoding::BitTotalizer
                             }
                         };
+                        // Forward the same `--satddd-*` flags to puresat. The
+                        // `use_extended_precedence_graph` flag maps to puresat's
+                        // simpler `use_precedence_graph` (chain-only, no ER) —
+                        // semantically the same now that incremental_sat also
+                        // uses `chain_earliest` instead of ER.
                         let pure_settings = ddd_solvers::puresat::SatDddSettings {
-                            // puresat still uses the simple within-train chain; map the
-                            // incremental_sat flag onto it for now until puresat is also
-                            // upgraded to extended precedence + energetic reasoning.
                             use_precedence_graph: satddd_settings.use_extended_precedence_graph,
+                            prealloc_cost_thresholds: satddd_settings.prealloc_cost_thresholds,
+                            seed_precedence_from_earliest: satddd_settings
+                                .seed_precedence_from_earliest,
+                            seed_resource_conflicts: satddd_settings.seed_resource_conflicts,
+                            use_scl_amo: satddd_settings.use_scl_amo,
                         };
                         ddd_solvers::puresat::solve_scl_fresh_addclauses_with_encoding_and_settings(
                             &mk_env,

@@ -7,7 +7,6 @@ pub mod mipdddpack;
 mod minimize;
 pub mod maxsat_ti;
 pub mod maxsat_ddd;
-pub mod maxsat_ddd_recommend;
 pub mod maxsatddd_ladder_scl;
 pub mod heuristic;
 pub mod maxsatddd_ladder_abstract;

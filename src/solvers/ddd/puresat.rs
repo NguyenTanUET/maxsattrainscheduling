@@ -78,13 +78,36 @@ pub enum SatObjectiveEncoding {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SatDddSettings {
+    /// Within-train chain-propagation preprocessing of `earliest` times.
+    /// Same role as `incremental_sat::SatDddSettings::use_extended_precedence_graph`
+    /// but puresat uses the simple `chain_earliest` (no ER), so always sound.
     pub use_precedence_graph: bool,
+    /// Pre-allocate SAT vars + monotonicity clauses for each cost-step
+    /// threshold time at INIT. On stepped objectives (`InfiniteSteps180`)
+    /// this expands to up to 100 thresholds per visit. `Continuous` returns
+    /// empty so no effect on cont. Default `false` (lazy).
+    pub prealloc_cost_thresholds: bool,
+    /// Pre-seed fixed-precedence (travel-time) rows from each visit's
+    /// earliest time point at INIT. Reduces "travel-time conflict"
+    /// iterations at the cost of a larger initial CNF. Default `false`.
+    pub seed_precedence_from_earliest: bool,
+    /// Pre-seed pairwise AMO conflict clauses for visit pairs whose
+    /// earliest occupation intervals overlap by ≥ 180s. Default `false`.
+    pub seed_resource_conflicts: bool,
+    /// Use SC (Sequential Counter) AMO encoding from Truong/Kieu/To
+    /// (ICAART 2025) for resource-clique AMOs of size > [`PAIRWISE_AMO_MAX_SIZE`].
+    /// If `false`, AMOs always use pairwise. Default `true`.
+    pub use_scl_amo: bool,
 }
 
 impl Default for SatDddSettings {
     fn default() -> Self {
         Self {
             use_precedence_graph: true,
+            prealloc_cost_thresholds: false,
+            seed_precedence_from_earliest: false,
+            seed_resource_conflicts: false,
+            use_scl_amo: true,
         }
     }
 }
@@ -1000,6 +1023,23 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 }
 
 
+// ─── AMO encoding constants (kept in sync with maxsatddd_ladder_scl + incremental_sat) ──
+
+/// Maximum clique size encoded by pairwise AMO. Cliques strictly larger
+/// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
+/// 2025 §3.1. Larger value keeps pairwise for medium cliques whose
+/// simplicity may beat SC's tighter propagation in the DDD setting.
+const PAIRWISE_AMO_MAX_SIZE: usize = 5;
+
+/// Lazy AMO threshold (kept for API parity — not used by puresat path).
+#[allow(dead_code)]
+const LAZY_AMO_THRESHOLD: usize = 0;
+
+/// SC (Sequential Counter) AMO encoding from Truong/Kieu/To (ICAART 2025).
+///
+/// Emits formulas (1)–(4) per index plus the R_1 biconditional via (1)+(3)
+/// for j=1. Including formula (3) for both the R_1 layer and inner indexes
+/// gives stronger unit propagation than earlier versions that omitted it.
 fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
@@ -1015,13 +1055,20 @@ fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<
         prefix.push(solver.new_var());
     }
 
-    solver.add_clause(vec![!lits[0], prefix[0]]);
+    // R_1 layer: x_1 ↔ R_1 via (1) one direction + (3) the other.
+    solver.add_clause(vec![!lits[0], prefix[0]]);                // (1) for j=1
+    solver.add_clause(vec![lits[0], !prefix[0]]);                // (3) for j=1
+
     for i in 1..(lits.len() - 1) {
-        solver.add_clause(vec![!lits[i], prefix[i]]);
-        solver.add_clause(vec![!prefix[i - 1], prefix[i]]);
-        solver.add_clause(vec![!lits[i], !prefix[i - 1]]);
+        solver.add_clause(vec![!lits[i], prefix[i]]);            // (1)
+        solver.add_clause(vec![!prefix[i - 1], prefix[i]]);      // (2)
+        solver.add_clause(vec![lits[i], prefix[i - 1], !prefix[i]]); // (3)
+        solver.add_clause(vec![!lits[i], !prefix[i - 1]]);       // (4)
     }
-    solver.add_clause(vec![!lits[lits.len() - 1], !prefix[prefix.len() - 1]]);
+    solver.add_clause(vec![
+        !lits[lits.len() - 1],
+        !prefix[prefix.len() - 1],
+    ]); // (4) for j=w
 }
 
 fn add_pairwise_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
@@ -1032,9 +1079,12 @@ fn add_pairwise_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[
     }
 }
 
-fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
-    const PAIRWISE_AMO_MAX_SIZE: usize = 5;
-    if lits.len() <= PAIRWISE_AMO_MAX_SIZE {
+fn add_hybrid_amo<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    lits: &[Bool<L>],
+    use_scl_amo: bool,
+) {
+    if !use_scl_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
         add_scl_amo(solver, lits);
@@ -1151,11 +1201,19 @@ fn build_active_lit<L: satcoder::Lit>(
     };
 
     let active = solver.new_var();
-    // active → !delay_start
-    solver.add_clause(vec![!active, !delay_start]);
-    // active → delay_end
-    solver.add_clause(vec![!active, delay_end]);
-    // (!delay_start ∧ delay_end) → active
+    // For AMO clique soundness we only need the CONVERSE direction:
+    //   (!delay_start ∧ delay_end) → active
+    // Kept in sync with `maxsatddd_ladder_scl::build_active_lit` and
+    // `incremental_sat::build_active_lit`. See the comment there for the
+    // full argument re: soundness + propagation trade-off.
+    const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
+    if ENCODE_ACTIVE_FORWARD_DIRECTION {
+        // active → !delay_start
+        solver.add_clause(vec![!active, !delay_start]);
+        // active → delay_end
+        solver.add_clause(vec![!active, delay_end]);
+    }
+    // (!delay_start ∧ delay_end) → active   — required for soundness.
     solver.add_clause(vec![active, delay_start, !delay_end]);
 
     active_cache.insert((visit_id, tau_plus_1), active);
@@ -1247,8 +1305,7 @@ fn solve_native_debug_with_mode(
             touched_intervals.push(visit_id);
             new_time_points.push((visit_id, true.into(), earliest));
 
-            const SEED_COST_THRESHOLDS: bool = true;
-            if SEED_COST_THRESHOLDS {
+            if settings.prealloc_cost_thresholds {
                 for t in problem.trains[train_idx]
                     .visit_cost_threshold_times(delay_cost_type, visit_idx, earliest)
                 {
@@ -1270,7 +1327,10 @@ fn solve_native_debug_with_mode(
     let mut value_trace = ValueTrace::default();
     let mut logged_incumbent: Option<i32> = None;
     let mut logged_lower_bound: Option<i32> = None;
-    let trace_bound_queries = problem.name == "instances_original/InstanceA1.txt";
+    // Debug-only tracing flag — disabled by default. Was previously hardcoded
+    // to fire on a single instance name (`instances_original/InstanceA1.txt`),
+    // which is dead debug code.
+    let trace_bound_queries = false;
 
     let mut scpb_terms: Vec<(NativeLit, usize)> = Vec::new();
     let mut scpb_total_weight = 0usize;
@@ -1283,8 +1343,7 @@ fn solve_native_debug_with_mode(
     let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
     let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
 
-    const SEED_PRECEDENCE_FROM_EARLIEST: bool = true;
-    if SEED_PRECEDENCE_FROM_EARLIEST {
+    if settings.seed_precedence_from_earliest {
         for visit_id in visits.keys() {
             let (train_idx, visit_idx) = visits[visit_id];
             if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
@@ -1331,12 +1390,11 @@ fn solve_native_debug_with_mode(
     // and add one AMO clause `!active_v1 OR !active_v2`. Total ≈ 7 clauses + 2
     // aux vars per seeded pair. For typical instances this is ~5-20k extra
     // clauses; SAT solver handles this easily in exchange for faster convergence.
-    const SEED_RESOURCE_CONFLICTS: bool = true;
     // Only seed overlaps ≥ 180s — aligns with InfiniteSteps180 step boundaries.
     // For finer objectives (cont, infsteps60), smaller conflicts may also matter;
     // tune lower if benchmarks show more seeding helps.
     const MIN_OVERLAP_FOR_SEED: i32 = 180;
-    if SEED_RESOURCE_CONFLICTS {
+    if settings.seed_resource_conflicts {
         let mut seed_active_cache: HashMap<(VisitId, i32), Bool<NativeLit>> = HashMap::new();
         let mut n_seeded = 0usize;
         let mut seen_resource_pairs: HashSet<(usize, usize)> = HashSet::new();
@@ -1890,7 +1948,7 @@ fn solve_native_debug_with_mode(
                         active_lits.push(lit);
                     }
 
-                    add_hybrid_amo(&mut solver, &active_lits);
+                    add_hybrid_amo(&mut solver, &active_lits, settings.use_scl_amo);
                 }
                 n_conflict_constraints += 1;
                 cliques_processed += 1;

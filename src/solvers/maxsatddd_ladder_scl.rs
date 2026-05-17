@@ -107,6 +107,20 @@ pub struct MaxSatDddLadderSclSettings {
     /// Use interval-graph clique-cover conflict encoding (AMO over cliques).
     /// If false, fallback to pairwise conflict generation.
     pub use_interval_graph_conflicts: bool,
+    /// Within the interval-graph clique-cover encoding, use the SCL/SCAMO
+    /// (Sequential Counter for Ladder) AMO encoding from Truong/Kieu/To
+    /// (ICAART 2025) for large cliques (size > [`PAIRWISE_AMO_MAX_SIZE`]).
+    /// If false, the encoding stays pairwise regardless of clique size.
+    /// Has no effect when `use_interval_graph_conflicts = false`.
+    pub use_scl_amo: bool,
+    /// Lite clique-AMO mode for the pair-based conflict path: during the
+    /// pair-by-pair conflict scan, aggregate visits sharing a (resource,
+    /// tau) into mini-cliques. For each clique of size ≥ 3, emit an SCL
+    /// AMO (Truong/Kieu/To SC encoding) over the active literals — in
+    /// addition to the per-pair "delay one of them" clauses. Effective
+    /// only when `use_interval_graph_conflicts = false` (otherwise the
+    /// full interval-graph clique-cover already handles AMOs).
+    pub use_touched_clique_amo: bool,
     /// Seed fixed precedence rows from earliest time points (only used when SCL is enabled).
     pub seed_scl_from_earliest: bool,
     /// **Experimental**: TRUE SCAMO encoding per Truong/Kieu/To (ICAART 2025
@@ -121,19 +135,56 @@ pub struct MaxSatDddLadderSclSettings {
     /// further work to pick block boundaries and detect "compatible" cliques.
     /// Default OFF for safety.
     pub use_scamo_encoding: bool,
+    /// Pre-allocate SAT variables and monotonicity clauses for the
+    /// per-visit cost-threshold time points at INIT (before any iteration).
+    /// Mirrors `Problem::visit_cost_threshold_times` for the chosen objective:
+    /// stepped objectives expand to many thresholds (e.g. `InfiniteSteps180`
+    /// yields up to 100 per visit), `Continuous` returns empty.
+    ///
+    /// When ON: SAT formula starts heavy but cost-tree growth happens
+    /// up-front; better unit-propagation in some configurations.
+    /// When OFF (default): matches `maxsatddd_ladder` lazy behaviour — cost
+    /// timepoints are created only when an actual conflict needs them.
+    pub prealloc_cost_thresholds: bool,
 }
 
 impl Default for MaxSatDddLadderSclSettings {
     fn default() -> Self {
+        // Option B baseline (precedence + touched-clique AMO + SC encoding):
+        // empirically best on infsteps180 + finsteps123, lighter than the
+        // full interval-graph clique cover.
         Self {
-            use_precedence_graph: false,
+            use_precedence_graph: true,
             use_eager_chain_expansion: false,
             use_interval_graph_conflicts: false,
+            use_scl_amo: true,
+            use_touched_clique_amo: true,
             seed_scl_from_earliest: false,
             use_scamo_encoding: false, // experimental, see field doc
+            prealloc_cost_thresholds: false,
         }
     }
 }
+
+// ─── Tunables for SCL AMO experimentation ───────────────────────────────────
+//
+// Two knobs control how AMO over conflict cliques is encoded inside the
+// interval-graph path (`use_interval_graph_conflicts = true`).
+
+/// Maximum clique size encoded by pairwise AMO. Cliques strictly larger
+/// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
+/// 2025 §3.1 (see [`add_scl_amo`]). Larger value keeps pairwise for
+/// medium cliques whose simplicity may beat SC's tighter propagation in
+/// the DDD setting.
+const PAIRWISE_AMO_MAX_SIZE: usize = 5;
+
+/// Lazy AMO threshold. A clique with > 2 members must be detected this
+/// many times across iterations (counted by member visit-set) before its
+/// full AMO is encoded. Until then each detection emits only a single
+/// pair clause for the clique's first two members — same shape as the
+/// 2-member fast path. 0 = eager (encode AMO on first detection); ≥ 2
+/// = lazy with that many pair-clause "warmups" first.
+const LAZY_AMO_THRESHOLD: usize = 0;
 
 enum Soft<L: satcoder::Lit> {
     Primary,
@@ -365,24 +416,10 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
-fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
-    let mut effective = Vec::with_capacity(problem.trains.len());
-
-    for train in &problem.trains {
-        let mut train_bounds = Vec::with_capacity(train.visits.len());
-        let mut propagated_lb: Option<i32> = None;
-
-        for visit in &train.visits {
-            let lb = propagated_lb.map_or(visit.earliest, |prev_lb| prev_lb.max(visit.earliest));
-            train_bounds.push(lb);
-            propagated_lb = Some(lb + visit.travel_time);
-        }
-
-        effective.push(train_bounds);
-    }
-
-    effective
-}
+// `compute_effective_earliest` has moved to
+// `super::ddd::extended_precedence::chain_earliest` so that
+// `maxsatddd_ladder_scl` and `incremental_sat` use byte-identical
+// chain-propagation logic for `delays[0]` setup.
 
 pub fn solve<L: satcoder::Lit + Copy + std::fmt::Debug + 'static>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
@@ -485,7 +522,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     let mut new_time_points = Vec::new();
     let effective_earliest = settings
         .use_precedence_graph
-        .then(|| compute_effective_earliest(problem));
+        .then(|| crate::solvers::ddd::extended_precedence::chain_earliest(problem));
 
     #[allow(unused)]
     let mut core_sizes: BTreeMap<usize, usize> = BTreeMap::new();
@@ -527,13 +564,23 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             touched_intervals.push(visit_id);
             new_time_points.push((visit_id, true.into(), earliest));
 
-            for t in problem.trains[train_idx]
-                .visit_cost_threshold_times(delay_cost_type, visit_idx, earliest)
-            {
-                let (var, is_new) = occupations[visit_id].time_point(&mut solver, t);
-                if is_new {
-                    n_timepoints += 1;
-                    new_time_points.push((visit_id, var, t));
+            // Pre-allocate SAT vars + monotonicity clauses for each cost-step
+            // threshold time. Gated by `prealloc_cost_thresholds` because this
+            // is a structural divergence from `maxsatddd_ladder` (which is
+            // fully lazy): on stepped objectives like `InfiniteSteps180` the
+            // helper returns up to 100 thresholds per visit, ballooning the
+            // initial CNF and slowing SAT calls for the rest of the run.
+            // For `Continuous` the helper returns an empty list so this loop
+            // is a no-op regardless of the flag.
+            if settings.prealloc_cost_thresholds {
+                for t in problem.trains[train_idx]
+                    .visit_cost_threshold_times(delay_cost_type, visit_idx, earliest)
+                {
+                    let (var, is_new) = occupations[visit_id].time_point(&mut solver, t);
+                    if is_new {
+                        n_timepoints += 1;
+                        new_time_points.push((visit_id, var, t));
+                    }
                 }
             }
         }
@@ -551,6 +598,11 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
     // Rows already added for interval-graph conflict encoding.
     let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
+    // Lazy-AMO bookkeeping: count cross-iteration touches of each clique
+    // (keyed by sorted visit-set, not by row times) and remember which
+    // cliques have already had their full AMO encoded.
+    let mut clique_touch_counts: HashMap<Vec<VisitId>, usize> = HashMap::new();
+    let mut clique_amo_encoded: HashSet<Vec<VisitId>> = HashSet::new();
     // Rows already added for fixed-precedence encoding: (visit_id, time).
     let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
     // let mut priorities: Vec<(VisitId, VisitId)> = Vec::new();
@@ -602,6 +654,17 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     const USE_HEURISTIC: bool = true;
     let mut best_heur: Option<(i32, Vec<Vec<i32>>)> = None;
     let mut injected_heuristic_cost: Option<i32> = None;
+
+    // Seed `best_heur` with a quick greedy schedule. Gives a sound UB even
+    // when the Gurobi-based heuristic thread isn't running (e.g. license
+    // expired), so timeout cases can still report a finite `ub` and
+    // downstream tooling can compute a real GAP.
+    {
+        let greedy_sol = crate::solvers::ddd::extended_precedence::greedy_schedule(problem);
+        if let Some(cost) = problem.verify_solution(&greedy_sol, delay_cost_type) {
+            best_heur = Some((cost, greedy_sol));
+        }
+    }
 
     let heur_thread = USE_HEURISTIC.then(|| {
         let (sol_in_tx, sol_in_rx) = std::sync::mpsc::channel();
@@ -729,21 +792,41 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             time_out: t1_out,
                         }));
 
-                        // Insert/update precedence row for this time point.
-                        let in_var = v1.delays[v1.incumbent_idx].0;
-                        let in_t = v1.incumbent_time();
-                        let _ = add_fixed_precedence_row(
-                            &mut solver,
-                            problem,
-                            &visits,
-                            &mut occupations,
-                            &mut new_time_points,
-                            &mut fixed_prec_rows,
-                            visit_id,
-                            in_var,
-                            in_t,
-                            settings.use_eager_chain_expansion,
-                        );
+                        // When `use_eager_chain_expansion` is OFF, emit the
+                        // travel-time clause inline — matches ladder semantics
+                        // exactly (no dedup, no short-circuit). The dedup +
+                        // earliest-next short-circuit inside
+                        // `add_fixed_precedence_row` change the emitted CNF in
+                        // subtle ways that make `SclNothing != Ldr` even when
+                        // every other flag is off.
+                        if settings.use_eager_chain_expansion {
+                            let in_var = v1.delays[v1.incumbent_idx].0;
+                            let in_t = v1.incumbent_time();
+                            let _ = add_fixed_precedence_row(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut fixed_prec_rows,
+                                visit_id,
+                                in_var,
+                                in_t,
+                                settings.use_eager_chain_expansion,
+                            );
+                        } else {
+                            let t1_in_var = v1.delays[v1.incumbent_idx].0;
+                            let new_t = v1.incumbent_time() + visit.travel_time;
+                            let (t1_earliest_out_var, t1_is_new) =
+                                occupations[next_visit].time_point(&mut solver, new_t);
+                            SatInstance::add_clause(
+                                &mut solver,
+                                vec![!t1_in_var, t1_earliest_out_var],
+                            );
+                            if t1_is_new {
+                                new_time_points.push((next_visit, t1_earliest_out_var, new_t));
+                            }
+                        }
                         stats.n_travel += 1;
                     }
 
@@ -1041,6 +1124,24 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         continue;
                     }
 
+                    // Cross-iteration visit-set key for lazy-AMO counting.
+                    // Different from `row_key` (which depends on incumbent
+                    // times): two detections of the same VISIT SET — even at
+                    // different times — share this key, so the touch count
+                    // accumulates across DDD iterations.
+                    let visit_set_key: Vec<VisitId> = {
+                        let mut v: Vec<VisitId> =
+                            members.iter().map(|m| m.visit_id).collect();
+                        v.sort_unstable_by_key(|id| id.0);
+                        v
+                    };
+                    let touch_count = {
+                        let c =
+                            clique_touch_counts.entry(visit_set_key.clone()).or_insert(0);
+                        *c += 1;
+                        *c
+                    };
+
                     found_resource_conflict = true;
                     stats.n_conflict += 1;
 
@@ -1106,7 +1207,66 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         );
 
                         solver.add_clause(vec![!m_end_i, !m_end_j, delay_i, delay_j]);
+                    } else if !is_scamo_eligible
+                        && LAZY_AMO_THRESHOLD > 0
+                        && touch_count < LAZY_AMO_THRESHOLD
+                        && !clique_amo_encoded.contains(&visit_set_key)
+                    {
+                        // Lazy mode warm-up: this clique has been seen
+                        // `touch_count` times (< LAZY_AMO_THRESHOLD). Emit
+                        // a single pair clause for the first two members
+                        // (same shape as the 2-member fast path) instead
+                        // of a full AMO. The AMO is encoded once the
+                        // touch count reaches the threshold.
+                        let mi = members[0];
+                        let mj = members[1];
+
+                        let m_end_lit_of = |visit_id: VisitId,
+                                            occs: &TiVec<VisitId, Occ<L>>|
+                         -> Bool<L> {
+                            let (train_idx, visit_idx) = visits[visit_id];
+                            if visit_idx + 1 < problem.trains[train_idx].visits.len() {
+                                let next_id: VisitId =
+                                    (usize::from(visit_id) + 1).into();
+                                occs[next_id].delays[occs[next_id].incumbent_idx].0
+                            } else {
+                                true.into()
+                            }
+                        };
+
+                        let m_end_i = m_end_lit_of(mi.visit_id, &occupations);
+                        let m_end_j = m_end_lit_of(mj.visit_id, &occupations);
+
+                        let delay_i = get_delay_lit_at(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            settings.use_eager_chain_expansion,
+                            mi.visit_id,
+                            mj.end,
+                        );
+                        let delay_j = get_delay_lit_at(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            settings.use_eager_chain_expansion,
+                            mj.visit_id,
+                            mi.end,
+                        );
+
+                        solver.add_clause(vec![!m_end_i, !m_end_j, delay_i, delay_j]);
                     } else {
+                        // Full AMO encoding (eager path, or lazy threshold
+                        // reached). Mark the visit-set so subsequent
+                        // detections of the same clique skip re-encoding.
+                        clique_amo_encoded.insert(visit_set_key.clone());
+
                         // Sequential AMO via Tseitin-encoded "active_i(tau)" aux vars.
                         // Choose tau+1 = min(member.end) so the AMO forces at least
                         // all but one member to start at or after this time. Uses
@@ -1151,7 +1311,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             // ordering and a `..._with_prefix` SC variant.
                             let _bits = encode_scamo_amo_block(&mut solver, &active_lits);
                         } else {
-                            add_hybrid_amo(&mut solver, &active_lits);
+                            add_hybrid_amo(&mut solver, &active_lits, settings.use_scl_amo);
                         }
                     }
                     n_conflict_constraints += 1;
@@ -1167,6 +1327,16 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 touched_intervals = new_touched;
             } else {
                 let mut deconflicted_train_pairs: HashSet<(usize, usize)> = HashSet::new();
+
+                // Lite clique aggregation for the pair-based scan: each
+                // (resource, tau_plus_1) accumulates visits that ended up in a
+                // detected conflict. After the scan, cliques with ≥3 members
+                // are encoded as a single AMO over `active(v, tau_plus_1)`
+                // literals — opt-in via `use_touched_clique_amo`. This lets
+                // SCL/SCAMO AMO encoding fire WITHOUT the heavier interval-
+                // graph clique-cover pass.
+                let mut touched_pair_cliques: HashMap<(usize, i32), HashSet<VisitId>> =
+                    HashMap::new();
 
                 // ───────── SCAMO encoding for pair-based branch ─────────
                 // When `use_scamo_encoding` is on, detect SCAMO-eligible
@@ -1459,17 +1629,22 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                 // by an eligible SCAMO clique, the post-retain
                                 // SCAMO AMO block is the sole encoding —
                                 // skip the pair-based "delay one of them"
-                                // clause. Empty (no-op) when SCAMO is off.
-                                let (lo, hi) = if visit_id.0 <= other_visit.0 {
-                                    (visit_id, other_visit)
-                                } else {
-                                    (other_visit, visit_id)
-                                };
-                                if pair_skip_set.contains(&(lo, hi)) {
-                                    found_resource_conflict = true;
-                                    stats.n_conflict += 1;
-                                    retain = true;
-                                    continue;
+                                // clause. Gated on `use_scamo_encoding` so
+                                // the per-pair (lo,hi) compute + HashSet
+                                // lookup don't run at all when SCAMO is off
+                                // (matches ladder's per-pair cost exactly).
+                                if settings.use_scamo_encoding {
+                                    let (lo, hi) = if visit_id.0 <= other_visit.0 {
+                                        (visit_id, other_visit)
+                                    } else {
+                                        (other_visit, visit_id)
+                                    };
+                                    if pair_skip_set.contains(&(lo, hi)) {
+                                        found_resource_conflict = true;
+                                        stats.n_conflict += 1;
+                                        retain = true;
+                                        continue;
+                                    }
                                 }
 
                                 found_resource_conflict = true;
@@ -1539,12 +1714,71 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                     &mut solver,
                                     vec![!t1_out_lit, !t2_out_lit, delay_t1, delay_t2],
                                 );
+
+                                // Touched-clique-AMO aggregation: record
+                                // both visits at the (resource, tau_plus_1)
+                                // of their overlap. Only meaningful for
+                                // self-conflicts (both on same resource);
+                                // cross-resource conflicts skipped.
+                                if settings.use_touched_clique_amo
+                                    && visit.resource_id == other_resource
+                                {
+                                    let tau_plus_1 = t1_out.min(t2_out);
+                                    let entry = touched_pair_cliques
+                                        .entry((other_resource, tau_plus_1))
+                                        .or_default();
+                                    entry.insert(visit_id);
+                                    entry.insert(other_visit);
+                                }
+
                                 retain = true;
                             }
                         }
                     }
                     retain
                 });
+
+                // ───────── Touched-clique AMO (post-retain) ─────────
+                // For each (resource, tau_plus_1) that accumulated ≥ 3
+                // visits during the pair-based scan, emit a single AMO
+                // over their `active(v, tau_plus_1)` literals. Choice of
+                // pairwise vs SC encoding follows `use_scl_amo`.
+                if settings.use_touched_clique_amo {
+                    let mut active_lit_cache_tcamo: HashMap<(VisitId, i32), Bool<L>> =
+                        HashMap::new();
+                    let entries: Vec<((usize, i32), HashSet<VisitId>)> =
+                        touched_pair_cliques.into_iter().collect();
+                    for ((_, tau_plus_1), visit_set) in entries {
+                        if visit_set.len() < 3 {
+                            continue;
+                        }
+                        let mut visits_sorted: Vec<VisitId> =
+                            visit_set.into_iter().collect();
+                        visits_sorted.sort_by_key(|v| v.0);
+                        if !clique_amo_encoded.insert(visits_sorted.clone()) {
+                            continue;
+                        }
+                        let mut active_lits: Vec<Bool<L>> =
+                            Vec::with_capacity(visits_sorted.len());
+                        for &v in &visits_sorted {
+                            let lit = build_active_lit(
+                                &mut solver,
+                                problem,
+                                &visits,
+                                &mut occupations,
+                                &mut new_time_points,
+                                &mut fixed_prec_rows,
+                                &mut active_lit_cache_tcamo,
+                                settings.use_eager_chain_expansion,
+                                v,
+                                tau_plus_1,
+                            );
+                            active_lits.push(lit);
+                        }
+                        add_hybrid_amo(&mut solver, &active_lits, settings.use_scl_amo);
+                        n_conflict_constraints += 1;
+                    }
+                }
 
                 // ───────── SCAMO encoding (post-retain) ─────────
                 // After the pair-based loop emits its "delay one of them"
@@ -1774,7 +2008,15 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             // );
         }
 
-        let mut n_assumps = soft_constraints.len();
+        // Lazy/incremental assumption set, matching `maxsatddd_ladder`:
+        // start with the top-20 highest-weight soft constraints and grow by
+        // 20 each time the SAT solver returns SAT with `n_assumps <
+        // soft_constraints.len()`. This is empirically much faster than
+        // feeding the solver every soft assumption at once — especially on
+        // `Continuous` where `soft_constraints` can hold hundreds of cost
+        // variables. The `Sat ... if n_assumps < soft_constraints.len()`
+        // arm below grows `n_assumps` until a real core is hit.
+        let mut n_assumps = 20;
         let mut assumptions = soft_constraints
             .iter()
             .map(|(k, (_, w, _))| (*k, *w))
@@ -2030,7 +2272,18 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             // Do weighted RC2
 
             if core.len() == 0 {
-                if !settings.use_precedence_graph {
+                // SCL-specific fallback: when the precedence graph is OFF but
+                // some other SCL feature is ON, an empty core may indicate
+                // missing precedence info rather than true infeasibility — try
+                // injecting the best heuristic as a recovery step.
+                //
+                // Pure-ladder mode (all SCL features off) skips this branch
+                // entirely so behaviour matches `maxsatddd_ladder.rs` exactly.
+                let any_other_scl_feature = settings.use_eager_chain_expansion
+                    || settings.use_interval_graph_conflicts
+                    || settings.use_touched_clique_amo
+                    || settings.use_scamo_encoding;
+                if !settings.use_precedence_graph && any_other_scl_feature {
                     if let Some((ub_cost, ub_sol)) = best_heur.as_ref() {
                         if injected_heuristic_cost != Some(*ub_cost) {
                             inject_solution_timepoints_maxsat(
@@ -2447,9 +2700,12 @@ fn add_pairwise_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[
     }
 }
 
-fn add_hybrid_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
-    const PAIRWISE_AMO_MAX_SIZE: usize = 5;
-    if lits.len() <= PAIRWISE_AMO_MAX_SIZE {
+fn add_hybrid_amo<L: satcoder::Lit>(
+    solver: &mut impl SatInstance<L>,
+    lits: &[Bool<L>],
+    use_scl_amo: bool,
+) {
+    if !use_scl_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
         add_scl_amo(solver, lits);

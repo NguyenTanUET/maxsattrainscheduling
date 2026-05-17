@@ -1,0 +1,34 @@
+[
+  {
+    "avg_tracks": 20.482759475708008,
+    "conflicting_visit_pairs": 6144,
+    "conflicts": 33,
+    "delay_cost_type": "InfiniteSteps180",
+    "index": 0,
+    "name": "stationA11",
+    "solves": [
+      {
+        "algorithm_time": 0.09091242399999544,
+        "avg_time_points": 21.091207888249794,
+        "delay_cost_type": "InfiniteSteps180",
+        "iterations": 284,
+        "lb": 102,
+        "max_time_points": 161,
+        "num_conflicts": 18798,
+        "num_time_points": 25668,
+        "num_traveltime": 18798,
+        "objective_iters": 102,
+        "resource_iters": 1,
+        "sol_time": 122287.349248,
+        "solver_name": "MaxSatDddLadderScl",
+        "solver_time": 122.194299481,
+        "status": "timeout",
+        "total_time": 122.285210969,
+        "travel_and_resource_iters": 180,
+        "travel_iters": 0,
+        "ub": 413
+      }
+    ],
+    "trains": 29
+  }
+]

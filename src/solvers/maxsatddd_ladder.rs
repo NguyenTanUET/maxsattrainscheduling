@@ -181,6 +181,16 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     });
     let mut best_heur: Option<(i32, Vec<Vec<i32>>)> = None;
 
+    // Seed `best_heur` with a quick greedy schedule so timeout cases still
+    // report a finite UB / valid GAP even when the Gurobi heuristic thread
+    // is unavailable (license expired, etc).
+    {
+        let greedy_sol = crate::solvers::ddd::extended_precedence::greedy_schedule(problem);
+        if let Some(cost) = problem.verify_solution(&greedy_sol, delay_cost_type) {
+            best_heur = Some((cost, greedy_sol));
+        }
+    }
+
     loop {
         if start_time.elapsed().as_secs_f64() > timeout {
             let ub = best_heur.map(|(c, _)| c).unwrap_or(i32::MAX);
