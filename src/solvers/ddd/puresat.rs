@@ -326,21 +326,40 @@ impl TrackedSolver {
     /// All learned clauses and heuristic state are reset. New solver state
     /// after rebuild contains exactly the clauses the user added (no
     /// CDCL-derived information) and the same variable namespace.
+    ///
+    /// **A2 optimization** — two batched paths replace per-element loops:
+    ///   1. Variable reservation: one `reserve(max_var)` call (Glucose
+    ///      reserves up to and including that var) instead of `var_count`
+    ///      individual `new_var()` calls.
+    ///   2. Clause replay: reuse a single `RsClause` buffer cleared and
+    ///      extended per iteration, avoiding the per-clause `collect()`
+    ///      allocation that `FromIterator<Lit>` would otherwise perform.
     fn rebuild(&mut self) {
         self.native = NativeSolver::new();
-        // Re-allocate variables to match the saved namespace. Each call
-        // reserves a new RsVar in the fresh Glucose backend; since we
-        // start at id 0 and increment, IDs match the original allocation.
-        for _ in 0..self.var_count {
-            let _ = SatInstance::<NativeLit>::new_var(&mut self.native);
-        }
-        // Replay clauses (using the inner Glucose API directly to avoid
-        // re-running the SatInstance reservation we already accounted for).
-        for clause in &self.clause_log {
-            let cl: RsClause = clause.iter().copied().collect();
+
+        // (1) Batch-reserve: single call covers all vars up to var_count - 1.
+        if self.var_count > 0 {
+            let max_var = RsVar::new(self.var_count - 1);
             self.native
                 .inner
-                .add_clause_ref(&cl)
+                .reserve(max_var)
+                .expect("glucose reserve failed during rebuild");
+            // Keep next_var in sync with the saved namespace so subsequent
+            // SatInstance::new_var() calls produce the same IDs as before.
+            self.native.next_var = self.var_count;
+        }
+
+        // (2) Reuse one clause buffer across the replay loop.
+        // `rustsat::types::Clause` doesn't expose a public `clear()`, but
+        // `drain(..)` removes all literals while keeping the backing Vec's
+        // capacity — exactly what we want for reuse.
+        let mut buf: RsClause = RsClause::default();
+        for clause in &self.clause_log {
+            buf.drain(..);
+            buf.extend(clause.iter().copied());
+            self.native
+                .inner
+                .add_clause_ref(&buf)
                 .expect("glucose add_clause_ref failed during rebuild");
         }
     }
@@ -1537,9 +1556,24 @@ fn solve_native_debug_with_mode(
 
     const USE_INITIAL_HEURISTIC_UB_ONLY: bool = true;
     if USE_INITIAL_HEURISTIC_UB_ONLY {
-        if let Some((ub_cost, ub_sol)) =
-            compute_initial_heuristic_upper_bound(&mk_env, problem, delay_cost_type, &occupations)?
-        {
+        // Wrap the Gurobi-backed heuristic in `catch_unwind` so a bad/expired
+        // license (e.g. host-id mismatch) does NOT crash puresat. On failure
+        // we proceed without an initial UB; the DDD loop will discover one
+        // through bound-query iterations.
+        let heuristic_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            compute_initial_heuristic_upper_bound(&mk_env, problem, delay_cost_type, &occupations)
+        }));
+        let heuristic_ub = match heuristic_result {
+            Ok(inner) => inner?,
+            Err(_) => {
+                eprintln!(
+                    "WARN: Gurobi heuristic unavailable (likely license issue) — \
+                     proceeding without initial UB. DDD loop will discover UB."
+                );
+                None
+            }
+        };
+        if let Some((ub_cost, ub_sol)) = heuristic_ub {
             println!("SAT initial heuristic UB={}", ub_cost);
             if trace_bound_queries {
                 eprintln!(
