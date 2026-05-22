@@ -1158,7 +1158,7 @@ fn do_output_stats<L: satcoder::Lit>(
         .into(),
     );
     output_stats("num_traveltime".to_string(), stats.n_travel.into());
-    output_stats("num_conflicts".to_string(), stats.n_travel.into());
+    output_stats("num_conflicts".to_string(), stats.n_conflict.into());
     output_stats(
         "num_time_points".to_string(),
         occupations
@@ -1167,6 +1167,13 @@ fn do_output_stats<L: satcoder::Lit>(
             .sum::<usize>()
             .into(),
     );
+    // Total SAT variables allocated and CNF clauses added throughout the
+    // entire solve (initial encoding + every DDD refinement iteration).
+    // Counts come from the per-thread `CountingSolver` wrapper around the
+    // underlying solver; caller must reset before invoking `solve()`.
+    let (n_vars_total, n_clauses_total) = crate::solvers::counting_solver::get_counts();
+    output_stats("num_vars_total".to_string(), n_vars_total.into());
+    output_stats("num_clauses_total".to_string(), n_clauses_total.into());
     output_stats(
         "max_time_points".to_string(),
         occupations

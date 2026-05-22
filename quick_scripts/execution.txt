@@ -115,8 +115,8 @@ bash quick_scripts/run_all_txt_instances_limited.sh
   ./target/release/ddd \
   -s maxsat_ddd_ladder \
   --txt-instances \
-  --objective finsteps123 \
-  --json-output results_maxsat_no_prec.json
+  --objective cont \
+  --json-output results_maxsat_manual_test_cont.json
 
   ./target/release/ddd \
   -s sat_ddd_scl \

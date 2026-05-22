@@ -4,7 +4,7 @@ use ddd::{
     maxsatsolver, parser,
     problem::{self, DelayCostThresholds, DelayCostType, NamedProblem, Visit},
     solvers::{
-        bigm, ddd as ddd_solvers,
+        bigm, counting_solver, ddd as ddd_solvers,
         greedy::{self, default_heuristic},
         heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
         maxsatddd_ladder_scl, milp_ti, SolverError,
@@ -743,29 +743,45 @@ fn main() {
                         },
                     )
                     .map(|(v, _)| v),
-                    SolverType::MaxSatDddLadderScl => maxsatddd_ladder_scl::solve_with_settings(
-                        &mk_env,
-                        satcoder::solvers::minisat::Solver::new(),
-                        &p.problem,
-                        TIMEOUT,
-                        delay_cost_type,
-                        maxsatddd_ladder_scl_settings,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                    .map(|(v, _)| v),
-                    SolverType::MaxSatDddLadderRC2 => maxsatddd_ladder::solve(
-                        &mk_env,
-                        satcoder::solvers::minisat::Solver::new(),
-                        &p.problem,
-                        TIMEOUT,
-                        delay_cost_type,
-                        |k, v| {
-                            solve_data.insert(k, v);
-                        },
-                    )
-                    .map(|(v, _)| v),
+                    SolverType::MaxSatDddLadderScl => {
+                        // Reset the per-thread CNF size counters before
+                        // invoking solve, then wrap the underlying solver
+                        // in CountingSolver so every new_var/add_clause is
+                        // counted. The solve function reads the final
+                        // counts via counting_solver::get_counts() and
+                        // emits them as num_vars_total / num_clauses_total.
+                        counting_solver::reset_counts();
+                        maxsatddd_ladder_scl::solve_with_settings(
+                            &mk_env,
+                            counting_solver::CountingSolver::new(
+                                satcoder::solvers::minisat::Solver::new(),
+                            ),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            maxsatddd_ladder_scl_settings,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
+                    SolverType::MaxSatDddLadderRC2 => {
+                        counting_solver::reset_counts();
+                        maxsatddd_ladder::solve(
+                            &mk_env,
+                            counting_solver::CountingSolver::new(
+                                satcoder::solvers::minisat::Solver::new(),
+                            ),
+                            &p.problem,
+                            TIMEOUT,
+                            delay_cost_type,
+                            |k, v| {
+                                solve_data.insert(k, v);
+                            },
+                        )
+                        .map(|(v, _)| v)
+                    }
                     SolverType::MaxSatDddLadderRC2Abstract => maxsatddd_ladder_abstract::solve(
                         &mk_env,
                         maxsatsolver::CustomRC2Incremental::new(

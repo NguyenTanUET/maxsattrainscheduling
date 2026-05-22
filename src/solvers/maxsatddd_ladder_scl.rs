@@ -176,6 +176,24 @@ impl Default for MaxSatDddLadderSclSettings {
 /// 2025 §3.1 (see [`add_scl_amo`]). Larger value keeps pairwise for
 /// medium cliques whose simplicity may beat SC's tighter propagation in
 /// the DDD setting.
+///
+/// Empirically tuned to 5 via threshold sweep on the Croella2024 TRP
+/// benchmark (3 objectives × 72 instances). Tested values {3, 5, 10}:
+///   - n=3  → too aggressive: SC on clique 4-5 adds 2n-1 aux vars that
+///            don't pay back in clause savings; stationB1 (cont) blew
+///            up 22s → 99s.
+///   - n=5  → SWEET SPOT: pairwise for trivial cliques, SC for medium+
+///            cliques where register chain helps CDCL learn quality
+///            clauses. Best total sol_time on all 3 objectives.
+///   - n=10 → too conservative: clique 6-10 falls back to pairwise,
+///            losing SC's propagation-chain advantage; net +15–46%
+///            slowdown vs n=5 on infsteps180/cont.
+///
+/// Theoretical crossover on raw clause count is at n ≈ 15
+/// (Thesis §3.2.1: 7n-5 < C(n,2) when n > 14), but CDCL learnt-clause
+/// quality from the SC register chain shifts the practical optimum to
+/// n=5 — CDCL benefits from SC structure on cliques smaller than the
+/// pure clause-count crossover would predict.
 const PAIRWISE_AMO_MAX_SIZE: usize = 5;
 
 /// Lazy AMO threshold. A clique with > 2 members must be detected this
@@ -2481,7 +2499,14 @@ fn do_output_stats<L: satcoder::Lit>(
         .into(),
     );
     output_stats("num_traveltime".to_string(), stats.n_travel.into());
-    output_stats("num_conflicts".to_string(), stats.n_travel.into());
+    output_stats("num_conflicts".to_string(), stats.n_conflict.into());
+    // Total SAT variables allocated and CNF clauses added throughout the
+    // entire solve (initial encoding + every DDD refinement iteration).
+    // Counts come from the per-thread `CountingSolver` wrapper around the
+    // underlying solver; caller must reset before invoking `solve()`.
+    let (n_vars_total, n_clauses_total) = crate::solvers::counting_solver::get_counts();
+    output_stats("num_vars_total".to_string(), n_vars_total.into());
+    output_stats("num_clauses_total".to_string(), n_clauses_total.into());
     output_stats(
         "num_time_points".to_string(),
         occupations

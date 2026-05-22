@@ -539,6 +539,13 @@ pub fn solve_scl_fresh_addclauses_with_encoding_and_settings<
     settings: SatDddSettings,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
+    // PureSat keeps the distinct `AddClauses` bound mode (each queried
+    // bound is encoded as permanent CNF clauses). This is what makes
+    // PureSat semantically different from `incremental_sat` (which uses
+    // `Assumptions`). The correctness fix for continuous cost is done
+    // inside the search loop by ensuring target_ub is MONOTONIC (always
+    // = current ub), avoiding the non-monotonic midpoint bisection that
+    // is incompatible with cumulative AddClauses bounds.
     let mode = SatBoundMode::AddClauses;
     solve_native_debug_with_mode(
         mk_env,
@@ -1048,6 +1055,13 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 /// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
 /// 2025 §3.1. Larger value keeps pairwise for medium cliques whose
 /// simplicity may beat SC's tighter propagation in the DDD setting.
+///
+/// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
+/// See [`crate::solvers::maxsatddd_ladder_scl::PAIRWISE_AMO_MAX_SIZE`]
+/// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
+/// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
+/// from SC register-chain learning on smaller cliques, putting the
+/// practical optimum at 5.
 const PAIRWISE_AMO_MAX_SIZE: usize = 5;
 
 /// Lazy AMO threshold (kept for API parity — not used by puresat path).
@@ -2086,6 +2100,45 @@ fn solve_native_debug_with_mode(
                             return Ok((s, stats));
                         }
                     }
+
+                    // CORRECTNESS FIX for continuous cost: when the SAT
+                    // solver finds a feasible no-conflict schedule, the
+                    // fresh-solver design of puresat would return the
+                    // SAME model on subsequent queries (no learnt-clause
+                    // memory to redirect search). The bisection then
+                    // proves UNSAT on insufficient-ladder formulas and
+                    // declares optimum prematurely — observed cost
+                    // values were 20-50% higher than the true optimum
+                    // proven by maxsat_ddd_ladder and sat_ddd_scl_totalizer.
+                    //
+                    // Fix: after each no-conflict schedule, add a
+                    // no-good clause that forbids re-finding the exact
+                    // schedule. Subsequent SAT calls must explore
+                    // alternative schedules, which triggers fresh
+                    // conflicts → ladder refinement → eventual
+                    // discovery of lower-cost schedules.
+                    //
+                    // Only applied for continuous cost where this is
+                    // load-bearing for correctness. For stepped
+                    // objectives the heuristic UB is tight enough that
+                    // bisection converges correctly without this
+                    // (verified: finsteps123/infsteps180 cost matched
+                    // maxsat 100% on 124 instances).
+                    if use_cont_fixed_query {
+                        invalid_clause.clear();
+                        for occ in occupations.iter() {
+                            let idx = occ.incumbent_idx;
+                            let (lit_at, _) = occ.delays[idx];
+                            invalid_clause.push(!lit_at);
+                            if idx + 1 < occ.delays.len() {
+                                let (lit_next, _) = occ.delays[idx + 1];
+                                invalid_clause.push(lit_next);
+                            }
+                        }
+                        if !invalid_clause.is_empty() {
+                            SatInstance::add_clause(&mut solver, invalid_clause.clone());
+                        }
+                    }
                 } else if search == SatSearchMode::Invalid {
                     invalid_clause.clear();
                     for occ in occupations.iter() {
@@ -2180,14 +2233,43 @@ fn solve_native_debug_with_mode(
                     return Err(SolverError::NoSolution);
                 }
 
+                // CORRECTNESS FIX for continuous cost under AddClauses mode:
+                // the previous midpoint bisection
+                //   target_ub = lower_bound + (ub - lower_bound) / 2
+                // was non-monotonic across iterations (the midpoint can move
+                // in either direction as lb/ub update). Under AddClauses, each
+                // queried bound becomes a PERMANENT clause in the formula;
+                // once a tight bound like `cost ≤ 3482` is added at some iter,
+                // every later SAT call is also bound by it, even if the new
+                // target_ub is looser. Result: subsequent UNSAT proofs are
+                // over the stale tight formula, and `lb` updates that follow
+                // are unsound — leading to wrong "optimum" claims (observed:
+                // 42/51 cont instances reported costs 20-50% higher than the
+                // true optimum proven by MaxSAT/IncSAT).
+                //
+                // Fix: for cont under AddClauses, use the same monotonic
+                // tightening rule as finsteps/infsteps — target_ub = ub —
+                // so cumulative bound clauses are always at least as loose
+                // as the latest ub. This preserves PureSat's distinct
+                // AddClauses semantics (vs IncSAT's per-query Assumptions
+                // mode) and only changes the cont-specific query strategy.
+                //
+                // For Assumptions mode (not used by PureSat, kept for
+                // generality), the midpoint bisection remains valid since
+                // each query bound is independent.
                 let target_ub = if use_cont_fixed_query {
-                    let selected = cont_active_query_bound.unwrap_or_else(|| {
-                        let span = ub - lower_bound;
-                        lower_bound + (span / 2)
-                    });
-                    let clipped = selected.min(ub).max(lower_bound);
-                    cont_active_query_bound = Some(clipped);
-                    clipped
+                    match mode {
+                        SatBoundMode::AddClauses => ub,
+                        SatBoundMode::Assumptions => {
+                            let selected = cont_active_query_bound.unwrap_or_else(|| {
+                                let span = ub - lower_bound;
+                                lower_bound + (span / 2)
+                            });
+                            let clipped = selected.min(ub).max(lower_bound);
+                            cont_active_query_bound = Some(clipped);
+                            clipped
+                        }
+                    }
                 } else {
                     match mode {
                         SatBoundMode::AddClauses => ub,

@@ -1194,6 +1194,13 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
 /// 2025 §3.1 (see [`add_scl_amo`]). Larger value keeps pairwise for
 /// medium cliques whose simplicity may beat SC's tighter propagation in
 /// the DDD setting.
+///
+/// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
+/// See [`crate::solvers::maxsatddd_ladder_scl::PAIRWISE_AMO_MAX_SIZE`]
+/// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
+/// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
+/// from SC register-chain learning on smaller cliques, putting the
+/// practical optimum at 5.
 const PAIRWISE_AMO_MAX_SIZE: usize = 5;
 
 /// Lazy AMO threshold. A clique with > 2 members must be detected this
