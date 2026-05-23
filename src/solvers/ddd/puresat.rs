@@ -8,7 +8,7 @@ use std::{
 use crate::{
     debug::{DebugInfo, ResourceInterval, SolverAction},
     problem::{DelayCostType, Problem},
-    solvers::{heuristic, value_trace::ValueTrace},
+    solvers::util::{heuristic, value_trace::ValueTrace},
 };
 use rustsat::{
     encodings::{
@@ -51,7 +51,7 @@ pub enum SatBoundMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SatPrecEncoding {
     Plain,
-    Scl,
+    Sc,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -97,7 +97,7 @@ pub struct SatDddSettings {
     /// Use SC (Sequential Counter) AMO encoding from Truong/Kieu/To
     /// (ICAART 2025) for resource-clique AMOs of size > [`PAIRWISE_AMO_MAX_SIZE`].
     /// If `false`, AMOs always use pairwise. Default `true`.
-    pub use_scl_amo: bool,
+    pub use_sc_amo: bool,
 }
 
 impl Default for SatDddSettings {
@@ -107,7 +107,7 @@ impl Default for SatDddSettings {
             prealloc_cost_thresholds: false,
             seed_precedence_from_earliest: false,
             seed_resource_conflicts: false,
-            use_scl_amo: true,
+            use_sc_amo: true,
         }
     }
 }
@@ -520,14 +520,14 @@ impl ManageVars for NativeVarManager<'_> {
 /// bounds independently and the first to finish determines the next round.
 ///
 /// Bound mode: AddClauses (permanent hard clauses, no assumptions).
-/// Precedence encoding: SCL hybrid (chain for chains >5, plain otherwise).
+/// Precedence encoding: SC hybrid (chain for chains >5, plain otherwise).
 /// Cost encoding: chosen via the `encoding` argument (`Scpb` or
 /// `BitTotalizer`).
 ///
 /// **Incompatible** with `SatObjectiveEncoding::IncrementalTotalizer` —
 /// `encode_ub_change` writes directly to the backing solver, bypassing the
 /// replay log; this entry will panic if that encoding is requested.
-pub fn solve_scl_fresh_addclauses_with_encoding_and_settings<
+pub fn solve_sc_fresh_addclauses_with_encoding_and_settings<
     L: satcoder::Lit + Copy + std::fmt::Debug,
 >(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
@@ -555,7 +555,7 @@ pub fn solve_scl_fresh_addclauses_with_encoding_and_settings<
         encoding,
         settings,
         mode,
-        SatPrecEncoding::Scl,
+        SatPrecEncoding::Sc,
         SatSearchMode::UbSearch,
         |_| {},
         output_stats,
@@ -1049,7 +1049,7 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 }
 
 
-// ─── AMO encoding constants (kept in sync with maxsatddd_ladder_scl + incremental_sat) ──
+// ─── AMO encoding constants (kept in sync with maxsatddd_ladder_sc + incremental_sat) ──
 
 /// Maximum clique size encoded by pairwise AMO. Cliques strictly larger
 /// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
@@ -1057,7 +1057,7 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 /// simplicity may beat SC's tighter propagation in the DDD setting.
 ///
 /// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
-/// See [`crate::solvers::maxsatddd_ladder_scl::PAIRWISE_AMO_MAX_SIZE`]
+/// See [`crate::solvers::maxsatddd_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
 /// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
 /// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
 /// from SC register-chain learning on smaller cliques, putting the
@@ -1073,7 +1073,7 @@ const LAZY_AMO_THRESHOLD: usize = 0;
 /// Emits formulas (1)–(4) per index plus the R_1 biconditional via (1)+(3)
 /// for j=1. Including formula (3) for both the R_1 layer and inner indexes
 /// gives stronger unit propagation than earlier versions that omitted it.
-fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
+fn add_sc_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
         2 => {
@@ -1115,12 +1115,12 @@ fn add_pairwise_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[
 fn add_hybrid_amo<L: satcoder::Lit>(
     solver: &mut impl SatInstance<L>,
     lits: &[Bool<L>],
-    use_scl_amo: bool,
+    use_sc_amo: bool,
 ) {
-    if !use_scl_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
+    if !use_sc_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
-        add_scl_amo(solver, lits);
+        add_sc_amo(solver, lits);
     }
 }
 
@@ -1236,7 +1236,7 @@ fn build_active_lit<L: satcoder::Lit>(
     let active = solver.new_var();
     // For AMO clique soundness we only need the CONVERSE direction:
     //   (!delay_start ∧ delay_end) → active
-    // Kept in sync with `maxsatddd_ladder_scl::build_active_lit` and
+    // Kept in sync with `maxsatddd_ladder_sc::build_active_lit` and
     // `incremental_sat::build_active_lit`. See the comment there for the
     // full argument re: soundness + propagation trade-off.
     const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
@@ -1396,7 +1396,7 @@ fn solve_native_debug_with_mode(
                     in_t,
                     prec,
                 );
-            } else if prec == SatPrecEncoding::Scl {
+            } else if prec == SatPrecEncoding::Sc {
                 let _ = add_fixed_precedence_row(
                     &mut solver,
                     problem,
@@ -1996,7 +1996,7 @@ fn solve_native_debug_with_mode(
                         active_lits.push(lit);
                     }
 
-                    add_hybrid_amo(&mut solver, &active_lits, settings.use_scl_amo);
+                    add_hybrid_amo(&mut solver, &active_lits, settings.use_sc_amo);
                 }
                 n_conflict_constraints += 1;
                 cliques_processed += 1;
@@ -2109,7 +2109,7 @@ fn solve_native_debug_with_mode(
                     // proves UNSAT on insufficient-ladder formulas and
                     // declares optimum prematurely — observed cost
                     // values were 20-50% higher than the true optimum
-                    // proven by maxsat_ddd_ladder and sat_ddd_scl_totalizer.
+                    // proven by maxsat_ddd_ladder and sat_ddd_sc_totalizer.
                     //
                     // Fix: after each no-conflict schedule, add a
                     // no-good clause that forbids re-finding the exact
@@ -2658,12 +2658,12 @@ fn add_fixed_precedence_row<L: satcoder::Lit>(
         SatPrecEncoding::Plain => {
             solver.add_clause(vec![!in_var, req_var]);
         }
-        SatPrecEncoding::Scl => {
-            const SCL_PAIRWISE_THRESHOLD: usize = 5;
+        SatPrecEncoding::Sc => {
+            const SC_PAIRWISE_THRESHOLD: usize = 5;
             let idx = occupations[next_visit]
                 .delays
                 .partition_point(|(_, t0)| *t0 < req_t);
-            if idx <= SCL_PAIRWISE_THRESHOLD {
+            if idx <= SC_PAIRWISE_THRESHOLD {
                 for i in 0..idx {
                     let lit_i = occupations[next_visit].delays[i].0;
                     let lit_next = occupations[next_visit].delays[i + 1].0;

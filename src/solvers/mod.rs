@@ -1,21 +1,16 @@
-pub mod maxsatddd_ladder;
-pub mod bigm;
-pub mod binarizedbigm;
-pub mod greedy;
-pub mod idl;
-pub mod mipdddpack;
-mod minimize;
-pub mod maxsat_ti;
-pub mod maxsat_ddd;
-pub mod maxsatddd_ladder_scl;
-pub mod heuristic;
-pub mod maxsatddd_ladder_abstract;
-pub mod milp_ti;
-pub mod ddd;
-pub mod value_trace;
-pub mod counting_solver;
-// pub mod cutting;
+//! Solver families.
+//!
+//! - `ladder`  — MaxSAT-DDD ladder solvers (thesis main).
+//! - `milp`    — MILP baselines (Big-M, TI, and experimental variants).
+//! - `ddd`     — DDD framework solvers (PureSAT, IncSAT, MaxSAT-RC2).
+//! - `legacy`  — pre-ladder MaxSAT solvers and experimental approaches.
+//! - `util`    — shared utilities (heuristics, counting solver, value trace).
 
+pub mod ddd;
+pub mod ladder;
+pub mod legacy;
+pub mod milp;
+pub mod util;
 
 #[derive(Debug)]
 pub enum SolverError {

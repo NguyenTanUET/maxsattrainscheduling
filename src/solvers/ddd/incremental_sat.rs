@@ -8,7 +8,7 @@ use std::{
 use crate::{
     debug::{DebugInfo, ResourceInterval, SolverAction},
     problem::{DelayCostType, Problem},
-    solvers::{heuristic, value_trace::ValueTrace},
+    solvers::util::{heuristic, value_trace::ValueTrace},
 };
 use rustsat::{
     encodings::{
@@ -51,7 +51,7 @@ pub enum SatBoundMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SatPrecEncoding {
     Plain,
-    Scl,
+    Sc,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,7 +102,7 @@ pub struct SatDddSettings {
     /// (ICAART 2025) for resource-clique AMOs of size > [`PAIRWISE_AMO_MAX_SIZE`].
     /// If `false`, AMOs always use pairwise regardless of size.
     /// Default `true` (use SC for large cliques).
-    pub use_scl_amo: bool,
+    pub use_sc_amo: bool,
 }
 
 impl Default for SatDddSettings {
@@ -112,7 +112,7 @@ impl Default for SatDddSettings {
             prealloc_cost_thresholds: false,
             seed_precedence_from_earliest: false,
             seed_resource_conflicts: false,
-            use_scl_amo: true,
+            use_sc_amo: true,
         }
     }
 }
@@ -496,7 +496,7 @@ pub fn solve_incremental_with_encoding_and_settings<L: satcoder::Lit + Copy + st
     )
 }
 
-pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_sc<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -504,7 +504,7 @@ pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     delay_cost_type: DelayCostType,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_with_mode_scl(
+    solve_with_mode_sc(
         mk_env,
         _solver,
         problem,
@@ -516,7 +516,7 @@ pub fn solve_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     )
 }
 
-pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_sc_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -525,7 +525,7 @@ pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_scl_with_encoding_and_settings(
+    solve_sc_with_encoding_and_settings(
         mk_env,
         _solver,
         problem,
@@ -537,7 +537,7 @@ pub fn solve_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     )
 }
 
-pub fn solve_scl_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_sc_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -556,14 +556,14 @@ pub fn solve_scl_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::
         encoding,
         settings,
         mode,
-        SatPrecEncoding::Scl,
+        SatPrecEncoding::Sc,
         SatSearchMode::UbSearch,
         |_| {},
         output_stats,
     )
 }
 
-/// Pure AddClauses variant of [`solve_scl_with_encoding_and_settings`].
+/// Pure AddClauses variant of [`solve_sc_with_encoding_and_settings`].
 ///
 /// Uses `SatBoundMode::AddClauses` instead of `Assumptions`: each cost-bound
 /// query is enforced by adding *permanent* hard clauses to the formula
@@ -573,9 +573,9 @@ pub fn solve_scl_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::
 /// - Comparing against the assumption-based pattern for benchmarking
 ///
 /// Backend: Glucose (via `NativeSolver`/`rustsat_glucose`). Precedence
-/// encoding: SCL hybrid. Cost encoding: chosen by the `encoding` argument
+/// encoding: SC hybrid. Cost encoding: chosen by the `encoding` argument
 /// (Scpb / IncrementalTotalizer / BitTotalizer).
-pub fn solve_scl_addclauses_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_sc_addclauses_with_encoding_and_settings<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -594,14 +594,14 @@ pub fn solve_scl_addclauses_with_encoding_and_settings<L: satcoder::Lit + Copy +
         encoding,
         settings,
         mode,
-        SatPrecEncoding::Scl,
+        SatPrecEncoding::Sc,
         SatSearchMode::UbSearch,
         |_| {},
         output_stats,
     )
 }
 
-pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_incremental_sc<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -609,7 +609,7 @@ pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     delay_cost_type: DelayCostType,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_with_mode_scl(
+    solve_with_mode_sc(
         mk_env,
         _solver,
         problem,
@@ -621,7 +621,7 @@ pub fn solve_incremental_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
     )
 }
 
-pub fn solve_incremental_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_incremental_sc_with_encoding<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -630,7 +630,7 @@ pub fn solve_incremental_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::D
     encoding: SatObjectiveEncoding,
     output_stats: impl FnMut(String, serde_json::Value),
 ) -> Result<(Vec<Vec<i32>>, SolveStats), SolverError> {
-    solve_incremental_scl_with_encoding_and_settings(
+    solve_incremental_sc_with_encoding_and_settings(
         mk_env,
         _solver,
         problem,
@@ -642,7 +642,7 @@ pub fn solve_incremental_scl_with_encoding<L: satcoder::Lit + Copy + std::fmt::D
     )
 }
 
-pub fn solve_incremental_scl_with_encoding_and_settings<
+pub fn solve_incremental_sc_with_encoding_and_settings<
     L: satcoder::Lit + Copy + std::fmt::Debug,
 >(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
@@ -662,7 +662,7 @@ pub fn solve_incremental_scl_with_encoding_and_settings<
         encoding,
         settings,
         SatBoundMode::Assumptions,
-        SatPrecEncoding::Scl,
+        SatPrecEncoding::Sc,
         SatSearchMode::UbSearch,
         |_| {},
         output_stats,
@@ -693,7 +693,7 @@ pub fn solve_with_mode<L: satcoder::Lit + Copy + std::fmt::Debug>(
     )
 }
 
-pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
+pub fn solve_with_mode_sc<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     _solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
     problem: &Problem,
@@ -711,7 +711,7 @@ pub fn solve_with_mode_scl<L: satcoder::Lit + Copy + std::fmt::Debug>(
         SatObjectiveEncoding::Scpb,
         SatDddSettings::default(),
         mode,
-        SatPrecEncoding::Scl,
+        SatPrecEncoding::Sc,
         search,
         |_| {},
         output_stats,
@@ -1185,18 +1185,18 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
-// ─── AMO encoding constants (kept in sync with `maxsatddd_ladder_scl.rs`) ────
+// ─── AMO encoding constants (kept in sync with `maxsatddd_ladder_sc.rs`) ────
 //
 // Two knobs control how AMO over conflict cliques is encoded.
 
 /// Maximum clique size encoded by pairwise AMO. Cliques strictly larger
 /// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
-/// 2025 §3.1 (see [`add_scl_amo`]). Larger value keeps pairwise for
+/// 2025 §3.1 (see [`add_sc_amo`]). Larger value keeps pairwise for
 /// medium cliques whose simplicity may beat SC's tighter propagation in
 /// the DDD setting.
 ///
 /// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
-/// See [`crate::solvers::maxsatddd_ladder_scl::PAIRWISE_AMO_MAX_SIZE`]
+/// See [`crate::solvers::maxsatddd_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
 /// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
 /// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
 /// from SC register-chain learning on smaller cliques, putting the
@@ -1227,7 +1227,7 @@ const LAZY_AMO_THRESHOLD: usize = 0;
 /// soundness for AMO but weakened unit propagation. The added clauses are
 /// O(n) and let CDCL conclude `prefix[i]` cannot be forced true unless some
 /// `lits[k≤i]` is.
-fn add_scl_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
+fn add_sc_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
         2 => {
@@ -1270,12 +1270,12 @@ fn add_pairwise_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[
 fn add_hybrid_amo<L: satcoder::Lit>(
     solver: &mut impl SatInstance<L>,
     lits: &[Bool<L>],
-    use_scl_amo: bool,
+    use_sc_amo: bool,
 ) {
-    if !use_scl_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
+    if !use_sc_amo || lits.len() <= PAIRWISE_AMO_MAX_SIZE {
         add_pairwise_amo(solver, lits);
     } else {
-        add_scl_amo(solver, lits);
+        add_sc_amo(solver, lits);
     }
 }
 
@@ -1408,7 +1408,7 @@ fn build_active_lit<L: satcoder::Lit>(
     // Toggle this const off to A/B-test whether the forward clauses are
     // actually buying us search speedup or are over-tightening (extra
     // propagation that pulls the solver down unhelpful branches). Kept in
-    // sync with `maxsatddd_ladder_scl::build_active_lit`.
+    // sync with `maxsatddd_ladder_sc::build_active_lit`.
     const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
     if ENCODE_ACTIVE_FORWARD_DIRECTION {
         // active → !delay_start
@@ -1507,7 +1507,7 @@ fn solve_native_debug_with_mode(
     let mut conflicts: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut new_time_points: Vec<(VisitId, Bool<NativeLit>, i32)> = Vec::new();
     // Within-train chain propagation of earliest times (no ER).
-    // Matches `maxsatddd_ladder_scl::compute_effective_earliest` exactly —
+    // Matches `maxsatddd_ladder_sc::compute_effective_earliest` exactly —
     // ER is removed from the SAT path because BIG_M=900 can falsely declare
     // saturating-cost objectives (e.g. `FiniteSteps123`) infeasible.
     let effective_earliest = if settings.use_extended_precedence_graph {
@@ -1608,7 +1608,7 @@ fn solve_native_debug_with_mode(
                     in_t,
                     prec,
                 );
-            } else if prec == SatPrecEncoding::Scl {
+            } else if prec == SatPrecEncoding::Sc {
                 let _ = add_fixed_precedence_row(
                     &mut solver,
                     problem,
@@ -2193,7 +2193,7 @@ fn solve_native_debug_with_mode(
                         active_lits.push(lit);
                     }
 
-                    add_hybrid_amo(&mut solver, &active_lits, settings.use_scl_amo);
+                    add_hybrid_amo(&mut solver, &active_lits, settings.use_sc_amo);
                 }
                 n_conflict_constraints += 1;
                 cliques_processed += 1;
@@ -2780,12 +2780,12 @@ fn add_fixed_precedence_row<L: satcoder::Lit>(
         SatPrecEncoding::Plain => {
             solver.add_clause(vec![!in_var, req_var]);
         }
-        SatPrecEncoding::Scl => {
-            const SCL_PAIRWISE_THRESHOLD: usize = 5;
+        SatPrecEncoding::Sc => {
+            const SC_PAIRWISE_THRESHOLD: usize = 5;
             let idx = occupations[next_visit]
                 .delays
                 .partition_point(|(_, t0)| *t0 < req_t);
-            if idx <= SCL_PAIRWISE_THRESHOLD {
+            if idx <= SC_PAIRWISE_THRESHOLD {
                 for i in 0..idx {
                     let lit_i = occupations[next_visit].delays[i].0;
                     let lit_next = occupations[next_visit].delays[i + 1].0;

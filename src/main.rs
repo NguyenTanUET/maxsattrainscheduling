@@ -4,10 +4,16 @@ use ddd::{
     maxsatsolver, parser,
     problem::{self, DelayCostThresholds, DelayCostType, NamedProblem, Visit},
     solvers::{
-        bigm, counting_solver, ddd as ddd_solvers,
-        greedy::{self, default_heuristic},
-        heuristic, maxsat_ddd, maxsat_ti, maxsatddd_ladder, maxsatddd_ladder_abstract,
-        maxsatddd_ladder_scl, milp_ti, SolverError,
+        ddd as ddd_solvers,
+        ladder::{maxsatddd_ladder, maxsatddd_ladder_abstract, maxsatddd_ladder_sc},
+        legacy::{maxsat_ddd, maxsat_ti},
+        milp::{bigm, milp_ti},
+        util::{
+            counting_solver,
+            greedy::{self, default_heuristic},
+            heuristic,
+        },
+        SolverError,
     },
 };
 
@@ -81,47 +87,47 @@ struct Opt {
     /// Truong/Kieu/To (ICAART 2025) for resource-clique AMOs of size > 5.
     /// If false, AMOs always use pairwise. True/false. Default true.
     #[structopt(long)]
-    satddd_use_scl_amo: Option<bool>,
+    satddd_use_sc_amo: Option<bool>,
 
-    /// Toggle eager chain expansion in `maxsat_ddd_ladder_scl`: expand long
+    /// Toggle eager chain expansion in `maxsat_ddd_ladder_sc`: expand long
     /// travel-time precedence chains into per-step 3-literal clauses instead
-    /// of a single 2-literal implication (NOT the SCL/SCAMO AMO encoding —
-    /// see `add_scl_amo` for that). True/false.
+    /// of a single 2-literal implication (NOT the SC AMO encoding —
+    /// see `add_sc_amo` for that). True/false.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_eager_chain_expansion: Option<bool>,
+    maxsatddd_ladder_sc_use_eager_chain_expansion: Option<bool>,
 
-    /// Toggle precedence-graph preprocessing/propagation in `maxsat_ddd_ladder_scl` (true/false).
+    /// Toggle precedence-graph preprocessing/propagation in `maxsat_ddd_ladder_sc` (true/false).
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_precedence_graph: Option<bool>,
+    maxsatddd_ladder_sc_use_precedence_graph: Option<bool>,
 
-    /// Toggle interval-graph conflict encoding in `maxsat_ddd_ladder_scl` (true/false).
+    /// Toggle interval-graph conflict encoding in `maxsat_ddd_ladder_sc` (true/false).
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_interval_graph: Option<bool>,
+    maxsatddd_ladder_sc_use_interval_graph: Option<bool>,
 
-    /// Alias of `maxsatddd_ladder_scl_use_interval_graph`.
+    /// Alias of `maxsatddd_ladder_sc_use_interval_graph`.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_interval_tree: Option<bool>,
+    maxsatddd_ladder_sc_use_interval_tree: Option<bool>,
 
-    /// Within interval-graph clique-cover encoding, use SCL/SCAMO Sequential
+    /// Within interval-graph clique-cover encoding, use SC Sequential
     /// Counter AMO (Truong/Kieu/To ICAART 2025) for large cliques. If false,
     /// keep pairwise AMO regardless of clique size. No effect when interval-
     /// graph encoding is off. True/false. Default true.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_scl_amo: Option<bool>,
+    maxsatddd_ladder_sc_use_sc_amo: Option<bool>,
 
     /// Lite clique-AMO aggregation for the pair-based conflict path. When on,
     /// the pair scan also accumulates (resource, tau) → visit-set; cliques
     /// of size ≥ 3 get a single AMO encoded after the scan. Effective only
     /// when `--use-interval-graph false`. True/false. Default false.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_touched_clique_amo: Option<bool>,
+    maxsatddd_ladder_sc_use_touched_clique_amo: Option<bool>,
 
     /// **Experimental**: enable TRUE SCAMO encoding (Truong/Kieu/To, ICAART
     /// 2025). Currently only Phase 1 (group detection + stats) is wired in;
     /// the encoding itself still uses `add_hybrid_amo`. Use this to inspect
     /// whether the staircase pattern is worth the rewrite.
     #[structopt(long)]
-    maxsatddd_ladder_scl_use_scamo: Option<bool>,
+    maxsatddd_ladder_sc_use_scamo: Option<bool>,
 
     /// Pre-seed precedence rows from each visit's earliest time point at
     /// initialization. Eager: encodes the full forward travel-time chain
@@ -130,7 +136,7 @@ struct Opt {
     /// Effective only when `--use-precedence-graph` or
     /// `--use-eager-chain-expansion` is true. True/false. Default false.
     #[structopt(long)]
-    maxsatddd_ladder_scl_seed_from_earliest: Option<bool>,
+    maxsatddd_ladder_sc_seed_from_earliest: Option<bool>,
 
     /// Pre-allocate SAT vars + monotonicity clauses for every cost-step
     /// threshold time at INIT (before iteration 1). For stepped objectives
@@ -139,7 +145,7 @@ struct Opt {
     /// no effect. Match `maxsatddd_ladder` lazy behaviour with `false`.
     /// True/false. Default false.
     #[structopt(long)]
-    maxsatddd_ladder_scl_prealloc_cost_thresholds: Option<bool>,
+    maxsatddd_ladder_sc_prealloc_cost_thresholds: Option<bool>,
 
     /// Objective encoding for `sat_ddd*` solvers: `scpb`, `totalizer`, or `bit_totalizer` (`nsc` accepted as alias).
     #[structopt(long)]
@@ -330,18 +336,18 @@ enum SolverType {
     BigMEager,
     BigMLazy,
     MaxSatDddLadderRC2,
-    MaxSatDddLadderScl,
+    MaxSatDddLadderSc,
     MaxSatDddLadderRC2Abstract,
     MaxSatDddLadderIpamir,
     MaxSatDddCadical,
     MaxSatIdl,
     SatDdd,
     SatDddInc,
-    SatDddScl,
-    SatDddSclTotalizer,
-    SatDddSclInc,
-    SatDddSclAddClauses,
-    SatDddSclFreshAddClauses,
+    SatDddSc,
+    SatDddScTotalizer,
+    SatDddScInc,
+    SatDddScAddClauses,
+    SatDddScFreshAddClauses,
     MipDdd,
     MipHull,
     Greedy,
@@ -392,17 +398,17 @@ fn main() {
             "maxsat_ddd" => SolverType::MaxSatDddLadderRC2,
             "maxsat_ddd_ladder" => SolverType::MaxSatDddLadderRC2,
             "maxsat_ddd_abstract" => SolverType::MaxSatDddLadderRC2Abstract,
-            "maxsat_ddd_ladder_scl" => SolverType::MaxSatDddLadderScl,
+            "maxsat_ddd_ladder_sc" => SolverType::MaxSatDddLadderSc,
             "maxsat_ddd_ladder_ipamir" => SolverType::MaxSatDddLadderIpamir,
             "maxsat_ddd_cdc" => SolverType::MaxSatDddCadical,
             "maxsat_idl" => SolverType::MaxSatIdl,
             "sat_ddd" => SolverType::SatDdd,
             "sat_ddd_inc" => SolverType::SatDddInc,
-            "sat_ddd_scl" => SolverType::SatDddScl,
-            "sat_ddd_scl_totalizer" => SolverType::SatDddSclTotalizer,
-            "sat_ddd_scl_inc" => SolverType::SatDddSclInc,
-            "sat_ddd_scl_addclauses" => SolverType::SatDddSclAddClauses,
-            "sat_ddd_scl_fresh_addclauses" => SolverType::SatDddSclFreshAddClauses,
+            "sat_ddd_sc" => SolverType::SatDddSc,
+            "sat_ddd_sc_totalizer" => SolverType::SatDddScTotalizer,
+            "sat_ddd_sc_inc" => SolverType::SatDddScInc,
+            "sat_ddd_sc_addclauses" => SolverType::SatDddScAddClauses,
+            "sat_ddd_sc_fresh_addclauses" => SolverType::SatDddScFreshAddClauses,
             "mip_ddd" => SolverType::MipDdd,
             "mip_hull" => SolverType::MipHull,
             "greedy" => SolverType::Greedy,
@@ -443,33 +449,33 @@ fn main() {
     // Default config = Option B: precedence + touched-clique AMO + SC AMO,
     // with eager-chain-expansion and full interval-graph clique cover OFF.
     // Empirically best on this benchmark; can be overridden via the
-    // matching --maxsatddd-ladder-scl-* flags.
-    let maxsatddd_ladder_scl_settings = maxsatddd_ladder_scl::MaxSatDddLadderSclSettings {
+    // matching --maxsatddd-ladder-sc-* flags.
+    let maxsatddd_ladder_sc_settings = maxsatddd_ladder_sc::MaxSatDddLadderScSettings {
         use_precedence_graph: opt
-            .maxsatddd_ladder_scl_use_precedence_graph
+            .maxsatddd_ladder_sc_use_precedence_graph
             .unwrap_or(true),
         use_eager_chain_expansion: opt
-            .maxsatddd_ladder_scl_use_eager_chain_expansion
+            .maxsatddd_ladder_sc_use_eager_chain_expansion
             .unwrap_or(false),
         use_interval_graph_conflicts: opt
-            .maxsatddd_ladder_scl_use_interval_tree
-            .or(opt.maxsatddd_ladder_scl_use_interval_graph)
+            .maxsatddd_ladder_sc_use_interval_tree
+            .or(opt.maxsatddd_ladder_sc_use_interval_graph)
             .unwrap_or(false),
-        use_scl_amo: opt.maxsatddd_ladder_scl_use_scl_amo.unwrap_or(true),
+        use_sc_amo: opt.maxsatddd_ladder_sc_use_sc_amo.unwrap_or(true),
         use_touched_clique_amo: opt
-            .maxsatddd_ladder_scl_use_touched_clique_amo
+            .maxsatddd_ladder_sc_use_touched_clique_amo
             .unwrap_or(true),
-        seed_scl_from_earliest: opt
-            .maxsatddd_ladder_scl_seed_from_earliest
+        seed_sc_from_earliest: opt
+            .maxsatddd_ladder_sc_seed_from_earliest
             .unwrap_or(false),
-        use_scamo_encoding: opt.maxsatddd_ladder_scl_use_scamo.unwrap_or(false),
+        use_scamo_encoding: opt.maxsatddd_ladder_sc_use_scamo.unwrap_or(false),
         prealloc_cost_thresholds: opt
-            .maxsatddd_ladder_scl_prealloc_cost_thresholds
+            .maxsatddd_ladder_sc_prealloc_cost_thresholds
             .unwrap_or(false),
     };
     println!(
-        "MaxSatDddLadderScl settings {:?}",
-        maxsatddd_ladder_scl_settings
+        "MaxSatDddLadderSc settings {:?}",
+        maxsatddd_ladder_sc_settings
     );
 
     let satddd_objective_encoding = opt
@@ -491,7 +497,7 @@ fn main() {
         seed_resource_conflicts: opt
             .satddd_seed_resource_conflicts
             .unwrap_or(false),
-        use_scl_amo: opt.satddd_use_scl_amo.unwrap_or(true),
+        use_sc_amo: opt.satddd_use_sc_amo.unwrap_or(true),
     };
     println!("SatDdd settings {:?}", satddd_settings);
 
@@ -743,7 +749,7 @@ fn main() {
                         },
                     )
                     .map(|(v, _)| v),
-                    SolverType::MaxSatDddLadderScl => {
+                    SolverType::MaxSatDddLadderSc => {
                         // Reset the per-thread CNF size counters before
                         // invoking solve, then wrap the underlying solver
                         // in CountingSolver so every new_var/add_clause is
@@ -751,7 +757,7 @@ fn main() {
                         // counts via counting_solver::get_counts() and
                         // emits them as num_vars_total / num_clauses_total.
                         counting_solver::reset_counts();
-                        maxsatddd_ladder_scl::solve_with_settings(
+                        maxsatddd_ladder_sc::solve_with_settings(
                             &mk_env,
                             counting_solver::CountingSolver::new(
                                 satcoder::solvers::minisat::Solver::new(),
@@ -759,7 +765,7 @@ fn main() {
                             &p.problem,
                             TIMEOUT,
                             delay_cost_type,
-                            maxsatddd_ladder_scl_settings,
+                            maxsatddd_ladder_sc_settings,
                             |k, v| {
                                 solve_data.insert(k, v);
                             },
@@ -849,8 +855,8 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::SatDddScl => {
-                        ddd_solvers::incremental_sat::solve_scl_with_encoding_and_settings(
+                    SolverType::SatDddSc => {
+                        ddd_solvers::incremental_sat::solve_sc_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -864,8 +870,8 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::SatDddSclTotalizer => {
-                        ddd_solvers::incremental_sat::solve_scl_with_encoding_and_settings(
+                    SolverType::SatDddScTotalizer => {
+                        ddd_solvers::incremental_sat::solve_sc_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -879,8 +885,8 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::SatDddSclInc => {
-                        ddd_solvers::incremental_sat::solve_incremental_scl_with_encoding_and_settings(
+                    SolverType::SatDddScInc => {
+                        ddd_solvers::incremental_sat::solve_incremental_sc_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -894,12 +900,12 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::SatDddSclAddClauses => {
+                    SolverType::SatDddScAddClauses => {
                         // Pure AddClauses bound mode: bound enforced by hard
                         // clauses (permanent) instead of per-call assumptions.
-                        // Same SCL hybrid precedence + Glucose backend; cost
+                        // Same SC hybrid precedence + Glucose backend; cost
                         // encoding configurable via --satddd-objective-encoding.
-                        ddd_solvers::incremental_sat::solve_scl_addclauses_with_encoding_and_settings(
+                        ddd_solvers::incremental_sat::solve_sc_addclauses_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -913,7 +919,7 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::SatDddSclFreshAddClauses => {
+                    SolverType::SatDddScFreshAddClauses => {
                         // Fresh-solver-per-iteration AddClauses (puresat module):
                         // replays the logged formula into a brand-new Glucose
                         // instance at every DDD iteration, dropping all learned
@@ -942,9 +948,9 @@ fn main() {
                             seed_precedence_from_earliest: satddd_settings
                                 .seed_precedence_from_earliest,
                             seed_resource_conflicts: satddd_settings.seed_resource_conflicts,
-                            use_scl_amo: satddd_settings.use_scl_amo,
+                            use_sc_amo: satddd_settings.use_sc_amo,
                         };
-                        ddd_solvers::puresat::solve_scl_fresh_addclauses_with_encoding_and_settings(
+                        ddd_solvers::puresat::solve_sc_fresh_addclauses_with_encoding_and_settings(
                             &mk_env,
                             satcoder::solvers::rustsat_glucose::Solver::new(),
                             &p.problem,
@@ -958,7 +964,7 @@ fn main() {
                         )
                         .map(|(v, _)| v)
                     }
-                    SolverType::MipDdd => ddd::solvers::mipdddpack::solve(
+                    SolverType::MipDdd => ddd::solvers::milp::mipdddpack::solve(
                         &mk_env,
                         get_env(),
                         &p.problem,
@@ -969,7 +975,7 @@ fn main() {
                         },
                     ),
                     SolverType::BinarizedBigMEager10Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -984,7 +990,7 @@ fn main() {
                         )
                     }
                     SolverType::BinarizedBigMEager30Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -999,7 +1005,7 @@ fn main() {
                         )
                     }
                     SolverType::BinarizedBigMEager60Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -1014,7 +1020,7 @@ fn main() {
                         )
                     }
                     SolverType::BinarizedBigMLazy10Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -1029,7 +1035,7 @@ fn main() {
                         )
                     }
                     SolverType::BinarizedBigMLazy30Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -1044,7 +1050,7 @@ fn main() {
                         )
                     }
                     SolverType::BinarizedBigMLazy60Sec => {
-                        ddd::solvers::binarizedbigm::solve_binarized_bigm(
+                        ddd::solvers::milp::binarizedbigm::solve_binarized_bigm(
                             get_env(),
                             &p.problem,
                             delay_cost_type,
@@ -1286,7 +1292,7 @@ mod tests {
         let delay_cost_type = DelayCostType::FiniteSteps123;
 
         let problem = crate::problem::problem1_with_stations();
-        let result = ddd::solvers::maxsatddd_ladder::solve(
+        let result = ddd::solvers::ladder::maxsatddd_ladder::solve(
             &crate::mk_env,
             satcoder::solvers::minisat::Solver::new(),
             &problem,
@@ -1310,7 +1316,7 @@ mod tests {
         env.set(grb::param::OutputFlag, 0).unwrap();
 
         let problem = crate::problem::problem1_with_stations();
-        let result = ddd::solvers::mipdddpack::solve(
+        let result = ddd::solvers::milp::mipdddpack::solve(
             &crate::mk_env,
             &env,
             &problem,
@@ -1331,7 +1337,7 @@ mod tests {
         let problem = crate::problem::problem1_with_stations();
         let delay_cost_type = DelayCostType::FiniteSteps123;
 
-        let result = ddd::solvers::maxsatddd_ladder::solve(
+        let result = ddd::solvers::ladder::maxsatddd_ladder::solve(
             &crate::mk_env,
             satcoder::solvers::minisat::Solver::new(),
             &problem,
@@ -1344,7 +1350,7 @@ mod tests {
         let first_score = problem.verify_solution(&result, delay_cost_type);
 
         for _ in 0..100 {
-            let result = ddd::solvers::maxsatddd_ladder::solve(
+            let result = ddd::solvers::ladder::maxsatddd_ladder::solve(
                 &crate::mk_env,
                 satcoder::solvers::minisat::Solver::new(),
                 &problem,
@@ -1380,7 +1386,7 @@ mod tests {
                     delaytype,
                 );
 
-                let result = ddd::solvers::maxsatddd_ladder::solve(
+                let result = ddd::solvers::ladder::maxsatddd_ladder::solve(
                     &crate::mk_env,
                     satcoder::solvers::minisat::Solver::new(),
                     &problem,
@@ -1394,7 +1400,7 @@ mod tests {
 
                 for iteration in 0..100 {
                     println!("iteration {} {}", instance_number, iteration);
-                    let result = ddd::solvers::maxsatddd_ladder::solve(
+                    let result = ddd::solvers::ladder::maxsatddd_ladder::solve(
                         &crate::mk_env,
                         satcoder::solvers::minisat::Solver::new(),
                         &problem,

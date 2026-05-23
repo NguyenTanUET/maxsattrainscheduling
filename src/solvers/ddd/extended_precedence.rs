@@ -14,7 +14,7 @@
 //! detects no schedule can exist.
 //!
 //! Horizon: per-visit `lst[v] = est[v] + BIG_M` where `BIG_M = 900` follows
-//! the convention from [`crate::solvers::maxsat_ti`] for the same TRP
+//! the convention from [`crate::solvers::legacy::maxsat_ti`] for the same TRP
 //! benchmark. Initialization uses chain-propagated `est` (not raw
 //! `visit.earliest`) so `lst` stays consistent with within-train precedence
 //! on long chains. Sound under the (empirically verified) assumption that
@@ -38,7 +38,7 @@ pub struct ExtendedPrecedence {
 const MAX_FIXEDPOINT_ITERS: usize = 20;
 
 /// Per-visit horizon offset: `lst[v] = est[v] + BIG_M`. Matches the
-/// `big_m` parameter used by [`crate::solvers::maxsat_ti`] for the same
+/// `big_m` parameter used by [`crate::solvers::legacy::maxsat_ti`] for the same
 /// benchmark (see main.rs site that passes `900`).
 const BIG_M: i32 = 900;
 
