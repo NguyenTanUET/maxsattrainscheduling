@@ -1,7 +1,7 @@
 use grb::{add_binvar, c, expr::GurobiSum};
 use std::collections::HashMap;
 
-use crate::solvers::ladder::maxsatddd_ladder::SolveStats;
+use crate::solvers::ddd::maxsat_ladder::SolveStats;
 use crate::solvers::SolverError;
 use crate::{
     problem::{DelayCostType, Problem},

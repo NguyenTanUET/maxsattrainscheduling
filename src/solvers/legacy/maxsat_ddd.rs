@@ -8,7 +8,7 @@ use crate::{
     problem::{DelayCostType, Problem},
 };
 
-use crate::solvers::ladder::maxsatddd_ladder::SolveStats;
+use crate::solvers::ddd::maxsat_ladder::SolveStats;
 use crate::solvers::SolverError;
 
 pub fn solve_incremental<S: MaxSatSolver>(

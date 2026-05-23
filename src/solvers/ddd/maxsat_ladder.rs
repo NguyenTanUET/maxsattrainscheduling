@@ -87,7 +87,7 @@ thread_local! { pub static  WATCH : std::cell::RefCell<Option<(usize,usize)>>  =
 
 use crate::{debug::DebugInfo, problem::DelayCostType, solvers::util::heuristic};
 
-use crate::solvers::{ddd::costtree::CostTree, SolverError};
+use crate::solvers::{ddd::shared::costtree::CostTree, SolverError};
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     mut solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,
@@ -185,7 +185,7 @@ pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     // report a finite UB / valid GAP even when the Gurobi heuristic thread
     // is unavailable (license expired, etc).
     {
-        let greedy_sol = crate::solvers::ddd::extended_precedence::greedy_schedule(problem);
+        let greedy_sol = crate::solvers::ddd::shared::precedence::greedy_schedule(problem);
         if let Some(cost) = problem.verify_solution(&greedy_sol, delay_cost_type) {
             best_heur = Some((cost, greedy_sol));
         }

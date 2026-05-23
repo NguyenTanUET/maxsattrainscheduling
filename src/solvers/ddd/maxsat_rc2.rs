@@ -16,7 +16,7 @@ use satcoder::{
 };
 use typed_index_collections::TiVec;
 
-use super::common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId};
+use super::shared::common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId};
 
 pub fn solve<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
@@ -42,7 +42,7 @@ thread_local! { pub static  WATCH : std::cell::RefCell<Option<(usize,usize)>>  =
 use crate::{debug::DebugInfo, problem::DelayCostType, solvers::util::heuristic};
 
 use crate::solvers::SolverError;
-use super::costtree::CostTree;
+use super::shared::costtree::CostTree;
 pub fn solve_debug<L: satcoder::Lit + Copy + std::fmt::Debug>(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     mut solver: impl SatInstance<L> + SatSolverWithCore<Lit = L> + std::fmt::Debug,

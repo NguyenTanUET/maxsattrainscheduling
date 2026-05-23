@@ -92,7 +92,7 @@ use crate::{
     solvers::util::heuristic,
 };
 
-use crate::solvers::{ddd::costtree::CostTree, SolverError};
+use crate::solvers::{ddd::shared::costtree::CostTree, SolverError};
 pub fn solve_debug(
     mk_env: impl Fn() -> grb::Env + Send + 'static,
     mut solver: impl MaxSatSolver + std::fmt::Debug,

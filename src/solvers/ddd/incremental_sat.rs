@@ -34,7 +34,7 @@ use satcoder::{
 };
 use typed_index_collections::TiVec;
 
-use super::{
+use super::shared::{
     common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
     costtree::CostTree,
 };
@@ -78,11 +78,11 @@ pub enum SatObjectiveEncoding {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SatDddSettings {
-    /// Run extended-precedence + unary energetic-reasoning preprocessing
-    /// (see [`super::extended_precedence`]) to tighten per-visit earliest
+    /// Run within-train chain-propagation preprocessing
+    /// ([`super::shared::precedence::chain_earliest`]) to tighten per-visit earliest
     /// start times before building the SAT formula and to seed
     /// fixed-precedence rows for the lower-bound chain.
-    pub use_extended_precedence_graph: bool,
+    pub use_precedence_graph: bool,
     /// Pre-allocate SAT vars + monotonicity clauses for each cost-step
     /// threshold time at INIT (before iteration 1). On stepped objectives
     /// (e.g. `InfiniteSteps180`) this expands to up to 100 thresholds per
@@ -108,7 +108,7 @@ pub struct SatDddSettings {
 impl Default for SatDddSettings {
     fn default() -> Self {
         Self {
-            use_extended_precedence_graph: true,
+            use_precedence_graph: true,
             prealloc_cost_thresholds: false,
             seed_precedence_from_earliest: false,
             seed_resource_conflicts: false,
@@ -1185,7 +1185,7 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
     Ok(None)
 }
 
-// ─── AMO encoding constants (kept in sync with `maxsatddd_ladder_sc.rs`) ────
+// ─── AMO encoding constants (kept in sync with `maxsat_ladder_sc/solve.rs`) ────
 //
 // Two knobs control how AMO over conflict cliques is encoded.
 
@@ -1196,7 +1196,7 @@ fn compute_initial_heuristic_upper_bound<L: satcoder::Lit>(
 /// the DDD setting.
 ///
 /// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
-/// See [`crate::solvers::maxsatddd_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
+/// See [`crate::solvers::maxsat_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
 /// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
 /// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
 /// from SC register-chain learning on smaller cliques, putting the
@@ -1408,7 +1408,7 @@ fn build_active_lit<L: satcoder::Lit>(
     // Toggle this const off to A/B-test whether the forward clauses are
     // actually buying us search speedup or are over-tightening (extra
     // propagation that pulls the solver down unhelpful branches). Kept in
-    // sync with `maxsatddd_ladder_sc::build_active_lit`.
+    // sync with `maxsat_ladder_sc::build_active_lit`.
     const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
     if ENCODE_ACTIVE_FORWARD_DIRECTION {
         // active → !delay_start
@@ -1507,11 +1507,11 @@ fn solve_native_debug_with_mode(
     let mut conflicts: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut new_time_points: Vec<(VisitId, Bool<NativeLit>, i32)> = Vec::new();
     // Within-train chain propagation of earliest times (no ER).
-    // Matches `maxsatddd_ladder_sc::compute_effective_earliest` exactly —
+    // Matches `maxsat_ladder_sc::compute_effective_earliest` exactly —
     // ER is removed from the SAT path because BIG_M=900 can falsely declare
     // saturating-cost objectives (e.g. `FiniteSteps123`) infeasible.
-    let effective_earliest = if settings.use_extended_precedence_graph {
-        Some(super::extended_precedence::chain_earliest(problem))
+    let effective_earliest = if settings.use_precedence_graph {
+        Some(super::shared::precedence::chain_earliest(problem))
     } else {
         None
     };
@@ -1575,7 +1575,7 @@ fn solve_native_debug_with_mode(
     let mut value_trace = ValueTrace::default();
     let mut logged_incumbent: Option<i32> = None;
     let mut logged_lower_bound: Option<i32> = None;
-    let trace_bound_queries = problem.name == "instances_original/InstanceA1.txt";
+    let trace_bound_queries = problem.name == "instances/original/InstanceA1.txt";
 
     let mut scpb_terms: Vec<(NativeLit, usize)> = Vec::new();
     let mut scpb_total_weight = 0usize;
@@ -1595,7 +1595,7 @@ fn solve_native_debug_with_mode(
                 continue;
             }
             let (in_var, in_t) = occupations[visit_id].delays[0];
-            if settings.use_extended_precedence_graph {
+            if settings.use_precedence_graph {
                 propagate_precedence(
                     &mut solver,
                     problem,

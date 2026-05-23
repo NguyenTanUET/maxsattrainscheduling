@@ -5,7 +5,7 @@ use std::{
     io::{BufRead, BufReader, Read},
 };
 
-use crate::solvers::ladder::maxsatddd_ladder::SolveStats;
+use crate::solvers::ddd::maxsat_ladder::SolveStats;
 use crate::solvers::SolverError;
 use crate::{
     maxsatsolver::{External, MaxSatSolver},

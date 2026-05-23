@@ -34,7 +34,7 @@ use satcoder::{
 };
 use typed_index_collections::TiVec;
 
-use super::{
+use super::shared::{
     common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
     costtree::CostTree,
 };
@@ -79,7 +79,7 @@ pub enum SatObjectiveEncoding {
 #[derive(Clone, Copy, Debug)]
 pub struct SatDddSettings {
     /// Within-train chain-propagation preprocessing of `earliest` times.
-    /// Same role as `incremental_sat::SatDddSettings::use_extended_precedence_graph`
+    /// Same role as `incremental_sat::SatDddSettings::use_precedence_graph`
     /// but puresat uses the simple `chain_earliest` (no ER), so always sound.
     pub use_precedence_graph: bool,
     /// Pre-allocate SAT vars + monotonicity clauses for each cost-step
@@ -1049,7 +1049,7 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 }
 
 
-// ─── AMO encoding constants (kept in sync with maxsatddd_ladder_sc + incremental_sat) ──
+// ─── AMO encoding constants (kept in sync with maxsat_ladder_sc + incremental_sat) ──
 
 /// Maximum clique size encoded by pairwise AMO. Cliques strictly larger
 /// than this use SC (Sequential Counter) AMO from Truong/Kieu/To, ICAART
@@ -1057,7 +1057,7 @@ fn compute_effective_earliest(problem: &Problem) -> Vec<Vec<i32>> {
 /// simplicity may beat SC's tighter propagation in the DDD setting.
 ///
 /// Empirically tuned to 5 via threshold sweep on Croella2024 TRP bench.
-/// See [`crate::solvers::maxsatddd_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
+/// See [`crate::solvers::maxsat_ladder_sc::PAIRWISE_AMO_MAX_SIZE`]
 /// for the full sweep result (n ∈ {3, 5, 10}). Theoretical crossover
 /// on raw clause count is at n ≈ 15 (Thesis §3.2.1), but CDCL benefits
 /// from SC register-chain learning on smaller cliques, putting the
@@ -1236,7 +1236,7 @@ fn build_active_lit<L: satcoder::Lit>(
     let active = solver.new_var();
     // For AMO clique soundness we only need the CONVERSE direction:
     //   (!delay_start ∧ delay_end) → active
-    // Kept in sync with `maxsatddd_ladder_sc::build_active_lit` and
+    // Kept in sync with `maxsat_ladder_sc::build_active_lit` and
     // `incremental_sat::build_active_lit`. See the comment there for the
     // full argument re: soundness + propagation trade-off.
     const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
@@ -1361,7 +1361,7 @@ fn solve_native_debug_with_mode(
     let mut logged_incumbent: Option<i32> = None;
     let mut logged_lower_bound: Option<i32> = None;
     // Debug-only tracing flag — disabled by default. Was previously hardcoded
-    // to fire on a single instance name (`instances_original/InstanceA1.txt`),
+    // to fire on a single instance name (`instances/original/InstanceA1.txt`),
     // which is dead debug code.
     let trace_bound_queries = false;
 

@@ -1,373 +1,3 @@
-   |
-   = help: consider importing this module instead:
-           crate::solvers::util::heuristic
-
-error[E0432]: unresolved imports `crate::solvers::minimize`, `crate::solvers::value_trace`
- --> src/solvers/milp/bigm.rs:9:15
-  |
-9 |     solvers::{minimize, value_trace::ValueTrace},
-  |               ^^^^^^^^  ^^^^^^^^^^^ could not find `value_trace` in `solvers`
-  |               |
-  |               no `minimize` in `solvers`
-  |
-  = help: consider importing this module instead:
-          crate::solvers::util::minimize
-
-warning: unused import: `HashSet`
- --> src/solvers/ddd/common.rs:3:38
-  |
-3 |     collections::{BTreeMap, HashMap, HashSet},
-  |                                      ^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `ResourceInterval`
-  --> src/solvers/ddd/common.rs:10:13
-   |
-10 |     debug::{ResourceInterval, SolverAction},
-   |             ^^^^^^^^^^^^^^^^
-
-warning: unused imports: `Bool`, `SatSolverWithCore`, `constraints::Totalizer`, and `prelude::SymbolicModel`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:15:5
-   |
-15 |     constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore,
-   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^  ^^^^               ^^^^^^^^^^^^^^^^^
-
-warning: unused import: `ddd::costtree::CostTree`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:95:22
-   |
-95 | use crate::solvers::{ddd::costtree::CostTree, SolverError};
-   |                      ^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `typed_index_collections::TiVec`
- --> src/solvers/legacy/maxsat_ddd.rs:4:5
-  |
-4 | use typed_index_collections::TiVec;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `serde::Serialize`
- --> src/solvers/legacy/maxsat_ti.rs:1:5
-  |
-1 | use serde::Serialize;
-  |     ^^^^^^^^^^^^^^^^
-
-warning: unused imports: `BufRead`, `BufReader`, `Read`, and `fmt::Display`
- --> src/solvers/legacy/maxsat_ti.rs:4:5
-  |
-4 |     fmt::Display,
-  |     ^^^^^^^^^^^^
-5 |     io::{BufRead, BufReader, Read},
-  |          ^^^^^^^  ^^^^^^^^^  ^^^^
-
-warning: unused import: `External`
-  --> src/solvers/legacy/maxsat_ti.rs:11:20
-   |
-11 |     maxsatsolver::{External, MaxSatSolver},
-   |                    ^^^^^^^^
-
-warning: unused import: `grb::parameter::IntParam::NetworkCuts`
- --> src/solvers/util/heuristic.rs:1:5
-  |
-1 | use grb::parameter::IntParam::NetworkCuts;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-error[E0277]: the size for values of type `[Vec<i32>]` cannot be known at compilation time
-    --> src/solvers/ddd/incremental_sat.rs:1173:16
-     |
-1173 |         if let Some(ub_sol) = heuristic::solve_heuristic_better(
-     |                ^^^^^^^^^^^^ doesn't have a size known at compile-time
-     |
-     = help: the trait `Sized` is not implemented for `[Vec<i32>]`
-note: required by a bound in `std::prelude::v1::Some`
-    --> /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/option.rs:607:5
-
-error[E0308]: mismatched types
-    --> src/solvers/ddd/incremental_sat.rs:1181:38
-     |
-1181 |             return Ok(Some((ub_cost, ub_sol)));
-     |                                      ^^^^^^ expected `Vec<Vec<i32>>`, found `[Vec<i32>]`
-     |
-     = note: expected struct `Vec<Vec<i32>>`
-                 found slice `[Vec<i32>]`
-help: try using a conversion method
-     |
-1181 |             return Ok(Some((ub_cost, ub_sol.to_vec())));
-     |                                            +++++++++
-
-error[E0277]: the size for values of type `[Vec<i32>]` cannot be known at compilation time
-    --> src/solvers/ddd/puresat.rs:1017:16
-     |
-1017 |         if let Some(ub_sol) = heuristic::solve_heuristic_better(
-     |                ^^^^^^^^^^^^ doesn't have a size known at compile-time
-     |
-     = help: the trait `Sized` is not implemented for `[Vec<i32>]`
-note: required by a bound in `std::prelude::v1::Some`
-    --> /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/option.rs:607:5
-
-error[E0308]: mismatched types
-    --> src/solvers/ddd/puresat.rs:1025:38
-     |
-1025 |             return Ok(Some((ub_cost, ub_sol)));
-     |                                      ^^^^^^ expected `Vec<Vec<i32>>`, found `[Vec<i32>]`
-     |
-     = note: expected struct `Vec<Vec<i32>>`
-                 found slice `[Vec<i32>]`
-help: try using a conversion method
-     |
-1025 |             return Ok(Some((ub_cost, ub_sol.to_vec())));
-     |                                            +++++++++
-
-warning: unused import: `SatInstance`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:15:59
-   |
-15 |     constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore,
-   |                                                           ^^^^^^^^^^^
-
-warning: unused variable: `arg0`
-   --> src/maxsatsolver.rs:207:29
-    |
-207 |             Self::Totalizer(arg0, arg1) => f.debug_tuple("Totalizer").field(arg1).finish(),
-    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_arg0`
-    |
-    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused variable: `timeout`
-   --> src/maxsatsolver.rs:302:9
-    |
-302 |         timeout: Option<f64>,
-    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_timeout`
-
-warning: variable does not need to be mutable
-   --> src/maxsatsolver.rs:560:17
-    |
-560 |             let mut obj_val = i32::MIN;
-    |                 ----^^^^^^^
-    |                 |
-    |                 help: remove this `mut`
-    |
-    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused variable: `obj_val`
-   --> src/maxsatsolver.rs:560:17
-    |
-560 |             let mut obj_val = i32::MIN;
-    |                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_obj_val`
-
-warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:119:16
-    |
-119 |     pub fn new(problem: &Problem, solver: &mut impl SatInstance<L>) -> Self {
-    |                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
-
-warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:119:35
-    |
-119 |     pub fn new(problem: &Problem, solver: &mut impl SatInstance<L>) -> Self {
-    |                                   ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
-
-warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:126:36
-    |
-126 |     pub fn extract_solution(&self, problem: &Problem) -> Vec<Vec<i32>> {
-    |                                    ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
-
-warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:133:9
-    |
-133 |         solver: &mut impl SatInstance<L>,
-    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
-
-warning: unused variable: `sol`
-   --> src/solvers/ddd/common.rs:134:9
-    |
-134 |         sol: &[Vec<i32>],
-    |         ^^^ help: if this is intentional, prefix it with an underscore: `_sol`
-
-warning: unused variable: `model`
-   --> src/solvers/ddd/common.rs:142:35
-    |
-142 |     pub fn apply_model(&mut self, model: &impl satcoder::prelude::SymbolicModel<L>) {
-    |                                   ^^^^^ help: if this is intentional, prefix it with an underscore: `_model`
-
-warning: variable does not need to be mutable
-   --> src/solvers/ddd/common.rs:153:9
-    |
-153 |         mut on_action: impl FnMut(SolverAction),
-    |         ----^^^^^^^^^
-    |         |
-    |         help: remove this `mut`
-
-warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:150:9
-    |
-150 |         solver: &mut impl SatInstance<L>,
-    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
-
-warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:151:9
-    |
-151 |         problem: &Problem,
-    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
-
-warning: unused variable: `stats`
-   --> src/solvers/ddd/common.rs:152:9
-    |
-152 |         stats: &mut SolveStats,
-    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_stats`
-
-warning: unused variable: `on_action`
-   --> src/solvers/ddd/common.rs:153:9
-    |
-153 |         mut on_action: impl FnMut(SolverAction),
-    |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_on_action`
-
-warning: variable does not need to be mutable
-   --> src/solvers/ddd/common.rs:168:9
-    |
-168 |         mut on_cost: impl FnMut(CostTerm<L>),
-    |         ----^^^^^^^
-    |         |
-    |         help: remove this `mut`
-
-warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:164:9
-    |
-164 |         solver: &mut impl SatInstance<L>,
-    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
-
-warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:165:9
-    |
-165 |         problem: &Problem,
-    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
-
-warning: unused variable: `delay_cost_type`
-   --> src/solvers/ddd/common.rs:166:9
-    |
-166 |         delay_cost_type: DelayCostType,
-    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_delay_cost_type`
-
-warning: unused variable: `mode`
-   --> src/solvers/ddd/common.rs:167:9
-    |
-167 |         mode: CostMode,
-    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_mode`
-
-warning: unused variable: `on_cost`
-   --> src/solvers/ddd/common.rs:168:9
-    |
-168 |         mut on_cost: impl FnMut(CostTerm<L>),
-    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_on_cost`
-
-warning: variable does not need to be mutable
-    --> src/solvers/ladder/maxsatddd_ladder_scl.rs:1057:25
-     |
-1057 |                     let mut flush_group = |current_group: &Vec<usize>,
-     |                         ----^^^^^^^^^^^
-     |                         |
-     |                         help: remove this `mut`
-
-warning: variable does not need to be mutable
-  --> src/solvers/legacy/maxsat_ddd.rs:21:5
-   |
-21 |     mut output_stats: impl FnMut(String, serde_json::Value),
-   |     ----^^^^^^^^^^^^
-   |     |
-   |     help: remove this `mut`
-
-warning: variable does not need to be mutable
-  --> src/solvers/legacy/maxsat_ddd.rs:32:9
-   |
-32 |     let mut n_new_intervals = 0;
-   |         ----^^^^^^^^^^^^^^^
-   |         |
-   |         help: remove this `mut`
-
-warning: unused variable: `visit_idx`
-   --> src/solvers/legacy/maxsat_ddd.rs:172:24
-    |
-172 |                 .map(|(visit_idx, v)| {
-    |                        ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_visit_idx`
-
-warning: unused variable: `env`
-  --> src/solvers/legacy/maxsat_ddd.rs:16:5
-   |
-16 |     env: &grb::Env,
-   |     ^^^ help: if this is intentional, prefix it with an underscore: `_env`
-
-warning: unused variable: `output_stats`
-  --> src/solvers/legacy/maxsat_ddd.rs:21:5
-   |
-21 |     mut output_stats: impl FnMut(String, serde_json::Value),
-   |     ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_output_stats`
-
-warning: unused variable: `n_new_intervals`
-  --> src/solvers/legacy/maxsat_ddd.rs:32:9
-   |
-32 |     let mut n_new_intervals = 0;
-   |         ^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_n_new_intervals`
-
-warning: variable `n_traveltime` is assigned to, but never used
-  --> src/solvers/legacy/maxsat_ddd.rs:33:9
-   |
-33 |     let mut n_traveltime = 0;
-   |         ^^^^^^^^^^^^^^^^
-   |
-   = note: consider using `_n_traveltime` instead
-
-warning: unused variable: `x`
-   --> src/solvers/legacy/maxsat_ddd.rs:169:17
-    |
-169 |             let x = occupations[train_idx]
-    |                 ^ help: if this is intentional, prefix it with an underscore: `_x`
-
-warning: value assigned to `n_traveltime` is never read
-   --> src/solvers/legacy/maxsat_ddd.rs:377:25
-    |
-377 |                         n_traveltime += 1;
-    |                         ^^^^^^^^^^^^^^^^^
-    |
-    = help: maybe it is overwritten before being read?
-    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
-
-warning: variable does not need to be mutable
-   --> src/solvers/legacy/maxsat_ddd.rs:842:9
-    |
-842 |     let mut solver_time = std::time::Duration::ZERO;
-    |         ----^^^^^^^^^^^
-    |         |
-    |         help: remove this `mut`
-
-warning: unused variable: `time_out`
-   --> src/solvers/legacy/maxsat_ddd.rs:890:42
-    |
-890 | ...                   .map(|(time, time_out)| {
-    |                                    ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_time_out`
-
-warning: unused variable: `env`
-   --> src/solvers/legacy/maxsat_ddd.rs:834:5
-    |
-834 |     env: &grb::Env,
-    |     ^^^ help: if this is intentional, prefix it with an underscore: `_env`
-
-warning: unused variable: `visit`
-  --> src/solvers/legacy/maxsat_ti.rs:73:25
-   |
-73 |         for (visit_idx, visit) in train.visits.iter().enumerate() {
-   |                         ^^^^^ help: if this is intentional, prefix it with an underscore: `_visit`
-
-warning: variable does not need to be mutable
-   --> src/solvers/legacy/maxsat_ti.rs:192:5
-    |
-192 |     mut solver: impl MaxSatSolver,
-    |     ----^^^^^^
-    |     |
-    |     help: remove this `mut`
-
-warning: variable does not need to be mutable
-   --> src/solvers/legacy/maxsat_ti.rs:202:9
-    |
-202 |     let mut solver_time = std::time::Duration::ZERO;
     |         ----^^^^^^^^^^^
     |         |
     |         help: remove this `mut`
@@ -389,6 +19,14 @@ warning: unused variable: `solver_time`
     |
 202 |     let mut solver_time = std::time::Duration::ZERO;
     |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver_time`
+
+warning: value assigned to `logged_incumbent` is never read
+   --> src/solvers/milp/bigm.rs:487:25
+    |
+487 |                         logged_incumbent = Some(ub_cost);
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
 
 warning: unused variable: `visit`
   --> src/solvers/milp/milp_ti.rs:73:25
@@ -486,11 +124,180 @@ warning: variable does not need to be mutable
    |         |
    |         help: remove this `mut`
 
-Some errors have detailed explanations: E0277, E0308, E0432.
-For more information about an error, try `rustc --explain E0277`.
-warning: `ddd` (lib) generated 64 warnings
-error: could not compile `ddd` (lib) due to 7 previous errors; 64 warnings emitted
+warning: method `take_interrupted` is never used
+   --> src/solvers/ddd/incremental_sat.rs:155:8
+    |
+128 | impl NativeSolver {
+    | ----------------- method in this implementation
+...
+155 |     fn take_interrupted(&mut self) -> bool {
+    |        ^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `inject_solution_timepoints_sat` is never used
+    --> src/solvers/ddd/incremental_sat.rs:1143:4
+     |
+1143 | fn inject_solution_timepoints_sat<L: satcoder::Lit>(
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `take_interrupted` is never used
+   --> src/solvers/ddd/puresat.rs:150:8
+    |
+123 | impl NativeSolver {
+    | ----------------- method in this implementation
+...
+150 |     fn take_interrupted(&mut self) -> bool {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: associated items `new` and `take_interrupted` are never used
+   --> src/solvers/ddd/puresat.rs:307:8
+    |
+306 | impl TrackedSolver {
+    | ------------------ associated items in this implementation
+307 |     fn new() -> Self {
+    |        ^^^
+...
+378 |     fn take_interrupted(&mut self) -> bool {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `inject_solution_timepoints_sat` is never used
+   --> src/solvers/ddd/puresat.rs:987:4
+    |
+987 | fn inject_solution_timepoints_sat<L: satcoder::Lit>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `bits_needed` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:111:4
+    |
+111 | fn bits_needed(max_value: usize) -> usize {
+    |    ^^^^^^^^^^^
+
+warning: function `build_binary_register` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:119:4
+    |
+119 | fn build_binary_register<L: satcoder::Lit + Copy + 'static>(reg_bits: &[Bool<L>]) -> Binary<L> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `build_weighted_binary_term` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:123:4
+    |
+123 | fn build_weighted_binary_term<L: satcoder::Lit + Copy + 'static>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `subtract_binary` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:145:4
+    |
+145 | fn subtract_binary<L: satcoder::Lit + Copy + 'static>(
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `binary_le_literal_bits` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:188:4
+    |
+188 | fn binary_le_literal_bits<L: satcoder::Lit + Copy>(
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `assert_binary_le` is never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:215:4
+    |
+215 | fn assert_binary_le<L: satcoder::Lit + Copy + 'static>(
+    |    ^^^^^^^^^^^^^^^^
+
+warning: struct `BinaryObjective` is never constructed
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:249:8
+    |
+249 | struct BinaryObjective<L: satcoder::Lit> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: associated items `new`, `add_term`, and `ensure_capacity` are never used
+   --> src/solvers/ladder/maxsatddd_ladder_sc/solve.rs:255:8
+    |
+254 | impl<L: satcoder::Lit + Copy + 'static> BinaryObjective<L> {
+    | ---------------------------------------------------------- associated items in this implementation
+255 |     fn new() -> Self {
+    |        ^^^
+...
+262 |     fn add_term(&mut self, solver: &mut impl SatInstance<L>, lit: Bool<L>, weight: usize) {
+    |        ^^^^^^^^
+...
+277 |     fn ensure_capacity(
+    |        ^^^^^^^^^^^^^^^
+
+warning: field `vars` is never read
+  --> src/solvers/milp/binarizedbigm.rs:15:5
+   |
+14 | struct TimeIndexedVar {
+   |        -------------- field in this struct
+15 |     vars: Vec<(i32, grb::Var)>,
+   |     ^^^^
+
+warning: field `problem` is never read
+   --> src/solvers/milp/binarizedbigm.rs:451:5
+    |
+450 | struct ConflictInformation<'a> {
+    |        ------------------- field in this struct
+451 |     problem: &'a Problem,
+    |     ^^^^^^^
+
+warning: `ddd` (lib) generated 95 warnings (run `cargo fix --lib -p ddd` to apply 61 suggestions)
+warning: unused import: `collections::HashSet`
+ --> src/main.rs:1:36
+  |
+1 | use std::{any::Any, cell::RefCell, collections::HashSet, fmt::Write, time::Instant};
+  |                                    ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `DelayCostThresholds`
+ --> src/main.rs:5:21
+  |
+5 |     problem::{self, DelayCostThresholds, DelayCostType, NamedProblem, Visit},
+  |                     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::path::PathBuf`
+  --> src/main.rs:20:5
+   |
+20 | use std::path::PathBuf;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `instances`
+   --> src/main.rs:294:9
+    |
+294 |     let instances = [20];
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_instances`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `new_solution`
+   --> src/main.rs:313:17
+    |
+313 |             let new_solution = x(
+    |                 ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_new_solution`
+
+warning: unused variable: `solve_stats`
+    --> src/main.rs:1101:17
+     |
+1101 |             let solve_stats = if let Ok(solution) = solution.as_ref() {
+     |                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_solve_stats`
+
+warning: field `debug` is never read
+  --> src/main.rs:31:5
+   |
+28 | struct Opt {
+   |        --- field in this struct
+...
+31 |     debug: bool,
+   |     ^^^^^
+   |
+   = note: `Opt` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ddd` (bin "ddd") generated 7 warnings (run `cargo fix --bin "ddd" -p ddd` to apply 6 suggestions)
+    Finished `release` profile [optimized] target(s) in 10.77s
+warning: the following packages contain code that will be rejected by a future version of Rust: bitflags v0.8.2
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 2`
 (gurobi) nguyentan@DESKTOP-RVI9A4T:/mnt/d/github/maxsattrainscheduling$ cargo build --release
+    Updating crates.io index
 warning: unnecessary transmute
   --> /mnt/d/github/salvers/dpllt/src/clausedb.rs:81:32
    |
@@ -589,64 +396,65 @@ warning: variable does not need to be mutable
 
 warning: `satcoder` (lib) generated 5 warnings (run `cargo fix --lib -p satcoder` to apply 3 suggestions)
    Compiling ddd v0.1.0 (/mnt/d/github/maxsattrainscheduling)
-error[E0432]: unresolved imports `crate::solvers::heuristic`, `crate::solvers::value_trace`
-  --> src/solvers/ddd/incremental_sat.rs:11:15
+error[E0432]: unresolved imports `super::common`, `super::costtree`
+  --> src/solvers/ddd/incremental_sat.rs:38:5
    |
-11 |     solvers::{heuristic, value_trace::ValueTrace},
-   |               ^^^^^^^^^  ^^^^^^^^^^^ could not find `value_trace` in `solvers`
-   |               |
-   |               no `heuristic` in `solvers`
-   |
-   = help: consider importing this module instead:
-           crate::solvers::util::heuristic
+38 |     common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
+   |     ^^^^^^ could not find `common` in `super`
+39 |     costtree::CostTree,
+   |     ^^^^^^^^ could not find `costtree` in `super`
 
-error[E0432]: unresolved imports `crate::solvers::heuristic`, `crate::solvers::value_trace`
-  --> src/solvers/ddd/puresat.rs:11:15
+error[E0432]: unresolved import `crate::solvers::ddd::costtree`
+  --> src/solvers/ddd/maxsat_ladder.rs:90:27
    |
-11 |     solvers::{heuristic, value_trace::ValueTrace},
-   |               ^^^^^^^^^  ^^^^^^^^^^^ could not find `value_trace` in `solvers`
-   |               |
-   |               no `heuristic` in `solvers`
+90 | use crate::solvers::{ddd::costtree::CostTree, SolverError};
+   |                           ^^^^^^^^ could not find `costtree` in `ddd`
+
+error[E0432]: unresolved import `crate::solvers::ddd::costtree`
+  --> src/solvers/ddd/maxsat_ladder_abstract.rs:95:27
    |
-   = help: consider importing this module instead:
-           crate::solvers::util::heuristic
+95 | use crate::solvers::{ddd::costtree::CostTree, SolverError};
+   |                           ^^^^^^^^ could not find `costtree` in `ddd`
 
-error[E0432]: unresolved imports `crate::solvers::minimize`, `crate::solvers::value_trace`
- --> src/solvers/milp/bigm.rs:9:15
-  |
-9 |     solvers::{minimize, value_trace::ValueTrace},
-  |               ^^^^^^^^  ^^^^^^^^^^^ could not find `value_trace` in `solvers`
-  |               |
-  |               no `minimize` in `solvers`
-  |
-  = help: consider importing this module instead:
-          crate::solvers::util::minimize
+error[E0432]: unresolved import `crate::solvers::ddd::costtree`
+   --> src/solvers/ddd/maxsat_ladder_sc/solve.rs:385:27
+    |
+385 | use crate::solvers::{ddd::costtree::CostTree, SolverError};
+    |                           ^^^^^^^^ could not find `costtree` in `ddd`
 
-warning: unused import: `HashSet`
- --> src/solvers/ddd/common.rs:3:38
-  |
-3 |     collections::{BTreeMap, HashMap, HashSet},
-  |                                      ^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
-
-warning: unused import: `ResourceInterval`
-  --> src/solvers/ddd/common.rs:10:13
+error[E0432]: unresolved imports `super::common`, `super::costtree`
+  --> src/solvers/ddd/puresat.rs:38:5
    |
-10 |     debug::{ResourceInterval, SolverAction},
-   |             ^^^^^^^^^^^^^^^^
+38 |     common::{do_output_stats, extract_solution, IterationType, Occ, SolveStats, VisitId},
+   |     ^^^^^^ could not find `common` in `super`
+39 |     costtree::CostTree,
+   |     ^^^^^^^^ could not find `costtree` in `super`
 
 warning: unused imports: `Bool`, `SatSolverWithCore`, `constraints::Totalizer`, and `prelude::SymbolicModel`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:15:5
+  --> src/solvers/ddd/maxsat_ladder_abstract.rs:15:5
    |
 15 |     constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore,
    |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^  ^^^^               ^^^^^^^^^^^^^^^^^
-
-warning: unused import: `ddd::costtree::CostTree`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:95:22
    |
-95 | use crate::solvers::{ddd::costtree::CostTree, SolverError};
-   |                      ^^^^^^^^^^^^^^^^^^^^^^^
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `VecDeque`
+ --> src/solvers/ddd/maxsat_ladder_sc/solve.rs:3:57
+  |
+3 |     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
+  |                                                         ^^^^^^^^
+
+warning: unused import: `HashSet`
+ --> src/solvers/ddd/shared/common.rs:3:38
+  |
+3 |     collections::{BTreeMap, HashMap, HashSet},
+  |                                      ^^^^^^^
+
+warning: unused import: `ResourceInterval`
+  --> src/solvers/ddd/shared/common.rs:10:13
+   |
+10 |     debug::{ResourceInterval, SolverAction},
+   |             ^^^^^^^^^^^^^^^^
 
 warning: unused import: `typed_index_collections::TiVec`
  --> src/solvers/legacy/maxsat_ddd.rs:4:5
@@ -680,54 +488,170 @@ warning: unused import: `grb::parameter::IntParam::NetworkCuts`
 1 | use grb::parameter::IntParam::NetworkCuts;
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0277]: the size for values of type `[Vec<i32>]` cannot be known at compilation time
-    --> src/solvers/ddd/incremental_sat.rs:1173:16
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:1685:37
      |
-1173 |         if let Some(ub_sol) = heuristic::solve_heuristic_better(
-     |                ^^^^^^^^^^^^ doesn't have a size known at compile-time
+1685 |                 let overlap_start = e1_start.max(e2_start);
+     |                                     ^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:1686:35
      |
-     = help: the trait `Sized` is not implemented for `[Vec<i32>]`
-note: required by a bound in `std::prelude::v1::Some`
-    --> /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/option.rs:607:5
+1686 |                 let overlap_end = e1_end.min(e2_end);
+     |                                   ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:2322:17
+     |
+2322 |                 problem.trains[train_idx].visit_delay_cost(delay_cost_type, visit_idx, new_t);
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:2331:43
+     |
+2331 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2332 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2331 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:2345:43
+     |
+2345 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2346 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2345 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/incremental_sat.rs:2358:43
+     |
+2358 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2359 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2358 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
 
 error[E0308]: mismatched types
-    --> src/solvers/ddd/incremental_sat.rs:1181:38
+    --> src/solvers/ddd/incremental_sat.rs:2787:50
      |
-1181 |             return Ok(Some((ub_cost, ub_sol)));
-     |                                      ^^^^^^ expected `Vec<Vec<i32>>`, found `[Vec<i32>]`
+2748 | fn add_fixed_precedence_row<L: satcoder::Lit>(
+     |                             - expected this type parameter
+...
+2787 |                 .partition_point(|(_, t0)| *t0 < req_t);
+     |                                                  ^^^^^ expected type parameter `L`, found `i32`
      |
-     = note: expected struct `Vec<Vec<i32>>`
-                 found slice `[Vec<i32>]`
-help: try using a conversion method
-     |
-1181 |             return Ok(Some((ub_cost, ub_sol.to_vec())));
-     |                                            +++++++++
-
-error[E0277]: the size for values of type `[Vec<i32>]` cannot be known at compilation time
-    --> src/solvers/ddd/puresat.rs:1017:16
-     |
-1017 |         if let Some(ub_sol) = heuristic::solve_heuristic_better(
-     |                ^^^^^^^^^^^^ doesn't have a size known at compile-time
-     |
-     = help: the trait `Sized` is not implemented for `[Vec<i32>]`
-note: required by a bound in `std::prelude::v1::Some`
-    --> /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/option.rs:607:5
+     = note: expected type parameter `L`
+                          found type `i32`
 
 error[E0308]: mismatched types
-    --> src/solvers/ddd/puresat.rs:1025:38
+    --> src/solvers/ddd/incremental_sat.rs:2788:23
      |
-1025 |             return Ok(Some((ub_cost, ub_sol)));
-     |                                      ^^^^^^ expected `Vec<Vec<i32>>`, found `[Vec<i32>]`
+2748 | fn add_fixed_precedence_row<L: satcoder::Lit>(
+     |                             - expected this type parameter
+...
+2788 |             if idx <= SC_PAIRWISE_THRESHOLD {
+     |                       ^^^^^^^^^^^^^^^^^^^^^ expected type parameter `L`, found `usize`
      |
-     = note: expected struct `Vec<Vec<i32>>`
-                 found slice `[Vec<i32>]`
-help: try using a conversion method
+     = note: expected type parameter `L`
+                          found type `usize`
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:1473:37
      |
-1025 |             return Ok(Some((ub_cost, ub_sol.to_vec())));
-     |                                            +++++++++
+1473 |                 let overlap_start = e1_start.max(e2_start);
+     |                                     ^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:1474:35
+     |
+1474 |                 let overlap_end = e1_end.min(e2_end);
+     |                                   ^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:2164:17
+     |
+2164 |                 problem.trains[train_idx].visit_delay_cost(delay_cost_type, visit_idx, new_t);
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:2173:43
+     |
+2173 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2174 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2173 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:2187:43
+     |
+2187 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2188 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2187 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
+
+error[E0282]: type annotations needed
+    --> src/solvers/ddd/puresat.rs:2200:43
+     |
+2200 | ...                   &mut |weight, cost_var| {
+     |                                     ^^^^^^^^
+2201 | ...                       let lit = cost_var
+     |                                     -------- type must be known at this point
+     |
+help: consider giving this closure parameter an explicit type
+     |
+2200 |                             &mut |weight, cost_var: /* Type */| {
+     |                                                   ++++++++++++
+
+error[E0308]: mismatched types
+    --> src/solvers/ddd/puresat.rs:2665:50
+     |
+2626 | fn add_fixed_precedence_row<L: satcoder::Lit>(
+     |                             - expected this type parameter
+...
+2665 |                 .partition_point(|(_, t0)| *t0 < req_t);
+     |                                                  ^^^^^ expected type parameter `L`, found `i32`
+     |
+     = note: expected type parameter `L`
+                          found type `i32`
+
+error[E0308]: mismatched types
+    --> src/solvers/ddd/puresat.rs:2666:23
+     |
+2626 | fn add_fixed_precedence_row<L: satcoder::Lit>(
+     |                             - expected this type parameter
+...
+2666 |             if idx <= SC_PAIRWISE_THRESHOLD {
+     |                       ^^^^^^^^^^^^^^^^^^^^^ expected type parameter `L`, found `usize`
+     |
+     = note: expected type parameter `L`
+                          found type `usize`
 
 warning: unused import: `SatInstance`
-  --> src/solvers/ladder/maxsatddd_ladder_abstract.rs:15:59
+  --> src/solvers/ddd/maxsat_ladder_abstract.rs:15:59
    |
 15 |     constraints::Totalizer, prelude::SymbolicModel, Bool, SatInstance, SatSolverWithCore,
    |                                                           ^^^^^^^^^^^
@@ -763,43 +687,43 @@ warning: unused variable: `obj_val`
     |                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_obj_val`
 
 warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:119:16
+   --> src/solvers/ddd/shared/common.rs:119:16
     |
 119 |     pub fn new(problem: &Problem, solver: &mut impl SatInstance<L>) -> Self {
     |                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
 
 warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:119:35
+   --> src/solvers/ddd/shared/common.rs:119:35
     |
 119 |     pub fn new(problem: &Problem, solver: &mut impl SatInstance<L>) -> Self {
     |                                   ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
 
 warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:126:36
+   --> src/solvers/ddd/shared/common.rs:126:36
     |
 126 |     pub fn extract_solution(&self, problem: &Problem) -> Vec<Vec<i32>> {
     |                                    ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
 
 warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:133:9
+   --> src/solvers/ddd/shared/common.rs:133:9
     |
 133 |         solver: &mut impl SatInstance<L>,
     |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
 
 warning: unused variable: `sol`
-   --> src/solvers/ddd/common.rs:134:9
+   --> src/solvers/ddd/shared/common.rs:134:9
     |
 134 |         sol: &[Vec<i32>],
     |         ^^^ help: if this is intentional, prefix it with an underscore: `_sol`
 
 warning: unused variable: `model`
-   --> src/solvers/ddd/common.rs:142:35
+   --> src/solvers/ddd/shared/common.rs:142:35
     |
 142 |     pub fn apply_model(&mut self, model: &impl satcoder::prelude::SymbolicModel<L>) {
     |                                   ^^^^^ help: if this is intentional, prefix it with an underscore: `_model`
 
 warning: variable does not need to be mutable
-   --> src/solvers/ddd/common.rs:153:9
+   --> src/solvers/ddd/shared/common.rs:153:9
     |
 153 |         mut on_action: impl FnMut(SolverAction),
     |         ----^^^^^^^^^
@@ -807,31 +731,31 @@ warning: variable does not need to be mutable
     |         help: remove this `mut`
 
 warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:150:9
+   --> src/solvers/ddd/shared/common.rs:150:9
     |
 150 |         solver: &mut impl SatInstance<L>,
     |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
 
 warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:151:9
+   --> src/solvers/ddd/shared/common.rs:151:9
     |
 151 |         problem: &Problem,
     |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
 
 warning: unused variable: `stats`
-   --> src/solvers/ddd/common.rs:152:9
+   --> src/solvers/ddd/shared/common.rs:152:9
     |
 152 |         stats: &mut SolveStats,
     |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_stats`
 
 warning: unused variable: `on_action`
-   --> src/solvers/ddd/common.rs:153:9
+   --> src/solvers/ddd/shared/common.rs:153:9
     |
 153 |         mut on_action: impl FnMut(SolverAction),
     |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_on_action`
 
 warning: variable does not need to be mutable
-   --> src/solvers/ddd/common.rs:168:9
+   --> src/solvers/ddd/shared/common.rs:168:9
     |
 168 |         mut on_cost: impl FnMut(CostTerm<L>),
     |         ----^^^^^^^
@@ -839,42 +763,34 @@ warning: variable does not need to be mutable
     |         help: remove this `mut`
 
 warning: unused variable: `solver`
-   --> src/solvers/ddd/common.rs:164:9
+   --> src/solvers/ddd/shared/common.rs:164:9
     |
 164 |         solver: &mut impl SatInstance<L>,
     |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver`
 
 warning: unused variable: `problem`
-   --> src/solvers/ddd/common.rs:165:9
+   --> src/solvers/ddd/shared/common.rs:165:9
     |
 165 |         problem: &Problem,
     |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_problem`
 
 warning: unused variable: `delay_cost_type`
-   --> src/solvers/ddd/common.rs:166:9
+   --> src/solvers/ddd/shared/common.rs:166:9
     |
 166 |         delay_cost_type: DelayCostType,
     |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_delay_cost_type`
 
 warning: unused variable: `mode`
-   --> src/solvers/ddd/common.rs:167:9
+   --> src/solvers/ddd/shared/common.rs:167:9
     |
 167 |         mode: CostMode,
     |         ^^^^ help: if this is intentional, prefix it with an underscore: `_mode`
 
 warning: unused variable: `on_cost`
-   --> src/solvers/ddd/common.rs:168:9
+   --> src/solvers/ddd/shared/common.rs:168:9
     |
 168 |         mut on_cost: impl FnMut(CostTerm<L>),
     |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_on_cost`
-
-warning: variable does not need to be mutable
-    --> src/solvers/ladder/maxsatddd_ladder_scl.rs:1057:25
-     |
-1057 |                     let mut flush_group = |current_group: &Vec<usize>,
-     |                         ----^^^^^^^^^^^
-     |                         |
-     |                         help: remove this `mut`
 
 warning: variable does not need to be mutable
   --> src/solvers/legacy/maxsat_ddd.rs:21:5
@@ -999,6 +915,14 @@ warning: unused variable: `solver_time`
 202 |     let mut solver_time = std::time::Duration::ZERO;
     |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_solver_time`
 
+warning: value assigned to `logged_incumbent` is never read
+   --> src/solvers/milp/bigm.rs:487:25
+    |
+487 |                         logged_incumbent = Some(ub_cost);
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
 warning: unused variable: `visit`
   --> src/solvers/milp/milp_ti.rs:73:25
    |
@@ -1095,8 +1019,7 @@ warning: variable does not need to be mutable
    |         |
    |         help: remove this `mut`
 
-Some errors have detailed explanations: E0277, E0308, E0432.
-For more information about an error, try `rustc --explain E0277`.
+Some errors have detailed explanations: E0282, E0308, E0432.
+For more information about an error, try `rustc --explain E0282`.
 warning: `ddd` (lib) generated 64 warnings
-error: could not compile `ddd` (lib) due to 7 previous errors; 64 warnings emitted
-(gurobi) nguyentan@DESKTOP-RVI9A4T:/mnt/d/github/maxsattrainscheduling$ cargo build --release
+error: could not compile `ddd` (lib) due to 21 previous errors; 64 warnings emitted
