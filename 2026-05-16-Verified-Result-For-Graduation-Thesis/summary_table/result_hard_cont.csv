@@ -1,0 +1,11 @@
+instance,BigM,TI,MS-Base,MS-Def,IS-Def,IS-Not,PS-Def,PS-Not
+trackA1,105.3,"5,445.4",195.5,140.6,T/O,T/O,T/O,T/O
+trackA2,60.7,"8,108.3","5,052.8",828.5,"84,111.9","83,952.7",T/O,T/O
+trackA8,"44,110.1",T/O,T/O,T/O,OOM,OOM,OOM,OOM
+trackA11,T/O,T/O,T/O,T/O,OOM,OOM,OOM,OOM
+trackA12,T/O,T/O,T/O,T/O,OOM,OOM,OOM,OOM
+stationA1,"2,646.1","24,163.1",T/O,T/O,T/O,T/O,T/O,OOM
+stationA2,"1,432.1","70,912.7",T/O,T/O,T/O,T/O,T/O,T/O
+stationA8,T/O,T/O,T/O,T/O,OOM,OOM,OOM,OOM
+stationA11,T/O,T/O,T/O,T/O,OOM,OOM,T/O,T/O
+stationA12,T/O,T/O,T/O,T/O,OOM,OOM,OOM,OOM
