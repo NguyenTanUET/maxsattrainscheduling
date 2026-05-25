@@ -84,24 +84,12 @@ pub struct SolveStats {
     pub satsolver: String,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-struct ResourceCliqueRowKey {
-    // (visit_id, start, next_incumbent_time). Includes next_incumbent so that
-    // when the next-visit's incumbent shifts (changing m_end_lits semantics),
-    // the key changes and a fresh tight constraint is added. This avoids the
-    // soundness bug where a loose early-iteration constraint would block
-    // re-processing the same conflict at later iterations.
-    members: Vec<(VisitId, i32, i32)>,
-}
-
 // Settings + tunable constants moved to `super::settings`.
 // SC AMO helpers moved to `super::sc_amo`.
 // Precedence helpers moved to `super::precedence`.
-// SCAMO experimental primitives moved to `super::experimental_approach::scamo`.
-use super::experimental_approach::scamo::encode_scamo_amo_block;
 use super::precedence::{add_fixed_precedence_row, propagate_precedence};
 use super::sc_amo::{add_hybrid_amo, build_active_lit, get_delay_lit_at};
-use super::settings::{LAZY_AMO_THRESHOLD, MaxSatDddLadderScSettings};
+use super::settings::MaxSatDddLadderScSettings;
 
 enum Soft<L: satcoder::Lit> {
     Primary,
@@ -450,6 +438,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     let mut n_timepoints = 0;
     let mut n_conflict_constraints = 0;
 
+    //Build conflict adjacency 
     for (a, b) in problem.conflicts.iter() {
         conflicts.entry(*a).or_default().push(*b);
         if *a != *b {
@@ -457,6 +446,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
         }
     }
 
+    //Build Occ 
     for (train_idx, train) in problem.trains.iter().enumerate() {
         for (visit_idx, visit) in train.visits.iter().enumerate() {
             let visit_id: VisitId = visits.push_and_get_key((train_idx, visit_idx));
@@ -478,17 +468,12 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             }
 
             resource_visits[visit.resource_id].push(visit_id);
+
             touched_intervals.push(visit_id);
             new_time_points.push((visit_id, true.into(), earliest));
 
             // Pre-allocate SAT vars + monotonicity clauses for each cost-step
-            // threshold time. Gated by `prealloc_cost_thresholds` because this
-            // is a structural divergence from `maxsat_ladder` (which is
-            // fully lazy): on stepped objectives like `InfiniteSteps180` the
-            // helper returns up to 100 thresholds per visit, ballooning the
-            // initial CNF and slowing SAT calls for the rest of the run.
-            // For `Continuous` the helper returns an empty list so this loop
-            // is a no-op regardless of the flag.
+            // threshold time. 
             if settings.prealloc_cost_thresholds {
                 for t in problem.trains[train_idx]
                     .visit_cost_threshold_times(delay_cost_type, visit_idx, earliest)
@@ -511,18 +496,13 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     let mut total_cost = 0;
     let mut soft_constraints = HashMap::new();
     let mut debug_actions = Vec::new();
-    // let mut cost_var_names: HashMap<Bool<L>, String> = HashMap::new();
 
-    // Rows already added for interval-graph conflict encoding.
-    let mut added_resource_clique_rows: HashSet<ResourceCliqueRowKey> = HashSet::new();
-    // Lazy-AMO bookkeeping: count cross-iteration touches of each clique
-    // (keyed by sorted visit-set, not by row times) and remember which
-    // cliques have already had their full AMO encoded.
-    let mut clique_touch_counts: HashMap<Vec<VisitId>, usize> = HashMap::new();
+    // Remember which cliques have already had their full AMO encoded
+    // (keyed by sorted visit-set) to dedup AMO emission across iterations.
+    //SEED PRECEDENCE ROWS
     let mut clique_amo_encoded: HashSet<Vec<VisitId>> = HashSet::new();
     // Rows already added for fixed-precedence encoding: (visit_id, time).
     let mut fixed_prec_rows: HashSet<(VisitId, i32)> = HashSet::new();
-    // let mut priorities: Vec<(VisitId, VisitId)> = Vec::new();
 
     // Optional: seed fixed-precedence (travel-time) constraints from the earliest
     // time points to reduce the number of "travel-time conflict" iterations.
@@ -577,12 +557,13 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
     // expired), so timeout cases can still report a finite `ub` and
     // downstream tooling can compute a real GAP.
     {
-        let greedy_sol = crate::solvers::ddd::shared::precedence::greedy_schedule(problem);
+        let greedy_sol = crate::solvers::ddd::shared::greedy::greedy_schedule(problem);
         if let Some(cost) = problem.verify_solution(&greedy_sol, delay_cost_type) {
             best_heur = Some((cost, greedy_sol));
         }
     }
 
+    //UB from Gurobi
     let heur_thread = USE_HEURISTIC.then(|| {
         let (sol_in_tx, sol_in_rx) = std::sync::mpsc::channel();
         let (sol_out_tx, sol_out_rx) = std::sync::mpsc::channel();
@@ -591,7 +572,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
         (sol_in_tx, sol_out_rx)
     });
 
+    /// Main DDD loop
     loop {
+        // Check timeout at the start of each iteration.
         if start_time.elapsed().as_secs_f64() > timeout {
             let ub = best_heur.map(|(c, _)| c).unwrap_or(i32::MAX);
             println!("TIMEOUT LB={} UB={}", total_cost, ub);
@@ -610,10 +593,11 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             return Err(SolverError::Timeout);
         }
 
+        // Check SAT/UNSAT of the current iteration's formula.
         let _p = hprof::enter("iteration");
         if is_sat {
-            // println!("Iteration {} conflict detection starting...", iteration);
-
+            
+            // If SAT, extract the solution and check for optimality via the async.
             if let Some((sol_tx, sol_rx)) = heur_thread.as_ref() {
                 let sol = extract_solution(problem, &occupations);
                 let _ = sol_tx.send(sol);
@@ -656,24 +640,13 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     }
                 }
 
-                // NOTE: We intentionally do NOT inject heuristic solution
-                // timepoints here. Empirically, `inject_solution_timepoints_maxsat`
-                // causes formula bloat for the `Continuous` objective (each
-                // injected timepoint → cost var → CostTree growth → larger
-                // formula → slower SAT calls → more timeouts). Ladder
-                // (`maxsat_ddd_ladder`) also receives heuristic UB updates but
-                // does NOT inject, and outperforms ladder_sc on cont benchmarks
-                // because of this. We match that behavior: use the heuristic
-                // purely for UB tracking and the UB=LB termination check above.
-                // The fallback injection at core.len()==0 (later in the loop)
-                // is kept as a last-resort for edge cases.
             }
 
-            let mut found_travel_time_conflict = false;
+            // Extract the current solution and check for travel-time and resource conflicts.
+               let mut found_travel_time_conflict = false;
             let mut found_resource_conflict = false;
 
-            // let mut touched_intervals = visits.keys().collect::<Vec<_>>();
-
+            // travel time conflict check.
             for visit_id in touched_intervals.iter().copied() {
                 let _p = hprof::enter("travel time check");
                 let (train_idx, visit_idx) = visits[visit_id];
@@ -696,10 +669,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     // TRAVEL TIME CONFLICT
                     if t1_in + visit.travel_time > t1_out {
                         found_travel_time_conflict = true;
-                        // println!(
-                        //     "  - TRAVEL time conflict train{} visit{} resource{} in{} travel{} out{}",
-                        //     train_idx, visit_idx, this_resource_id, t1_in, travel_time, t1_out
-                        // );
 
                         debug_actions.push(SolverAction::TravelTimeConflict(ResourceInterval {
                             train_idx,
@@ -747,1005 +716,229 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         stats.n_travel += 1;
                     }
 
-                    // let v1 = &occupations[visit];
-                    // let v2 = &occupations[next_visit];
 
-                    // // TRAVEL TIME CONFLICT
-                    // if t1_in + travel_time < t1_out {
-                    //     found_conflict = true;
-                    //     println!(
-                    //                             "  - TRAVEL OVERtime conflict train{} visit{} resource{} in{} travel{} out{}",
-                    //                             train_idx, visit_idx, this_resource_id, t1_in, travel_time, t1_out
-                    //                         );
 
-                    //     // Insert the new time point.
-                    //     let t1_in_var = v1.delays[v1.incumbent].0;
-                    //     let new_t = v1.incumbent_time() + travel_time;
-                    //     let (t1_earliest_out_var, t1_is_new) =
-                    //         occupations[next_visit].time_point(&mut solver, new_t);
 
-                    //     // T1_IN delay implies T1_EARLIEST_OUT delay.
-                    //     SatInstance::add_clause(&mut solver, vec![!t1_in_var, t1_earliest_out_var]);
-                    //     // The new timepoint might have a cost.
-                    //     if t1_is_new {
-                    //         new_time_points.push((next_visit, t1_in_var, new_t));
-                    //     }
-                    // }
                 }
             }
 
-            // println!("Solving conflicts in iteration {}", iteration);
 
-            // SOLVE ALL SIMPLE PRESEDENCES BEFORE CONFLICTS
-            // if !found_conflict {
-
+            //Resource conflict check: find all pairs of overlapping visits on conflicting resources, 
+            //and add a clause to forbid the current overlap.
             let _p = hprof::enter("conflict check");
-            if settings.use_interval_graph_conflicts {
-                #[derive(Clone, Copy)]
-                struct ActiveInterval {
-                    visit_id: VisitId,
-                    train_idx: usize,
-                    start: i32,
-                    end: i32,
-                }
+            let mut deconflicted_train_pairs: HashSet<(usize, usize)> = HashSet::new();
 
-                let touched_set: HashSet<VisitId> = touched_intervals.iter().copied().collect();
-                let mut touched_positions: HashMap<VisitId, Vec<usize>> = HashMap::new();
-                for (idx, visit_id) in touched_intervals.iter().copied().enumerate() {
-                    touched_positions.entry(visit_id).or_default().push(idx);
-                }
+            // Lite clique aggregation for the pair-based scan: each
+            // (resource, tau_plus_1) accumulates visits that ended up in a
+            // detected conflict. After the scan, cliques with ≥3 members
+            // are encoded as a single AMO over `active(v, tau_plus_1)`
+            // literals — opt-in via `use_touched_clique_amo`. This lets
+            // SC AMO encoding fire WITHOUT the heavier interval-
+            // graph clique-cover pass.
+            let mut touched_pair_cliques: HashMap<(usize, i32), HashSet<VisitId>> =
+                HashMap::new();
 
-                // Only process resource pairs impacted by touched visits.
-                let mut relevant_resource_pairs: HashSet<(usize, usize)> = HashSet::new();
-                for &visit_id in &touched_intervals {
-                    let (train_idx, visit_idx) = visits[visit_id];
-                    let resource = problem.trains[train_idx].visits[visit_idx].resource_id;
-                    if let Some(conflicting_resources) = conflicts.get(&resource) {
-                        for &other in conflicting_resources {
-                            if resource <= other {
-                                relevant_resource_pairs.insert((resource, other));
-                            } else {
-                                relevant_resource_pairs.insert((other, resource));
-                            }
-                        }
-                    }
-                }
-
-                let mut retain_touched = vec![false; touched_intervals.len()];
-                // Per-iteration cache: (visit_id, tau+1) → active literal.
-                // Reused across cliques in the same iteration to share aux vars.
-                let mut active_lit_cache: HashMap<(VisitId, i32), Bool<L>> = HashMap::new();
-
-                // Collect all clique candidates across resource pairs first, then
-                // process them in severity order with a per-iteration budget.
-                let mut clique_candidates: Vec<(i64, Vec<ActiveInterval>, i32, usize, usize)> =
-                    Vec::new();
-
-                for (resource_a, resource_b) in relevant_resource_pairs.into_iter() {
-                    // Early filter: skip pairs where either resource has no visits.
-                    // Saves O(V) scan + allocation for empty resources.
-                    if resource_a >= resource_visits.len()
-                        || resource_b >= resource_visits.len()
-                        || resource_visits[resource_a].is_empty()
-                        || resource_visits[resource_b].is_empty()
-                    {
-                        continue;
-                    }
-
-                    let mut group_intervals = Vec::new();
-                    for &resource in [resource_a, resource_b].iter() {
-                        if resource >= resource_visits.len() {
-                            continue;
-                        }
-                        if resource == resource_b
-                            && resource_a == resource_b
-                            && !group_intervals.is_empty()
-                        {
-                            continue;
-                        }
-                        for &visit_id in &resource_visits[resource] {
-                            let (train_idx, visit_idx) = visits[visit_id];
-                            let start = occupations[visit_id].incumbent_time();
-                            let next_visit: Option<VisitId> =
-                                if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                                    Some((usize::from(visit_id) + 1).into())
-                                } else {
-                                    None
-                                };
-                            let end = next_visit
-                                .map(|nx| occupations[nx].incumbent_time())
-                                .unwrap_or(
-                                    start + problem.trains[train_idx].visits[visit_idx].travel_time,
-                                );
-                            if end <= start {
-                                continue;
-                            }
-                            group_intervals.push(ActiveInterval {
-                                visit_id,
-                                train_idx,
-                                start,
-                                end,
-                            });
-                        }
-                    }
-
-                    if group_intervals.len() < 2 {
-                        continue;
-                    }
-
-                    let mut taus: Vec<i32> = group_intervals.iter().map(|it| it.start).collect();
-                    taus.sort_unstable();
-                    taus.dedup();
-
-                    for tau in taus {
-                        let members: Vec<ActiveInterval> = group_intervals
-                            .iter()
-                            .copied()
-                            .filter(|it| it.start <= tau && tau < it.end)
-                            .collect();
-
-                        if members.len() <= 1 {
-                            continue;
-                        }
-                        if !members.iter().any(|m| touched_set.contains(&m.visit_id)) {
-                            continue;
-                        }
-
-                        let mut trains_in_clique: HashSet<usize> = HashSet::new();
-                        for m in &members {
-                            trains_in_clique.insert(m.train_idx);
-                        }
-                        if trains_in_clique.len() <= 1 {
-                            continue;
-                        }
-
-                        // Severity = member_count * overlap_length. Prioritize large
-                        // cliques with long overlaps (most binding conflicts).
-                        let overlap_min_end = members.iter().map(|m| m.end).min().unwrap();
-                        let overlap_length = (overlap_min_end - tau).max(1) as i64;
-                        let severity = (members.len() as i64) * overlap_length;
-
-                        clique_candidates.push((
-                            severity,
-                            members,
-                            tau,
-                            resource_a,
-                            resource_b,
-                        ));
-                    }
-                }
-
-                // Sort by severity descending — process most "dangerous" cliques
-                // first. Do NOT filter: low-severity cliques are still real
-                // resource conflicts that must be resolved. Skipping them could
-                // prevent convergence or cause false-optimal returns for
-                // configurations where small overlaps matter for feasibility.
-                clique_candidates.sort_by(|a, b| b.0.cmp(&a.0));
-
-                // ─── SCAMO eligibility detection ────────────────────────────
-                // Mark cliques eligible for the SCAMO per-block AMO encoding:
-                // a clique is eligible when it sits in a group of ≥
-                // PHASE2_MIN_GROUP_SIZE consecutive cliques on the same
-                // resource pair where every consecutive pair shares ≥
-                // PHASE2_MIN_OVERLAP visits. Eligible cliques are routed to
-                // `encode_scamo_amo_block` instead of `add_hybrid_amo` in
-                // the main processing loop below.
-                //
-                // Each clique is encoded as a full AMO block (paper formulas
-                // 1–4) rather than mixing in AMZ blocks: in DDD each clique
-                // is an independent AMO requirement, and the paper's
-                // AMZ-plus-connection trick depends on a sliding-window
-                // structure that is not present at the variable level here.
-                let mut scamo_eligible: HashSet<usize> = HashSet::new();
-                if settings.use_scamo_encoding {
-                    const MIN_OVERLAP: usize = 1;
-                    const PHASE2_MIN_GROUP_SIZE: usize = 4;
-                    const PHASE2_MIN_OVERLAP: usize = 2;
-
-                    // Index cliques by resource pair; sort by τ within each.
-                    let mut by_pair: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
-                    for (idx, c) in clique_candidates.iter().enumerate() {
-                        by_pair.entry((c.3, c.4)).or_default().push(idx);
-                    }
-                    for indices in by_pair.values_mut() {
-                        indices.sort_by_key(|&i| clique_candidates[i].2);
-                    }
-
-                    // Promote a closed group to "eligible" if it meets the
-                    // Phase-2 bar (size and overlap thresholds).
-                    let mut flush_group = |current_group: &Vec<usize>,
-                                           current_min_overlap: usize,
-                                           scamo_eligible: &mut HashSet<usize>| {
-                        if current_group.len() >= PHASE2_MIN_GROUP_SIZE
-                            && current_min_overlap >= PHASE2_MIN_OVERLAP
-                        {
-                            for &idx in current_group {
-                                scamo_eligible.insert(idx);
-                            }
-                        }
-                    };
-
-                    for indices in by_pair.values() {
-                        if indices.len() < 2 {
-                            continue;
-                        }
-                        let mut current_group: Vec<usize> = vec![indices[0]];
-                        let mut current_min_overlap = usize::MAX;
-                        for &next_idx in &indices[1..] {
-                            let prev_idx = *current_group.last().unwrap();
-                            let prev_set: HashSet<VisitId> = clique_candidates[prev_idx]
-                                .1
-                                .iter()
-                                .map(|m| m.visit_id)
-                                .collect();
-                            let next_set: HashSet<VisitId> = clique_candidates[next_idx]
-                                .1
-                                .iter()
-                                .map(|m| m.visit_id)
-                                .collect();
-                            let overlap = prev_set.intersection(&next_set).count();
-                            if overlap >= MIN_OVERLAP {
-                                current_group.push(next_idx);
-                                current_min_overlap = current_min_overlap.min(overlap);
-                            } else {
-                                flush_group(
-                                    &current_group,
-                                    current_min_overlap,
-                                    &mut scamo_eligible,
-                                );
-                                current_group = vec![next_idx];
-                                current_min_overlap = usize::MAX;
-                            }
-                        }
-                        flush_group(&current_group, current_min_overlap, &mut scamo_eligible);
-                    }
-                }
-                // ────────────────────────────────────────────────────────────
-
-                // Per-iteration budget to prevent combinatorial blowup when many
-                // cliques are detected at once. Remaining cliques will be re-detected
-                // and processed in subsequent iterations (smart dedup via
-                // `added_resource_clique_rows` prevents double-adding).
-                const MAX_CLIQUES_PER_ITER: usize = 100;
-                let mut cliques_processed = 0usize;
-
-                for (clique_idx, (_severity, members, _tau, _resource_a, _resource_b)) in
-                    clique_candidates.into_iter().enumerate()
-                {
-                    if cliques_processed >= MAX_CLIQUES_PER_ITER {
-                        found_resource_conflict = true;
-                        break;
-                    }
-                    let is_scamo_eligible = scamo_eligible.contains(&clique_idx);
-
-                    let mut member_key: Vec<(VisitId, i32, i32)> = members
-                        .iter()
-                        .map(|m| {
-                            let (train_idx, visit_idx) = visits[m.visit_id];
-                            let next_incumbent =
-                                if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                                    let next_id: VisitId =
-                                        (usize::from(m.visit_id) + 1).into();
-                                    occupations[next_id].incumbent_time()
-                                } else {
-                                    i32::MAX
-                                };
-                            (m.visit_id, m.start, next_incumbent)
-                        })
-                        .collect();
-                    member_key.sort_unstable_by_key(|(v, t, _)| (v.0, *t));
-                    let row_key = ResourceCliqueRowKey {
-                        members: member_key,
-                    };
-                    if !added_resource_clique_rows.insert(row_key) {
-                        continue;
-                    }
-
-                    // Cross-iteration visit-set key for lazy-AMO counting.
-                    // Different from `row_key` (which depends on incumbent
-                    // times): two detections of the same VISIT SET — even at
-                    // different times — share this key, so the touch count
-                    // accumulates across DDD iterations.
-                    let visit_set_key: Vec<VisitId> = {
-                        let mut v: Vec<VisitId> =
-                            members.iter().map(|m| m.visit_id).collect();
-                        v.sort_unstable_by_key(|id| id.0);
-                        v
-                    };
-                    let touch_count = {
-                        let c =
-                            clique_touch_counts.entry(visit_set_key.clone()).or_insert(0);
-                        *c += 1;
-                        *c
-                    };
-
-                    found_resource_conflict = true;
-                    stats.n_conflict += 1;
-
-                    for m in &members {
-                        if let Some(idxs) = touched_positions.get(&m.visit_id) {
-                            for &idx in idxs {
-                                retain_touched[idx] = true;
-                            }
-                        }
-                    }
-
-                    // Fast-path for 2-member cliques (the common case in train
-                    // scheduling): emit a direct pairwise monotone clause
-                    // instead of Tseitin-encoded `active_i(tau)` aux vars + AMO.
-                    // Saves 6 Tseitin clauses + 2 aux vars per clique.
-                    //
-                    // SCAMO-eligible cliques bypass the fast-path: the goal of
-                    // the eligibility check is to encode every clique in the
-                    // group consistently with paper §3.1's SC AMO block, so
-                    // we always go through the active-lit + SC encoding path.
-                    if members.len() == 2 && !is_scamo_eligible {
-                        let mi = members[0];
-                        let mj = members[1];
-
-                        // Capture m_end literals BEFORE any timepoint creation.
-                        let m_end_lit_of = |visit_id: VisitId,
-                                            occs: &TiVec<VisitId, Occ<L>>|
-                         -> Bool<L> {
-                            let (train_idx, visit_idx) = visits[visit_id];
-                            if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                                let next_id: VisitId =
-                                    (usize::from(visit_id) + 1).into();
-                                occs[next_id].delays[occs[next_id].incumbent_idx].0
-                            } else {
-                                true.into()
-                            }
-                        };
-
-                        let m_end_i = m_end_lit_of(mi.visit_id, &occupations);
-                        let m_end_j = m_end_lit_of(mj.visit_id, &occupations);
-
-                        let delay_i = get_delay_lit_at(
-                            &mut solver,
-                            problem,
-                            &visits,
-                            &mut occupations,
-                            &mut new_time_points,
-                            &mut fixed_prec_rows,
-                            settings.use_eager_chain_expansion,
-                            mi.visit_id,
-                            mj.end,
-                        );
-                        let delay_j = get_delay_lit_at(
-                            &mut solver,
-                            problem,
-                            &visits,
-                            &mut occupations,
-                            &mut new_time_points,
-                            &mut fixed_prec_rows,
-                            settings.use_eager_chain_expansion,
-                            mj.visit_id,
-                            mi.end,
-                        );
-
-                        solver.add_clause(vec![!m_end_i, !m_end_j, delay_i, delay_j]);
-                    } else if !is_scamo_eligible
-                        && LAZY_AMO_THRESHOLD > 0
-                        && touch_count < LAZY_AMO_THRESHOLD
-                        && !clique_amo_encoded.contains(&visit_set_key)
-                    {
-                        // Lazy mode warm-up: this clique has been seen
-                        // `touch_count` times (< LAZY_AMO_THRESHOLD). Emit
-                        // a single pair clause for the first two members
-                        // (same shape as the 2-member fast path) instead
-                        // of a full AMO. The AMO is encoded once the
-                        // touch count reaches the threshold.
-                        let mi = members[0];
-                        let mj = members[1];
-
-                        let m_end_lit_of = |visit_id: VisitId,
-                                            occs: &TiVec<VisitId, Occ<L>>|
-                         -> Bool<L> {
-                            let (train_idx, visit_idx) = visits[visit_id];
-                            if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                                let next_id: VisitId =
-                                    (usize::from(visit_id) + 1).into();
-                                occs[next_id].delays[occs[next_id].incumbent_idx].0
-                            } else {
-                                true.into()
-                            }
-                        };
-
-                        let m_end_i = m_end_lit_of(mi.visit_id, &occupations);
-                        let m_end_j = m_end_lit_of(mj.visit_id, &occupations);
-
-                        let delay_i = get_delay_lit_at(
-                            &mut solver,
-                            problem,
-                            &visits,
-                            &mut occupations,
-                            &mut new_time_points,
-                            &mut fixed_prec_rows,
-                            settings.use_eager_chain_expansion,
-                            mi.visit_id,
-                            mj.end,
-                        );
-                        let delay_j = get_delay_lit_at(
-                            &mut solver,
-                            problem,
-                            &visits,
-                            &mut occupations,
-                            &mut new_time_points,
-                            &mut fixed_prec_rows,
-                            settings.use_eager_chain_expansion,
-                            mj.visit_id,
-                            mi.end,
-                        );
-
-                        solver.add_clause(vec![!m_end_i, !m_end_j, delay_i, delay_j]);
+            touched_intervals.retain(|visit_id| {
+                let visit_id = *visit_id;
+                let (train_idx, visit_idx) = visits[visit_id];
+                let next_visit: Option<VisitId> =
+                    if visit_idx + 1 < problem.trains[train_idx].visits.len() {
+                        Some((usize::from(visit_id) + 1).into())
                     } else {
-                        // Full AMO encoding (eager path, or lazy threshold
-                        // reached). Mark the visit-set so subsequent
-                        // detections of the same clique skip re-encoding.
-                        clique_amo_encoded.insert(visit_set_key.clone());
+                        None
+                    };
 
-                        // Sequential AMO via Tseitin-encoded "active_i(tau)" aux vars.
-                        // Choose tau+1 = min(member.end) so the AMO forces at least
-                        // all but one member to start at or after this time. Uses
-                        // monotone delay literals capturing BOTH start and end.
-                        let tau_plus_1 = members.iter().map(|m| m.end).min().unwrap();
+                let t1_in = occupations[visit_id].incumbent_time();
+                let visit = problem.trains[train_idx].visits[visit_idx];
+                let mut retain = false;
 
-                        let mut active_lits = Vec::with_capacity(members.len());
-                        for m in &members {
-                            let lit = build_active_lit(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut fixed_prec_rows,
-                                &mut active_lit_cache,
-                                settings.use_eager_chain_expansion,
-                                m.visit_id,
-                                tau_plus_1,
-                            );
-                            active_lits.push(lit);
-                        }
+                if let Some(conflicting_resources) = conflicts.get(&visit.resource_id) {
+                    for other_resource in conflicting_resources.iter().copied() {
+                        let t1_out = next_visit
+                            .map(|nx| occupations[nx].incumbent_time())
+                            .unwrap_or(t1_in + visit.travel_time);
 
-                        if is_scamo_eligible {
-                            // SCAMO Phase 2: route eligible cliques through the
-                            // paper §3.1 SC AMO block (formulas 1–4 in full).
-                            // This is sound for DDD because each clique still
-                            // gets its own complete AMO block — we do NOT add
-                            // paper's connection clauses (those rely on the
-                            // anti-bandwidth sliding-window structure that
-                            // does not appear in our cliques).
-                            //
-                            // Practical effect vs. `add_hybrid_amo`:
-                            //   • size ≤ 5 cliques: SC instead of pairwise
-                            //     (more clauses, more aux vars, stronger
-                            //     unit-propagation potential)
-                            //   • size > 5 cliques: identical (both call SC)
-                            //
-                            // The register bits returned are not (yet) shared
-                            // with neighbouring cliques in the group; that is
-                            // a future optimisation requiring careful variable
-                            // ordering and a `..._with_prefix` SC variant.
-                            let _bits = encode_scamo_amo_block(&mut solver, &active_lits);
-                        } else {
-                            add_hybrid_amo(&mut solver, &active_lits, settings.use_sc_amo);
-                        }
-                    }
-                    n_conflict_constraints += 1;
-                    cliques_processed += 1;
-                }
-
-                let mut new_touched = Vec::new();
-                for (idx, visit_id) in touched_intervals.into_iter().enumerate() {
-                    if retain_touched[idx] {
-                        new_touched.push(visit_id);
-                    }
-                }
-                touched_intervals = new_touched;
-            } else {
-                let mut deconflicted_train_pairs: HashSet<(usize, usize)> = HashSet::new();
-
-                // Lite clique aggregation for the pair-based scan: each
-                // (resource, tau_plus_1) accumulates visits that ended up in a
-                // detected conflict. After the scan, cliques with ≥3 members
-                // are encoded as a single AMO over `active(v, tau_plus_1)`
-                // literals — opt-in via `use_touched_clique_amo`. This lets
-                // SC AMO encoding fire WITHOUT the heavier interval-
-                // graph clique-cover pass.
-                let mut touched_pair_cliques: HashMap<(usize, i32), HashSet<VisitId>> =
-                    HashMap::new();
-
-                // ───────── SCAMO encoding for pair-based branch ─────────
-                // When `use_scamo_encoding` is on, detect SCAMO-eligible
-                // clique groups and skip emitting the pair-based "delay one
-                // of them" clauses for pairs covered by an eligible clique;
-                // the post-retain SCAMO AMO block is the sole encoding for
-                // those pairs. When the flag is off, this branch falls back
-                // to the original pure pair-based path.
-                //
-                // Local 4-tuple to mirror the if-branch's `ActiveInterval`
-                // (lifted later when both branches share a helper).
-                #[derive(Clone, Copy)]
-                struct PbActive {
-                    visit_id: VisitId,
-                    train_idx: usize,
-                    start: i32,
-                    end: i32,
-                }
-
-                // Cliques eligible for SCAMO encoding. Filled when
-                // use_scamo_encoding is on, encoded after `retain` finishes.
-                let mut scamo_eligible_to_encode: Vec<(Vec<PbActive>, i32)> = Vec::new();
-
-                // Pairs covered by an eligible SCAMO clique — the pair-based
-                // retain closure skips emitting its "delay one of them"
-                // clause for these (the SCAMO AMO block emitted post-retain
-                // is the sole encoding for them). Empty when SCAMO is off.
-                let mut pair_skip_set: HashSet<(VisitId, VisitId)> = HashSet::new();
-
-                if settings.use_scamo_encoding {
-                    // Snapshot touched_intervals before retain mutates it;
-                    // SCAMO clique detection needs the full pre-retain set.
-                    let touched_set: HashSet<VisitId> =
-                        touched_intervals.iter().copied().collect();
-
-                    // Replicate the if-branch's relevant_resource_pairs
-                    // computation: any resource that conflicts with a
-                    // touched visit's resource (BTreeSet for deterministic
-                    // iteration order = reproducibility).
-                    let mut relevant_resource_pairs: BTreeSet<(usize, usize)> =
-                        BTreeSet::new();
-                    for &visit_id in touched_intervals.iter() {
-                        let (train_idx, visit_idx) = visits[visit_id];
-                        let resource =
-                            problem.trains[train_idx].visits[visit_idx].resource_id;
-                        if let Some(conflicting) = conflicts.get(&resource) {
-                            for &other in conflicting {
-                                if resource <= other {
-                                    relevant_resource_pairs.insert((resource, other));
-                                } else {
-                                    relevant_resource_pairs.insert((other, resource));
-                                }
-                            }
-                        }
-                    }
-
-                    // Build clique_candidates for the SCAMO detection pass.
-                    let mut clique_candidates: Vec<(
-                        i64,
-                        Vec<PbActive>,
-                        i32,
-                        usize,
-                        usize,
-                    )> = Vec::new();
-                    for (resource_a, resource_b) in relevant_resource_pairs.into_iter() {
-                        if resource_a >= resource_visits.len()
-                            || resource_b >= resource_visits.len()
-                            || resource_visits[resource_a].is_empty()
-                            || resource_visits[resource_b].is_empty()
-                        {
-                            continue;
-                        }
-                        let mut group_intervals: Vec<PbActive> = Vec::new();
-                        for &resource in [resource_a, resource_b].iter() {
-                            if resource >= resource_visits.len() {
+                        for other_visit in resource_visits[other_resource].iter().copied() {
+                            if usize::from(visit_id) == usize::from(other_visit) {
                                 continue;
                             }
-                            if resource == resource_b
-                                && resource_a == resource_b
-                                && !group_intervals.is_empty()
+
+                            let v2 = &occupations[other_visit];
+                            let t2_in = v2.incumbent_time();
+                            let (other_train_idx, other_visit_idx) = visits[other_visit];
+
+                            if other_train_idx == train_idx {
+                                continue;
+                            }
+
+                            let other_next_visit: Option<VisitId> = if other_visit_idx + 1
+                                < problem.trains[other_train_idx].visits.len()
                             {
-                                continue;
-                            }
-                            for &visit_id in &resource_visits[resource] {
-                                let (train_idx, visit_idx) = visits[visit_id];
-                                let start = occupations[visit_id].incumbent_time();
-                                let next_visit: Option<VisitId> = if visit_idx + 1
-                                    < problem.trains[train_idx].visits.len()
-                                {
-                                    Some((usize::from(visit_id) + 1).into())
-                                } else {
-                                    None
-                                };
-                                let end = next_visit
-                                    .map(|nx| occupations[nx].incumbent_time())
-                                    .unwrap_or(
-                                        start
-                                            + problem.trains[train_idx].visits[visit_idx]
-                                                .travel_time,
-                                    );
-                                if end <= start {
-                                    continue;
-                                }
-                                group_intervals.push(PbActive {
-                                    visit_id,
-                                    train_idx,
-                                    start,
-                                    end,
-                                });
-                            }
-                        }
-                        if group_intervals.len() < 2 {
-                            continue;
-                        }
-                        let mut taus: Vec<i32> =
-                            group_intervals.iter().map(|it| it.start).collect();
-                        taus.sort_unstable();
-                        taus.dedup();
-                        for tau in taus {
-                            let members: Vec<PbActive> = group_intervals
-                                .iter()
-                                .copied()
-                                .filter(|it| it.start <= tau && tau < it.end)
-                                .collect();
-                            if members.len() <= 1 {
-                                continue;
-                            }
-                            if !members.iter().any(|m| touched_set.contains(&m.visit_id)) {
-                                continue;
-                            }
-                            let mut trains_in_clique: HashSet<usize> = HashSet::new();
-                            for m in &members {
-                                trains_in_clique.insert(m.train_idx);
-                            }
-                            if trains_in_clique.len() <= 1 {
-                                continue;
-                            }
-                            let overlap_min_end =
-                                members.iter().map(|m| m.end).min().unwrap();
-                            let overlap_length = (overlap_min_end - tau).max(1) as i64;
-                            let severity = (members.len() as i64) * overlap_length;
-                            clique_candidates.push((
-                                severity, members, tau, resource_a, resource_b,
-                            ));
-                        }
-                    }
-                    // Severity sort to match if-branch ordering — also makes
-                    // pair_skip_set population deterministic.
-                    clique_candidates.sort_by(|a, b| b.0.cmp(&a.0));
-
-                    // ─── SCAMO eligibility detection (mirror of if-branch) ───
-                    const MIN_OVERLAP: usize = 1;
-                    const PHASE2_MIN_GROUP_SIZE: usize = 4;
-                    const PHASE2_MIN_OVERLAP: usize = 2;
-
-                    let mut by_pair: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
-                    for (idx, c) in clique_candidates.iter().enumerate() {
-                        by_pair.entry((c.3, c.4)).or_default().push(idx);
-                    }
-                    for indices in by_pair.values_mut() {
-                        indices.sort_by_key(|&i| clique_candidates[i].2);
-                    }
-
-                    let mut scamo_eligible: HashSet<usize> = HashSet::new();
-                    for indices in by_pair.values() {
-                        if indices.len() < 2 {
-                            continue;
-                        }
-                        let mut current_group: Vec<usize> = vec![indices[0]];
-                        let mut current_min_overlap = usize::MAX;
-                        for &next_idx in &indices[1..] {
-                            let prev_idx = *current_group.last().unwrap();
-                            let prev_set: HashSet<VisitId> = clique_candidates[prev_idx]
-                                .1
-                                .iter()
-                                .map(|m| m.visit_id)
-                                .collect();
-                            let next_set: HashSet<VisitId> = clique_candidates[next_idx]
-                                .1
-                                .iter()
-                                .map(|m| m.visit_id)
-                                .collect();
-                            let overlap = prev_set.intersection(&next_set).count();
-                            if overlap >= MIN_OVERLAP {
-                                current_group.push(next_idx);
-                                current_min_overlap = current_min_overlap.min(overlap);
+                                Some((usize::from(other_visit) + 1).into())
                             } else {
-                                if current_group.len() >= PHASE2_MIN_GROUP_SIZE
-                                    && current_min_overlap >= PHASE2_MIN_OVERLAP
-                                {
-                                    for &i in &current_group {
-                                        scamo_eligible.insert(i);
-                                    }
-                                }
-                                current_group = vec![next_idx];
-                                current_min_overlap = usize::MAX;
+                                None
+                            };
+
+                            let t2_out = other_next_visit
+                                .map(|v| occupations[v].incumbent_time())
+                                .unwrap_or_else(|| {
+                                    let other_v =
+                                        problem.trains[other_train_idx].visits[other_visit_idx];
+                                    t2_in + other_v.travel_time
+                                });
+
+                            if t1_out <= t2_in || t2_out <= t1_in {
+                                continue;
                             }
-                        }
-                        if current_group.len() >= PHASE2_MIN_GROUP_SIZE
-                            && current_min_overlap >= PHASE2_MIN_OVERLAP
-                        {
-                            for &i in &current_group {
-                                scamo_eligible.insert(i);
+
+                            if !deconflicted_train_pairs.insert((train_idx, other_train_idx))
+                                || !deconflicted_train_pairs
+                                    .insert((other_train_idx, train_idx))
+                            {
+                                retain = true;
+                                continue;
                             }
-                        }
-                    }
 
-                    // Stash eligible clique data for post-retain encoding
-                    // and populate pair_skip_set so the pair-based loop
-                    // skips emitting redundant clauses for these pairs.
-                    for idx in &scamo_eligible {
-                        let (_severity, members, _tau, _, _) = &clique_candidates[*idx];
-                        let tau_plus_1 =
-                            members.iter().map(|m| m.end).min().unwrap();
-                        for i in 0..members.len() {
-                            for j in (i + 1)..members.len() {
-                                let a = members[i].visit_id;
-                                let b = members[j].visit_id;
-                                let (lo, hi) = if a.0 <= b.0 { (a, b) } else { (b, a) };
-                                pair_skip_set.insert((lo, hi));
+                            found_resource_conflict = true;
+                            stats.n_conflict += 1;
+
+                            let (delay_t2, t2_is_new) =
+                                occupations[other_visit].time_point(&mut solver, t1_out);
+                            let (delay_t1, t1_is_new) =
+                                occupations[visit_id].time_point(&mut solver, t2_out);
+
+                            if t1_is_new {
+                                new_time_points.push((visit_id, delay_t1, t2_out));
                             }
-                        }
-                        scamo_eligible_to_encode.push((members.clone(), tau_plus_1));
-                    }
-                }
-                // ──────────────────────────────────────────────────────
+                            if t2_is_new {
+                                new_time_points.push((other_visit, delay_t2, t1_out));
+                            }
 
-                touched_intervals.retain(|visit_id| {
-                    let visit_id = *visit_id;
-                    let (train_idx, visit_idx) = visits[visit_id];
-                    let next_visit: Option<VisitId> =
-                        if visit_idx + 1 < problem.trains[train_idx].visits.len() {
-                            Some((usize::from(visit_id) + 1).into())
-                        } else {
-                            None
-                        };
-
-                    let t1_in = occupations[visit_id].incumbent_time();
-                    let visit = problem.trains[train_idx].visits[visit_idx];
-                    let mut retain = false;
-
-                    if let Some(conflicting_resources) = conflicts.get(&visit.resource_id) {
-                        for other_resource in conflicting_resources.iter().copied() {
-                            let t1_out = next_visit
-                                .map(|nx| occupations[nx].incumbent_time())
-                                .unwrap_or(t1_in + visit.travel_time);
-
-                            for other_visit in resource_visits[other_resource].iter().copied() {
-                                if usize::from(visit_id) == usize::from(other_visit) {
-                                    continue;
-                                }
-
-                                let v2 = &occupations[other_visit];
-                                let t2_in = v2.incumbent_time();
-                                let (other_train_idx, other_visit_idx) = visits[other_visit];
-
-                                if other_train_idx == train_idx {
-                                    continue;
-                                }
-
-                                let other_next_visit: Option<VisitId> = if other_visit_idx + 1
-                                    < problem.trains[other_train_idx].visits.len()
-                                {
-                                    Some((usize::from(other_visit) + 1).into())
-                                } else {
-                                    None
-                                };
-
-                                let t2_out = other_next_visit
-                                    .map(|v| occupations[v].incumbent_time())
-                                    .unwrap_or_else(|| {
-                                        let other_v =
-                                            problem.trains[other_train_idx].visits[other_visit_idx];
-                                        t2_in + other_v.travel_time
-                                    });
-
-                                if t1_out <= t2_in || t2_out <= t1_in {
-                                    continue;
-                                }
-
-                                if !deconflicted_train_pairs.insert((train_idx, other_train_idx))
-                                    || !deconflicted_train_pairs
-                                        .insert((other_train_idx, train_idx))
-                                {
-                                    retain = true;
-                                    continue;
-                                }
-
-                                // SCAMO REPLACE: when this pair is covered
-                                // by an eligible SCAMO clique, the post-retain
-                                // SCAMO AMO block is the sole encoding —
-                                // skip the pair-based "delay one of them"
-                                // clause. Gated on `use_scamo_encoding` so
-                                // the per-pair (lo,hi) compute + HashSet
-                                // lookup don't run at all when SCAMO is off
-                                // (matches ladder's per-pair cost exactly).
-                                if settings.use_scamo_encoding {
-                                    let (lo, hi) = if visit_id.0 <= other_visit.0 {
-                                        (visit_id, other_visit)
-                                    } else {
-                                        (other_visit, visit_id)
-                                    };
-                                    if pair_skip_set.contains(&(lo, hi)) {
-                                        found_resource_conflict = true;
-                                        stats.n_conflict += 1;
-                                        retain = true;
-                                        continue;
-                                    }
-                                }
-
-                                found_resource_conflict = true;
-                                stats.n_conflict += 1;
-
-                                let (delay_t2, t2_is_new) =
-                                    occupations[other_visit].time_point(&mut solver, t1_out);
-                                let (delay_t1, t1_is_new) =
-                                    occupations[visit_id].time_point(&mut solver, t2_out);
-
-                                if t1_is_new {
-                                    new_time_points.push((visit_id, delay_t1, t2_out));
-                                }
-                                if t2_is_new {
-                                    new_time_points.push((other_visit, delay_t2, t1_out));
-                                }
-
-                                // Eager SC-style precedence propagation: pre-emptively add a
-                                // fixed-precedence row at the new time point (delay_t1, delay_t2)
-                                // for the train's NEXT visit, propagating travel time forward.
-                                //
-                                // Gated on `use_eager_chain_expansion` so that this entire block
-                                // is a no-op when the flag is OFF — that yields semantics
-                                // equivalent to `maxsat_ladder.rs` (which only enforces travel
-                                // time lazily in the dedicated travel-time-conflict branch above).
-                                //
-                                // With the flag ON we keep the previous eager behaviour: better
-                                // unit propagation, but +50–70% more time points per benchmark
-                                // (see sc-vs-ladder analysis).
-                                if settings.use_eager_chain_expansion {
-                                    let _ = add_fixed_precedence_row(
-                                        &mut solver,
-                                        problem,
-                                        &visits,
-                                        &mut occupations,
-                                        &mut new_time_points,
-                                        &mut fixed_prec_rows,
-                                        visit_id,
-                                        delay_t1,
-                                        t2_out,
-                                        settings.use_eager_chain_expansion,
-                                    );
-
-                                    let _ = add_fixed_precedence_row(
-                                        &mut solver,
-                                        problem,
-                                        &visits,
-                                        &mut occupations,
-                                        &mut new_time_points,
-                                        &mut fixed_prec_rows,
-                                        other_visit,
-                                        delay_t2,
-                                        t1_out,
-                                        settings.use_eager_chain_expansion,
-                                    );
-                                }
-
-                                let t1_out_lit = next_visit
-                                    .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
-                                    .unwrap_or_else(|| true.into());
-                                let t2_out_lit = other_next_visit
-                                    .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
-                                    .unwrap_or_else(|| true.into());
-
-                                n_conflict_constraints += 1;
-                                SatInstance::add_clause(
+                            // Eager SC-style precedence propagation: pre-emptively add a
+                            // fixed-precedence row at the new time point (delay_t1, delay_t2)
+                            // for the train's NEXT visit, propagating travel time forward.
+                            //
+                            // Gated on `use_eager_chain_expansion` so that this entire block
+                            // is a no-op when the flag is OFF — that yields semantics
+                            // equivalent to `maxsat_ladder.rs` (which only enforces travel
+                            // time lazily in the dedicated travel-time-conflict branch above).
+                            //
+                            // With the flag ON we keep the previous eager behaviour: better
+                            // unit propagation, but +50–70% more time points per benchmark
+                            // (see sc-vs-ladder analysis).
+                            if settings.use_eager_chain_expansion {
+                                let _ = add_fixed_precedence_row(
                                     &mut solver,
-                                    vec![!t1_out_lit, !t2_out_lit, delay_t1, delay_t2],
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut fixed_prec_rows,
+                                    visit_id,
+                                    delay_t1,
+                                    t2_out,
+                                    settings.use_eager_chain_expansion,
                                 );
 
-                                // Touched-clique-AMO aggregation: record
-                                // both visits at the (resource, tau_plus_1)
-                                // of their overlap. Only meaningful for
-                                // self-conflicts (both on same resource);
-                                // cross-resource conflicts skipped.
-                                if settings.use_touched_clique_amo
-                                    && visit.resource_id == other_resource
-                                {
-                                    let tau_plus_1 = t1_out.min(t2_out);
-                                    let entry = touched_pair_cliques
-                                        .entry((other_resource, tau_plus_1))
-                                        .or_default();
-                                    entry.insert(visit_id);
-                                    entry.insert(other_visit);
-                                }
-
-                                retain = true;
+                                let _ = add_fixed_precedence_row(
+                                    &mut solver,
+                                    problem,
+                                    &visits,
+                                    &mut occupations,
+                                    &mut new_time_points,
+                                    &mut fixed_prec_rows,
+                                    other_visit,
+                                    delay_t2,
+                                    t1_out,
+                                    settings.use_eager_chain_expansion,
+                                );
                             }
-                        }
-                    }
-                    retain
-                });
 
-                // ───────── Touched-clique AMO (post-retain) ─────────
-                // For each (resource, tau_plus_1) that accumulated ≥ 3
-                // visits during the pair-based scan, emit a single AMO
-                // over their `active(v, tau_plus_1)` literals. Choice of
-                // pairwise vs SC encoding follows `use_sc_amo`.
-                if settings.use_touched_clique_amo {
-                    let mut active_lit_cache_tcamo: HashMap<(VisitId, i32), Bool<L>> =
-                        HashMap::new();
-                    let entries: Vec<((usize, i32), HashSet<VisitId>)> =
-                        touched_pair_cliques.into_iter().collect();
-                    for ((_, tau_plus_1), visit_set) in entries {
-                        if visit_set.len() < 3 {
-                            continue;
-                        }
-                        let mut visits_sorted: Vec<VisitId> =
-                            visit_set.into_iter().collect();
-                        visits_sorted.sort_by_key(|v| v.0);
-                        if !clique_amo_encoded.insert(visits_sorted.clone()) {
-                            continue;
-                        }
-                        let mut active_lits: Vec<Bool<L>> =
-                            Vec::with_capacity(visits_sorted.len());
-                        for &v in &visits_sorted {
-                            let lit = build_active_lit(
+                            let t1_out_lit = next_visit
+                                .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
+                                .unwrap_or_else(|| true.into());
+                            let t2_out_lit = other_next_visit
+                                .map(|v| occupations[v].delays[occupations[v].incumbent_idx].0)
+                                .unwrap_or_else(|| true.into());
+
+                            n_conflict_constraints += 1;
+                            SatInstance::add_clause(
                                 &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut fixed_prec_rows,
-                                &mut active_lit_cache_tcamo,
-                                settings.use_eager_chain_expansion,
-                                v,
-                                tau_plus_1,
+                                vec![!t1_out_lit, !t2_out_lit, delay_t1, delay_t2],
                             );
-                            active_lits.push(lit);
+
+                            // Touched-clique-AMO aggregation: record
+                            // both visits at the (resource, tau_plus_1)
+                            // of their overlap. Only meaningful for
+                            // self-conflicts (both on same resource);
+                            // cross-resource conflicts skipped.
+                            if settings.use_touched_clique_amo
+                                && visit.resource_id == other_resource
+                            {
+                                let tau_plus_1 = t1_out.min(t2_out);
+                                let entry = touched_pair_cliques
+                                    .entry((other_resource, tau_plus_1))
+                                    .or_default();
+                                entry.insert(visit_id);
+                                entry.insert(other_visit);
+                            }
+
+                            retain = true;
                         }
-                        add_hybrid_amo(&mut solver, &active_lits, settings.use_sc_amo);
-                        n_conflict_constraints += 1;
                     }
                 }
+                retain
+            });
 
-                // ───────── SCAMO encoding (post-retain) ─────────
-                // After the pair-based loop emits its "delay one of them"
-                // clauses for non-skipped pairs, emit the paper §3.1 SC
-                // AMO block for each SCAMO-eligible clique. Because the
-                // pair-based loop skipped pairs covered by an eligible
-                // clique (pair_skip_set), the AMO block is the sole
-                // encoding for those pairs.
-                //
-                // Per-iteration cache for `active_lit` so visits shared
-                // across multiple eligible cliques only emit the Tseitin
-                // definition once per (visit, τ).
-                if settings.use_scamo_encoding && !scamo_eligible_to_encode.is_empty() {
-                    let mut active_lit_cache_pb: HashMap<(VisitId, i32), Bool<L>> =
-                        HashMap::new();
-                    for (members, tau_plus_1) in &scamo_eligible_to_encode {
-                        let mut active_lits: Vec<Bool<L>> =
-                            Vec::with_capacity(members.len());
-                        for m in members {
-                            let lit = build_active_lit(
-                                &mut solver,
-                                problem,
-                                &visits,
-                                &mut occupations,
-                                &mut new_time_points,
-                                &mut fixed_prec_rows,
-                                &mut active_lit_cache_pb,
-                                settings.use_eager_chain_expansion,
-                                m.visit_id,
-                                *tau_plus_1,
-                            );
-                            active_lits.push(lit);
-                        }
-                        let _bits = encode_scamo_amo_block(&mut solver, &active_lits);
-                        n_conflict_constraints += 1;
+            // ───────── Touched-clique AMO (post-retain) ─────────
+            // For each (resource, tau_plus_1) that accumulated ≥ 3
+            // visits during the pair-based scan, emit a single AMO
+            // over their `active(v, tau_plus_1)` literals. Choice of
+            // pairwise vs SC encoding follows `use_sc_amo`.
+            if settings.use_touched_clique_amo {
+                let mut active_lit_cache_tcamo: HashMap<(VisitId, i32), Bool<L>> =
+                    HashMap::new();
+                let entries: Vec<((usize, i32), HashSet<VisitId>)> =
+                    touched_pair_cliques.into_iter().collect();
+                for ((_, tau_plus_1), visit_set) in entries {
+                    if visit_set.len() < 3 {
+                        continue;
                     }
+                    let mut visits_sorted: Vec<VisitId> =
+                        visit_set.into_iter().collect();
+                    visits_sorted.sort_by_key(|v| v.0);
+                    if !clique_amo_encoded.insert(visits_sorted.clone()) {
+                        continue;
+                    }
+                    let mut active_lits: Vec<Bool<L>> =
+                        Vec::with_capacity(visits_sorted.len());
+                    for &v in &visits_sorted {
+                        let lit = build_active_lit(
+                            &mut solver,
+                            problem,
+                            &visits,
+                            &mut occupations,
+                            &mut new_time_points,
+                            &mut fixed_prec_rows,
+                            &mut active_lit_cache_tcamo,
+                            settings.use_eager_chain_expansion,
+                            v,
+                            tau_plus_1,
+                        );
+                        active_lits.push(lit);
+                    }
+                    add_hybrid_amo(&mut solver, &active_lits, settings.use_sc_amo);
+                    n_conflict_constraints += 1;
                 }
-                // ──────────────────────────────────────────────────────
             }
 
-            // touched_intervals.clear();
-            // assert!(touched_intervals.is_empty());
-            // }
 
+            // If UNSAT, add conflict-graph-based constraints, optimal check
             let iterationtype = if found_travel_time_conflict && found_resource_conflict {
                 IterationType::TravelAndResourceConflict
             } else if found_travel_time_conflict {
                 IterationType::TravelTimeConflict
             } else if found_resource_conflict {
-                // println!("Iteration {}", iteration);
                 IterationType::ResourceConflict
             } else {
                 IterationType::Solution
@@ -1761,11 +954,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 let trains = if !USE_LP_MINIMIZE {
                     extract_solution(problem, &occupations)
                 } else {
-                    // let p = priorities
-                    //     .into_iter()
-                    //     .map(|(a, b)| (visits[a], visits[b]))
-                    //     .collect();
-                    // minimize::minimize_solution(env, problem, p)?
                     panic!()
                 };
 
@@ -1827,24 +1015,17 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 return Ok((trains, stats));
             }
         }
+
+        // Add new time points and their costs to the solver.
         for (visit, new_timepoint_var, new_t) in new_time_points.drain(..) {
             n_timepoints += 1;
             let (train_idx, visit_idx) = visits[visit];
-            // let resource = problem.trains[train_idx].visits[visit_idx].resource_id;
 
             let new_timepoint_cost =
                 problem.trains[train_idx].visit_delay_cost(delay_cost_type, visit_idx, new_t);
 
             if new_timepoint_cost > 0 {
-                // println!(
-                //     "new var for t{} v{} t{} cost{}",
-                //     train_idx, visit_idx, new_t, new_timepoint_cost
-                // );
 
-                // let var_name = format!(
-                //     "t{}v{}t{}cost{}",
-                //     train_idx, visit_idx, new_t, new_timepoint_cost
-                // );
 
                 const USE_COST_TREE: bool = true;
                 if !USE_COST_TREE {
@@ -1858,10 +1039,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         assert!(cost + 1 == occupations[visit].cost.len());
 
                         soft_constraints.insert(!next_cost_var, (Soft::Primary, 1, 1));
-                        // println!(
-                        //     "Extending t{}v{} to cost {} {:?}",
-                        //     train_idx, visit_idx, cost, next_cost_var
-                        // );
                     }
 
                     SatInstance::add_clause(
@@ -1872,16 +1049,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         ],
                     );
 
-                    // println!("  highest cost {}", occupations[visit].cost.len() - 1);
                 } else {
-                    // if let Some((weight, cost_var)) = occupations[visit].cost_tree.add_cost(
-                    //     &mut solver,
-                    //     new_timepoint_var,
-                    //     new_timepoint_cost,
-                    // ) {
-                    //     assert!(weight > 0);
-                    //     soft_constraints.insert(!cost_var, (Soft::Delay, weight, weight));
-                    // }
 
                     // Direct insertion in callback — no Vec buffering overhead.
                     // Matches the ladder (non-SC) pattern for lower allocation cost.
@@ -1899,40 +1067,10 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
             // set the cost for this new time point.
 
-            // WATCH.with(|x| {
-            //     if *x.borrow() == Some((train_idx, visit_idx)) {
-            // println!(
-            //     "Soft constraint for t{}-v{}-r{} t{} cost{} lit{:?}",
-            //     train_idx, visit_idx, resource, new_t, new_var_cost, new_var
-            // );
-            // println!(
-            //     "   new var implies cost {}=>{:?}",
-            //     new_var_cost, occupations[visit].cost[new_var_cost]
-            // );
-            //     }
-            // });
-            // println!(
-            //     "Soft constraint for t{}-v{}-r{} t{} cost{} lit{:?}",
-            //     train_idx, visit_idx, resource, new_t, new_var_cost, new_var
-            // );
-            // println!(
-            //     "   new var implies cost {}=>{:?}",
-            //     new_var_cost, occupations[visit].cost[new_var_cost]
-            // );
-            // SatInstance::add_clause(
-            //     &mut solver,
-            //     vec![!new_var, occupations[visit].cost[new_var_cost]],
-            // );
         }
 
-        // Lazy/incremental assumption set, matching `maxsat_ladder`:
-        // start with the top-20 highest-weight soft constraints and grow by
-        // 20 each time the SAT solver returns SAT with `n_assumps <
-        // soft_constraints.len()`. This is empirically much faster than
-        // feeding the solver every soft assumption at once — especially on
-        // `Continuous` where `soft_constraints` can hold hundreds of cost
-        // variables. The `Sat ... if n_assumps < soft_constraints.len()`
-        // arm below grows `n_assumps` until a real core is hit.
+        //Solve
+        //Build asssumption
         let mut n_assumps = 20;
         let mut assumptions = soft_constraints
             .iter()
@@ -1946,6 +1084,8 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             n_timepoints,
             n_conflict_constraints
         );
+
+        //grow assumptions
         let core = loop {
             let solve_start = Instant::now();
             let result = {
@@ -1957,7 +1097,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             };
             solver_time += solve_start.elapsed();
 
-            // println!("solving done");
+            //Update incumbent
             match result {
                 satcoder::SatResultWithCore::Sat(_) if n_assumps < soft_constraints.len() => {
                     n_assumps += 20;
@@ -1968,7 +1108,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                     let _p = hprof::enter("update times");
 
                     for (visit, this_occ) in occupations.iter_mut_enumerated() {
-                        // let old_time = this_occ.incumbent_time();
                         let mut touched = false;
 
                         while model.value(&this_occ.delays[this_occ.incumbent_idx + 1].0) {
@@ -1981,24 +1120,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         }
                         let (_train_idx, visit_idx) = visits[visit];
 
-                        // let resource = problem.trains[train_idx].visits[visit_idx].resource_id;
-                        // let new_time = this_occ.incumbent_time();
 
-                        // WATCH.with(|x| {
-                        //     if *x.borrow() == Some((train_idx, visit_idx))  && touched {
-                        //         println!("Delays {:?}", this_occ.delays);
-                        //         println!(
-                        //             "Updated t{}-v{}-r{}  t={}-->{}",
-                        //             train_idx, visit_idx, resource, old_time, new_time
-                        //         );
-                        //     }
-                        // });
 
                         if touched {
-                            // println!(
-                            //     "Updated t{}-v{}-r{}  t={}-->{}",
-                            //     train_idx, visit_idx, resource, old_time, new_time
-                            // );
 
                             // We are really interested not in the visits, but the resource occupation
                             // intervals. Therefore, also the previous visit has been touched by this visit.
@@ -2011,17 +1135,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                             touched_intervals.push(visit);
                         }
 
-                        // let cost = this_occ
-                        //     .cost
-                        //     .iter()
-                        //     .map(|c| if model.value(c) { 1 } else { 0 })
-                        //     .sum::<isize>()
-                        //     - 1;
-                        // if cost > 0 {
-                        //     // println!("t{}-v{}  cost={}", train_idx, visit_idx, cost);
-                        // }
                     }
 
+                    //Local Minimization: Optimize incumbent solution by trying to move each visit earlier as much as possible
                     const USE_LOCAL_MINIMIZE: bool = true;
                     if USE_LOCAL_MINIMIZE {
                         let mut last_mod = 0;
@@ -2030,7 +1146,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         assert!(visits.len() == occupations.len());
                         while last_mod < occs_len {
                             let mut touched = false;
-                            // println!("i = {} (l={})",i, visits.len());
 
                             let visit_id = VisitId(i % occs_len as u32);
                             while occupations[visit_id].incumbent_idx > 0 {
@@ -2124,7 +1239,6 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                         });
 
                                 if can_reduce {
-                                    // println!("REDUCE {} {} {}", train_idx, visit_idx, occupations[visit_id].incumbent_time());
                                     occupations[visit_id].incumbent_idx -= 1;
                                     touched = true;
                                     last_mod = 0;
@@ -2150,22 +1264,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                         }
                     }
 
-                    // println!(
-                    //     "Touched {}/{} occupations",
-                    //     touched_intervals.len(),
-                    //     occupations.len()
-                    // );
 
-                    // priorities = conflict_vars
-                    //     .iter()
-                    //     .filter_map(|(pair, l)| {
-                    //         let has_choice = model.value(l);
-                    //         let has_time = occupations[pair.0].incumbent_time()
-                    //             < occupations[pair.1].incumbent_time();
-                    //         (has_choice && has_time).then(|| *pair)
-                    //     })
-                    //     .collect::<Vec<_>>();
-                    // println!("Pri {:?}", priorities);
 
                     debug_out(DebugInfo {
                         iteration,
@@ -2175,6 +1274,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
                     break None;
                 }
+
                 satcoder::SatResultWithCore::Unsat(core) => {
                     is_sat = false;
                     stats.n_unsat += 1;
@@ -2183,10 +1283,9 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
             }
         };
 
+        //Core handling RC2
         if let Some(core) = core {
             let _p = hprof::enter("treat core");
-            // println!("Got core length {}", core.len());
-            // Do weighted RC2
 
             if core.len() == 0 {
                 // SC-specific fallback: when the precedence graph is OFF but
@@ -2197,9 +1296,7 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 // Pure-ladder mode (all SC features off) skips this branch
                 // entirely so behaviour matches `maxsat_ladder.rs` exactly.
                 let any_other_sc_feature = settings.use_eager_chain_expansion
-                    || settings.use_interval_graph_conflicts
-                    || settings.use_touched_clique_amo
-                    || settings.use_scamo_encoding;
+                    || settings.use_touched_clique_amo;
                 if !settings.use_precedence_graph && any_other_sc_feature {
                     if let Some((ub_cost, ub_sol)) = best_heur.as_ref() {
                         if injected_heuristic_cost != Some(*ub_cost) {
@@ -2224,70 +1321,39 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
 
             let core = core.iter().map(|c| Bool::Lit(*c)).collect::<Vec<_>>();
 
-            // println!("Core size {}", core.len());
-            // // *core_sizes.entry(core.len()).or_default() += 1;
-            // trim_core(&mut core, &mut solver);
-            // minimize_core(&mut core, &mut solver);
-            // println!("Post core size {}", core.len());
 
-            // *processed_core_sizes.entry(core.len()).or_default() += 1;
-            // println!("  pre sizes {:?}", core_sizes);
-            // println!("  post sizes {:?}", processed_core_sizes);
             *iteration_types.entry(IterationType::Objective).or_default() += 1;
             debug_actions.push(SolverAction::Core(core.len()));
 
             let min_weight = core.iter().map(|c| soft_constraints[c].1).min().unwrap();
-            // let max_weight = core.iter().map(|c| soft_constraints[c].1).max().unwrap();
             assert!(min_weight >= 1);
 
-            // println!("Core sz{} weight range {} -- {} assumps {}/{}",  core.len(), min_weight, max_weight, n_assumps, soft_constraints.len());
 
             for c in core.iter() {
                 let (soft, cost, original_cost) = soft_constraints.remove(c).unwrap();
 
-                // let soft_str = match &soft {
-                //     Soft::Delay => "delay".to_string(),
-                //     Soft::Totalizer(_, b) => format!("totalizer w/bound={}", b),
-                // };
 
-                // println!("  * {:?} {:?} {} {}", c, cost_var_names.get(c), soft_str, cost);
 
                 assert!(cost >= min_weight);
                 let new_cost = cost - min_weight;
-                // assert!(new_cost >= 0);
-                // assert!(original_cost == 1);
                 match soft {
                     Soft::Primary => {
                         if new_cost > 0 {
-                            // println!("  ** Reducing delay cost from {} to {}", cost, new_cost);
                             soft_constraints.insert(*c, (Soft::Primary, new_cost, original_cost));
                         } else {
-                            // println!("  ** Removing delay cost {}", cost);
                         }
                         /* primary soft constraint, when we relax to new_cost=0 we are done */
                     }
                     Soft::Totalizer(mut tot, bound) => {
-                        // panic!();
                         if new_cost > 0 {
-                            // println!("  ** Reducing totalizer cost from {} to {}", cost, new_cost);
 
                             soft_constraints
                                 .insert(*c, (Soft::Totalizer(tot, bound), new_cost, original_cost));
                         } else {
-                            // panic!();
-                            // totalizer: need to extend its bound
                             let new_bound = bound + 1;
-                            // println!("Increasing totalizer bound to {}", new_bound);
                             tot.increase_bound(&mut solver, new_bound as u32);
                             if new_bound < tot.rhs().len() {
-                                // println!(
-                                //     "  ** Expanding totalizer original cost {}",
-                                //     original_cost
-                                // );
 
-                                // let mut name = cost_var_names[c].clone();
-                                // name.push_str(&format!("<={}", new_bound));
-                                // cost_var_names.insert(!tot.rhs()[new_bound], name);
 
                                 soft_constraints.insert(
                                     !tot.rhs()[new_bound], // tot <= 2, 3, 4...
@@ -2298,18 +1364,12 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                                     ),
                                 );
                             } else {
-                                // println!("  ** Totalizer fully expanded {}", cost);
                             }
                         }
                     }
                 }
             }
 
-            // println!(
-            //     "increasing cost from {} to {}",
-            //     total_cost,
-            //     total_cost + min_weight
-            // );
             total_cost += min_weight as i32;
             println!("    LB={}", total_cost);
 
@@ -2339,24 +1399,16 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 let tot = Totalizer::count(&mut solver, core.iter().map(|c| !*c), bound as u32);
                 assert!(bound < tot.rhs().len());
 
-                // let mut name = String::new();
-                // for c in core {
-                //     name.push_str(&format!("{}+", cost_var_names[&c]));
-                // }
-                // name.push_str(&format!("<={}", bound));
-                // cost_var_names.insert(!tot.rhs()[bound], name);
                 soft_constraints.insert(
                     !tot.rhs()[bound], // tot <= 1
                     (Soft::Totalizer(tot, bound), min_weight, min_weight),
                 );
             } else {
-                // panic!();
                 SatInstance::add_clause(&mut solver, vec![!core[0]]);
             }
         }
 
         iteration += 1;
-        // println!("iteration {}", iteration);
     }
 }
 
@@ -2521,13 +1573,9 @@ impl<L: satcoder::Lit> Occ<L> {
     }
 
     pub fn time_point(&mut self, solver: &mut impl SatInstance<L>, t: i32) -> (Bool<L>, bool) {
-        // The inserted time should be between the neighboring times.
-        // assert!(idx == 0 || self.delays[idx - 1].1 < t);
-        // assert!(idx == self.delays.len() || self.delays[idx + 1].1 > t);
 
         let idx = self.delays.partition_point(|(_, t0)| *t0 < t);
 
-        // println!("idx {} t {}   delays{:?}", idx, t, self.delays);
 
         assert!(idx > 0 || t == self.delays[0].1); // cannot insert before the earliest time.
         assert!(idx < self.delays.len()); // cannot insert after infinity.

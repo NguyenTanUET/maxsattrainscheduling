@@ -8,15 +8,12 @@
 //!                helpers `get_delay_lit_at` and `build_active_lit`).
 //! - [`precedence`] — Contribution 2: precedence-graph propagation
 //!                    (`add_fixed_precedence_row`, `propagate_precedence`).
-//! - [`experimental_approach`] — Alternatives that are **not** part of the
-//!                               thesis result (TRUE SCAMO encoding, etc.).
 //! - [`solve`] — main DDD loop, common types, cost-tree integration.
 //!
 //! The public API of this module is the `solve*` entry points and
 //! `MaxSatDddLadderScSettings`, both re-exported here for compatibility
 //! with the old flat-file layout.
 
-mod experimental_approach;
 mod precedence;
 mod sc_amo;
 mod settings;

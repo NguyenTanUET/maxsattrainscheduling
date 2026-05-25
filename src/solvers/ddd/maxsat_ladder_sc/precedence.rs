@@ -56,14 +56,7 @@ pub(super) fn add_fixed_precedence_row<L: satcoder::Lit>(
         // For chains > threshold: expand into per-step 3-literal clauses
         // so unit propagation reaches the far end in one shot rather than
         // multi-hop through the monotonicity ladder.
-        //
-        // NOTE: this is NOT the SC / Sequential Counter for Ladder AMO
-        // encoding (Truong/Kieu/To, ICAART 2025) — that is implemented in
-        // [`super::sc_amo::add_sc_amo`]. The legacy field name
-        // `use_sc_fixed_precedence` referred to this expansion heuristic,
-        // not the paper's SC; it has been renamed to
-        // `use_eager_chain_expansion` to avoid confusion.
-        const LADDER_SHORTCUT_THRESHOLD: usize = 5;
+        const LADDER_SHORTCUT_THRESHOLD: usize = 8;
         let idx = occupations[next_visit]
             .delays
             .partition_point(|(_, t0)| *t0 < req_t);

@@ -2588,6 +2588,7 @@ fn solve_native_debug_with_mode(
                 is_sat = true;
                 stats.n_sat += 1;
 
+                //Dedup touched_intervals.
                 let mut touched_seen = vec![false; occupations.len()];
                 if !touched_intervals.is_empty() {
                     let mut write = 0usize;

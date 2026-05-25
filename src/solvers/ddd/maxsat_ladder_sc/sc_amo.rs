@@ -1,8 +1,7 @@
 //! Sequential Counter (SC) AMO encoding for resource-conflict cliques —
 //! Contribution 1 of the thesis (Chapter 3 §3.2.1).
 //!
-//! `add_sc_amo` emits the SC AMO encoding (Sinz 2005 + Truong/Kieu/To
-//! ICAART 2025 four-formula form). `add_pairwise_amo` is the legacy
+//! `add_sc_amo` emits the SC AMO encoding (Sinz 2005). `add_pairwise_amo` is the legacy
 //! O(n²) pairwise encoding for comparison. `add_hybrid_amo` dispatches
 //! between the two based on clique size (`PAIRWISE_AMO_MAX_SIZE`).
 //!
@@ -21,8 +20,8 @@ use super::precedence::add_fixed_precedence_row;
 use super::settings::PAIRWISE_AMO_MAX_SIZE;
 use super::solve::{Occ, VisitId};
 
-/// Sequential Counter (SC) encoding for At-Most-One — Truong, Kieu, To
-/// (ICAART 2025), §3.1, four-formula form.
+/// Sequential Counter (SC) encoding for At-Most-One
+/// four-formula form.
 ///
 /// Auxiliary register bits `prefix[0..n-1]` where `prefix[i]` plays the role
 /// of `R_{i+1}` in the paper (R_1 ≡ x_1 implicitly via the `(¬lits[0] ∨

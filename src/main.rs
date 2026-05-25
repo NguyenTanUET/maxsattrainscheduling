@@ -58,35 +58,23 @@ struct Opt {
     #[structopt(long)]
     json_output: Option<String>,
 
-    /// Toggle within-train chain-propagation preprocessing in `sat_ddd*`
-    /// solvers (true/false).
+    /// Default true (lazy).
     #[structopt(long)]
     satddd_use_precedence_graph: Option<bool>,
 
-    /// `sat_ddd*` only: pre-allocate SAT vars + monotonicity clauses for
-    /// every cost-step threshold time at INIT (before iteration 1). On
-    /// stepped objectives (e.g. `InfiniteSteps180`) this expands to up to
-    /// 100 thresholds per visit. `Continuous` returns empty → no effect.
-    /// True/false. Default false (lazy).
+    /// Default false (lazy).
     #[structopt(long)]
     satddd_prealloc_cost_thresholds: Option<bool>,
 
-    /// `sat_ddd*` only: pre-seed fixed-precedence (travel-time) rows from
-    /// each visit's earliest time point at INIT. Reduces "travel-time
-    /// conflict" iterations at the cost of a larger initial CNF.
-    /// True/false. Default false (lazy).
+    /// Default false (lazy).
     #[structopt(long)]
     satddd_seed_precedence_from_earliest: Option<bool>,
 
-    /// `sat_ddd*` only: pre-seed pairwise AMO conflict clauses for visit
-    /// pairs whose earliest occupation intervals overlap by ≥ 180s. Adds
-    /// ~7 clauses + 2 aux vars per pair. True/false. Default false (lazy).
+    /// Default false (lazy).
     #[structopt(long)]
     satddd_seed_resource_conflicts: Option<bool>,
 
-    /// `sat_ddd*` only: enable SC (Sequential Counter) AMO encoding from
-    /// Truong/Kieu/To (ICAART 2025) for resource-clique AMOs of size > 5.
-    /// If false, AMOs always use pairwise. True/false. Default true.
+    /// Default true.
     #[structopt(long)]
     satddd_use_sc_amo: Option<bool>,
 
@@ -101,54 +89,23 @@ struct Opt {
     #[structopt(long)]
     maxsat_ladder_sc_use_precedence_graph: Option<bool>,
 
-    /// Toggle interval-graph conflict encoding in `maxsat_ddd_ladder_sc` (true/false).
-    #[structopt(long)]
-    maxsat_ladder_sc_use_interval_graph: Option<bool>,
-
-    /// Alias of `maxsat_ladder_sc_use_interval_graph`.
-    #[structopt(long)]
-    maxsat_ladder_sc_use_interval_tree: Option<bool>,
-
-    /// Within interval-graph clique-cover encoding, use SC Sequential
-    /// Counter AMO (Truong/Kieu/To ICAART 2025) for large cliques. If false,
-    /// keep pairwise AMO regardless of clique size. No effect when interval-
-    /// graph encoding is off. True/false. Default true.
+    /// Default true.
     #[structopt(long)]
     maxsat_ladder_sc_use_sc_amo: Option<bool>,
 
-    /// Lite clique-AMO aggregation for the pair-based conflict path. When on,
-    /// the pair scan also accumulates (resource, tau) → visit-set; cliques
-    /// of size ≥ 3 get a single AMO encoded after the scan. Effective only
-    /// when `--use-interval-graph false`. True/false. Default false.
+    /// Default false.
     #[structopt(long)]
     maxsat_ladder_sc_use_touched_clique_amo: Option<bool>,
 
-    /// **Experimental**: enable TRUE SCAMO encoding (Truong/Kieu/To, ICAART
-    /// 2025). Currently only Phase 1 (group detection + stats) is wired in;
-    /// the encoding itself still uses `add_hybrid_amo`. Use this to inspect
-    /// whether the staircase pattern is worth the rewrite.
-    #[structopt(long)]
-    maxsat_ladder_sc_use_scamo: Option<bool>,
-
-    /// Pre-seed precedence rows from each visit's earliest time point at
-    /// initialization. Eager: encodes the full forward travel-time chain
-    /// before iteration 1; reduces "travel-time conflict" iterations at the
-    /// cost of a larger initial CNF (more time points + cost variables).
-    /// Effective only when `--use-precedence-graph` or
-    /// `--use-eager-chain-expansion` is true. True/false. Default false.
+    /// Default false.
     #[structopt(long)]
     maxsat_ladder_sc_seed_from_earliest: Option<bool>,
 
-    /// Pre-allocate SAT vars + monotonicity clauses for every cost-step
-    /// threshold time at INIT (before iteration 1). For stepped objectives
-    /// (e.g. `InfiniteSteps180`) this can balloon the initial CNF — up to
-    /// 100 thresholds per visit. `Continuous` returns empty so the flag has
-    /// no effect. Match `maxsat_ladder` lazy behaviour with `false`.
-    /// True/false. Default false.
+    /// Default false.
     #[structopt(long)]
     maxsat_ladder_sc_prealloc_cost_thresholds: Option<bool>,
 
-    /// Objective encoding for `sat_ddd*` solvers: `scpb`, `totalizer`, or `bit_totalizer` (`nsc` accepted as alias).
+    /// Objective encoding for `sat_ddd*` solvers: `scpb`, `totalizer`, or `bit_totalizer`.
     #[structopt(long)]
     satddd_objective_encoding: Option<String>,
 }
@@ -458,10 +415,6 @@ fn main() {
         use_eager_chain_expansion: opt
             .maxsat_ladder_sc_use_eager_chain_expansion
             .unwrap_or(false),
-        use_interval_graph_conflicts: opt
-            .maxsat_ladder_sc_use_interval_tree
-            .or(opt.maxsat_ladder_sc_use_interval_graph)
-            .unwrap_or(false),
         use_sc_amo: opt.maxsat_ladder_sc_use_sc_amo.unwrap_or(true),
         use_touched_clique_amo: opt
             .maxsat_ladder_sc_use_touched_clique_amo
@@ -469,7 +422,6 @@ fn main() {
         seed_sc_from_earliest: opt
             .maxsat_ladder_sc_seed_from_earliest
             .unwrap_or(false),
-        use_scamo_encoding: opt.maxsat_ladder_sc_use_scamo.unwrap_or(false),
         prealloc_cost_thresholds: opt
             .maxsat_ladder_sc_prealloc_cost_thresholds
             .unwrap_or(false),
