@@ -105,5 +105,4 @@ flake.lock
 
 libipamir.a
 gurobi.log
-/quick_scripts
 quick_scripts/execution.txt
