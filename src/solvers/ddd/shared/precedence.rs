@@ -1,10 +1,9 @@
-//! Precedence preprocessing for TRP — Contribution 2 of the thesis
-//! (Chapter 3 §3.2.2).
+//! Precedence preprocessing for TRP — Contribution 2 of the thesis.
 //!
 //! [`chain_earliest`] — within-train chain propagation
 //! `est[v+1] = max(visit.earliest, est[v] + travel[v])`. Sound for all
 //! objectives; used by `incremental_sat`, `puresat`, and
-//! `maxsat_ladder_sc`. **This is the thesis' Contribution 2.**
+//! `maxsat_ladder_sc`.
 
 use crate::problem::Problem;
 
