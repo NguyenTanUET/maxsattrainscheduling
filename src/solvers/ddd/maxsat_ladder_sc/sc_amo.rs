@@ -1,13 +1,8 @@
 //! Sequential Counter (SC) AMO encoding for resource-conflict cliques —
-//! Contribution 1 of the thesis (Chapter 3 §3.2.1).
 //!
 //! `add_sc_amo` emits the SC AMO encoding (Sinz 2005). `add_pairwise_amo` is the legacy
 //! O(n²) pairwise encoding for comparison. `add_hybrid_amo` dispatches
 //! between the two based on clique size (`PAIRWISE_AMO_MAX_SIZE`).
-//!
-//! `get_delay_lit_at` and `build_active_lit` are the Tseitin helpers that
-//! materialise the per-visit indicator literals `x_v` over which the AMO
-//! is enforced (thesis Eq. eq:xv-cnf).
 
 use std::collections::{HashMap, HashSet};
 
@@ -22,22 +17,6 @@ use super::solve::{Occ, VisitId};
 
 /// Sequential Counter (SC) encoding for At-Most-One
 /// four-formula form.
-///
-/// Auxiliary register bits `prefix[0..n-1]` where `prefix[i]` plays the role
-/// of `R_{i+1}` in the paper (R_1 ≡ x_1 implicitly via the `(¬lits[0] ∨
-/// prefix[0])` clause we emit before the loop).
-///
-/// All four paper formulas are emitted:
-///   (1) x_j → R_j                           — `(¬lits[i] ∨ prefix[i])`
-///   (2) R_{j-1} → R_j                       — `(¬prefix[i-1] ∨ prefix[i])`
-///   (3) ¬x_j ∧ ¬R_{j-1} → ¬R_j              — `(lits[i] ∨ prefix[i-1] ∨ ¬prefix[i])`
-///   (4) x_j → ¬R_{j-1}                      — `(¬lits[i] ∨ ¬prefix[i-1])`
-///
-/// Formula (3) is the *downward* propagation (register stays false when no
-/// var has fired yet). Earlier versions of this file omitted it, which kept
-/// soundness for AMO but weakened unit propagation. The added clauses are
-/// O(n) and let CDCL conclude `prefix[i]` cannot be forced true unless some
-/// `lits[k≤i]` is.
 pub(super) fn add_sc_amo<L: satcoder::Lit>(solver: &mut impl SatInstance<L>, lits: &[Bool<L>]) {
     match lits.len() {
         0 | 1 => return,
@@ -200,25 +179,6 @@ pub(super) fn build_active_lit<L: satcoder::Lit>(
     };
 
     let active = solver.new_var();
-    // For AMO clique soundness we only need the CONVERSE direction:
-    //   (!delay_start ∧ delay_end) → active
-    // i.e. when a visit is genuinely occupying the resource at τ, its
-    // `active` literal must be true; the AMO over `active`s then forces
-    // all other actives in the clique to false, which (by their own
-    // converse clauses) constrains their delay literals correctly.
-    //
-    // The two forward clauses
-    //   active → !delay_start
-    //   active → delay_end
-    // make the encoding a full biconditional `active ↔ (!delay_start ∧ delay_end)`,
-    // giving the solver the ability to propagate from `active` back to
-    // delay literals. They are NOT required for soundness — a `true`
-    // assignment to `active` without the corresponding delay literals
-    // does not break AMO. They only help propagation strength.
-    //
-    // Toggle this const off to A/B-test whether the forward clauses are
-    // actually buying us search speedup or are over-tightening (extra
-    // propagation that pulls the solver down unhelpful branches).
     const ENCODE_ACTIVE_FORWARD_DIRECTION: bool = false;
     if ENCODE_ACTIVE_FORWARD_DIRECTION {
         // active → !delay_start

@@ -467,8 +467,10 @@ pub fn solve_debug_with_settings<L: satcoder::Lit + Copy + std::fmt::Debug + 'st
                 resource_visits.push(Vec::new());
             }
 
+            // (1.1)
             resource_visits[visit.resource_id].push(visit_id);
-
+            //
+            
             touched_intervals.push(visit_id);
             new_time_points.push((visit_id, true.into(), earliest));
 

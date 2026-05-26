@@ -1,4 +1,4 @@
-//! Precedence-graph preprocessing — Contribution 2 of the thesis (Chapter 3 §3.2.2).
+//! Precedence-graph preprocessing.
 //!
 //! `add_fixed_precedence_row` encodes one within-train travel-time
 //! implication `d^{i,r}(t) → d^{i,q}(t + l^{r}_i)` between two consecutive
@@ -34,19 +34,23 @@ pub(super) fn add_fixed_precedence_row<L: satcoder::Lit>(
         return None;
     }
 
+    //check if (v, t) is already added -> ignore
     let (train_idx, visit_idx) = visits[visit_id];
     if visit_idx + 1 >= problem.trains[train_idx].visits.len() {
         return None;
     }
 
+    //Skip last visit
     let travel = problem.trains[train_idx].visits[visit_idx].travel_time;
     let next_visit: VisitId = (usize::from(visit_id) + 1).into();
     let req_t = in_t + travel;
 
+    //calculate next visit
     let earliest_next = occupations[next_visit].delays[0].1;
     if req_t <= earliest_next {
         return Some((next_visit, true.into(), earliest_next));
     }
+
 
     let (req_var, is_new) = occupations[next_visit].time_point(solver, req_t);
     if use_eager_chain_expansion {
@@ -70,7 +74,7 @@ pub(super) fn add_fixed_precedence_row<L: satcoder::Lit>(
             solver.add_clause(vec![!in_var, req_var]);
         }
     } else {
-        // Plain encoding: a single 2-literal implication. Relies on the
+        // Plain encoding (3.14): a single 2-literal implication. Relies on the
         // monotonicity chain among delay literals (already established in
         // `Occ::time_point`) for correct forward propagation.
         solver.add_clause(vec![!in_var, req_var]);
