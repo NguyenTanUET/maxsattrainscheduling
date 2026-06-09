@@ -1,0 +1,63 @@
+
+Log started (V22.2.0.0) Tue Jun  9 08:33:13 2026
+
+New value for time limit in seconds: 120
+New value for default parallel thread count: 4
+New value for mixed integer optimality gap tolerance: 0.001
+New value for level of mixed integer node display: 2
+
+Problem 'results/InstanceB1_bigm_finsteps123.lp' read.
+Read time = 0.01 sec. (0.43 ticks)
+Version identifier: 22.2.0.0 | 2026-05-04 | 5dff98e58
+CPXPARAM_Threads                                 4
+CPXPARAM_TimeLimit                               120
+CPXPARAM_MIP_Tolerances_MIPGap                   0.001
+Tried aggregator 2 times.
+MIP Presolve eliminated 22 rows and 22 columns.
+MIP Presolve modified 33726 coefficients.
+Aggregator did 312 substitutions.
+Reduced MIP has 4388 rows, 2384 columns, and 12820 nonzeros.
+Reduced MIP has 2072 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.01 sec. (18.10 ticks)
+Found incumbent of value 54.000000 after 0.02 sec. (27.84 ticks)
+Probing time = 0.00 sec. (4.17 ticks)
+Tried aggregator 1 time.
+Detecting symmetries...
+MIP Presolve modified 12 coefficients.
+Reduced MIP has 4388 rows, 2384 columns, and 12820 nonzeros.
+Reduced MIP has 2072 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.00 sec. (7.18 ticks)
+Probing time = 0.00 sec. (3.87 ticks)
+Clique table members: 2223.
+MIP emphasis: balance optimality and feasibility.
+MIP search method: dynamic search.
+Parallel mode: deterministic, using up to 4 threads.
+Root relaxation solution time = 0.01 sec. (96.70 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                           54.0000        4.0000            92.59%
+*     0+    0                           48.0000        4.0000            91.67%
+      0     0        4.0000     3       48.0000        4.0000     1878   91.67%
+*     0+    0                            4.0000        4.0000             0.00%
+      0     0        cutoff              4.0000        4.0000     1878    0.00%
+Elapsed time = 0.06 sec. (155.90 ticks, tree = 0.01 MB, solutions = 3)
+
+Root node processing (before b&c):
+  Real time             =    0.06 sec. (156.10 ticks)
+Parallel b&c, 4 threads:
+  Real time             =    0.00 sec. (0.00 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    0.06 sec. (156.10 ticks)
+
+Solution pool: 3 solutions saved.
+
+MIP - Integer optimal solution:  Objective =  4.0000000000e+00
+Solution time =    0.06 sec.  Iterations = 1878  Nodes = 0
+Deterministic time = 156.10 ticks  (2578.55 ticks/sec)
+
+
+Incumbent solution written to file 'results/InstanceB1_bigm_finsteps123.sol'.

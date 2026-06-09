@@ -1,0 +1,82 @@
+
+Log started (V22.2.0.0) Tue Jun  9 08:33:03 2026
+
+New value for time limit in seconds: 120
+New value for default parallel thread count: 4
+New value for mixed integer optimality gap tolerance: 0.001
+New value for level of mixed integer node display: 2
+
+Problem 'results/InstanceA11_bigm_finsteps123.lp' read.
+Read time = 0.02 sec. (1.31 ticks)
+Version identifier: 22.2.0.0 | 2026-05-04 | 5dff98e58
+CPXPARAM_Threads                                 4
+CPXPARAM_TimeLimit                               120
+CPXPARAM_MIP_Tolerances_MIPGap                   0.001
+Tried aggregator 2 times.
+MIP Presolve eliminated 41 rows and 41 columns.
+MIP Presolve modified 144795 coefficients.
+Aggregator did 595 substitutions.
+Reduced MIP has 12968 rows, 6836 columns, and 38260 nonzeros.
+Reduced MIP has 6241 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.04 sec. (63.31 ticks)
+Found incumbent of value 90.000000 after 0.06 sec. (91.79 ticks)
+Probing time = 0.01 sec. (6.13 ticks)
+Tried aggregator 1 time.
+Detecting symmetries...
+MIP Presolve modified 89 coefficients.
+Reduced MIP has 12968 rows, 6836 columns, and 38260 nonzeros.
+Reduced MIP has 6241 binaries, 0 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.01 sec. (21.00 ticks)
+Probing time = 0.00 sec. (5.70 ticks)
+Clique table members: 2147.
+MIP emphasis: balance optimality and feasibility.
+MIP search method: dynamic search.
+Parallel mode: deterministic, using up to 4 threads.
+Root relaxation solution time = 0.09 sec. (750.88 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                           90.0000       11.0000            87.78%
+*     0+    0                           84.0000       11.0000            86.90%
+      0     0       11.0000    11       84.0000       11.0000     5764   86.90%
+      0     0       11.0849    31       84.0000      Cuts: 50     6025   86.80%
+      0     0       20.0001    16       84.0000     Cuts: 293     6163   76.19%
+*     0+    0                           32.0000       20.0001            37.50%
+      0     0       20.0046    18       32.0000     Cuts: 278     6223   37.49%
+      0     0       20.0077    21       32.0000      Cuts: 60     6242   37.48%
+*     0+    0                           30.0000       20.0077            33.31%
+*     0+    0                           28.0000       20.0077            28.54%
+      0     0       20.0101    25       28.0000      Cuts: 26     6284   28.54%
+Detecting symmetries...
+*     0+    0                           26.0000       20.0139            23.02%
+      0     0  -1.00000e+75     0       26.0000       20.0139     6284   23.02%
+Detecting symmetries...
+      0     2       20.0101    25       26.0000       20.0253     6284   22.98%
+Elapsed time = 0.46 sec. (1408.62 ticks, tree = 0.02 MB, solutions = 6)
+*    13+    3                           25.0000       20.0253            19.90%
+*    15+    3                           23.0000       20.0253            12.93%
+
+Clique cuts applied:  62
+Implied bound cuts applied:  61
+Flow cuts applied:  2
+Mixed integer rounding cuts applied:  140
+Gomory fractional cuts applied:  7
+
+Root node processing (before b&c):
+  Real time             =    0.44 sec. (1362.65 ticks)
+Parallel b&c, 4 threads:
+  Real time             =    0.08 sec. (150.69 ticks)
+  Sync time (average)   =    0.02 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    0.52 sec. (1513.33 ticks)
+
+Solution pool: 8 solutions saved.
+
+MIP - Integer optimal solution:  Objective =  2.3000000000e+01
+Solution time =    0.52 sec.  Iterations = 6605  Nodes = 35
+Deterministic time = 1513.36 ticks  (2903.01 ticks/sec)
+
+
+Incumbent solution written to file 'results/InstanceA11_bigm_finsteps123.sol'.

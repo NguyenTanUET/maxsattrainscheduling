@@ -132,6 +132,7 @@ pub(super) fn build_active_lit<L: satcoder::Lit>(
     visit_id: VisitId,
     tau_plus_1: i32,
 ) -> Bool<L> {
+    
     if let Some(&lit) = active_cache.get(&(visit_id, tau_plus_1)) {
         return lit;
     }

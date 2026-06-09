@@ -1,0 +1,26 @@
+Instance: ../instances/original/InstanceB9.txt
+Solver: bigm
+Cost type: finsteps123
+Timeout: 120s
+Threads: 4
+
+Build time: .338396971s
+Solve time: .025595574s
+
+Files:
+  LP: results/InstanceB9_bigm_finsteps123.lp
+  SOL: results/InstanceB9_bigm_finsteps123.sol
+  CPLEX log: results/InstanceB9_bigm_finsteps123.cplex.log
+
+Loading InstanceB9.txt...
+  Solver: bigm
+  Cost type: finsteps123
+  Solution file: results/InstanceB9_bigm_finsteps123.sol
+
+Parsed 368 variables
+
+=== RESULTS ===
+CPLEX objective: 7
+CPLEX status: integer optimal solution
+Verified cost: 7
+Valid: True (OK)
