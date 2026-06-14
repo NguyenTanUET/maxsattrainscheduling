@@ -123,6 +123,27 @@ END_SOLVE=$(date +%s.%N)
 SOLVE_TIME=$(echo "$END_SOLVE - $START_SOLVE" | bc -l)
 
 if [ ! -f "$SOL_FILE" ]; then
+    # Phân biệt CPLEX timeout-without-feasible (Error 1217) vs crash thực sự.
+    if grep -q "Time limit exceeded, no integer solution" "$CPLEX_LOG" 2>/dev/null; then
+        echo "CPLEX timeout without feasible integer solution."
+        cat > "$SUMMARY" <<EOF
+Instance: $INSTANCE
+Solver: $SOLVER
+Cost type: $COST_TYPE
+Timeout: ${TIMEOUT}s
+Threads: $THREADS
+
+Build time: ${BUILD_TIME}s
+Solve time: ${SOLVE_TIME}s
+
+CPLEX status: no_solution
+Verified cost: NA
+Valid: NA
+EOF
+        # Exit 0 để batch.sh nhận và ghi status=no_solution.
+        # Wrap script đọc Status: từ SUMMARY.
+        exit 0
+    fi
     echo "Error: .sol file not created. Check $CPLEX_LOG for details."
     exit 3
 fi

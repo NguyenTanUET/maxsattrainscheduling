@@ -93,8 +93,10 @@ fn main() {
         .to_string_lossy()
         .to_string();
 
-    let (lp_path, n_vars, n_constraints) = match solver.as_str() {
+    let (lp_path, stats) = match solver.as_str() {
         "bigm" => {
+            // BigM dùng lazy constraints (CPLEX LP Lazy Constraints section),
+            // tương đương Gurobi BigMLazy callback. Eager đã bỏ.
             let path = format!(
                 "{}/{}_bigm_{}.lp",
                 out_dir,
@@ -102,9 +104,9 @@ fn main() {
                 cost_str
             );
             let start = Instant::now();
-            let (v, c) = write_bigm_lp(&path, problem, cost_type);
+            let s = write_bigm_lp(&path, problem, cost_type);
             println!("  Build time: {:.2}s", start.elapsed().as_secs_f64());
-            (path, v, c)
+            (path, s)
         }
         "ti" => {
             let path = format!(
@@ -112,19 +114,45 @@ fn main() {
                 out_dir, stem, cost_str, interval, big_m_ti
             );
             let start = Instant::now();
-            let (v, c) = write_ti_lp(&path, problem, cost_type, interval, big_m_ti);
+            let s = write_ti_lp(&path, problem, cost_type, interval, big_m_ti);
             println!("  Build time: {:.2}s", start.elapsed().as_secs_f64());
-            (path, v, c)
+            (path, s)
         }
         _ => {
-            eprintln!("Unknown solver: {}. Use 'bigm' or 'ti'.", solver);
+            eprintln!("Unknown solver: {}. Use 'bigm' | 'ti'.", solver);
             std::process::exit(1);
         }
     };
 
-    println!("  Vars: {}", n_vars);
-    println!("  Constraints: {}", n_constraints);
+    // Compute problem-level stats for Gurobi-compatible CSV.
+    let n_trains = problem.trains.len();
+    let n_visit_conflict_pairs = visit_conflicts(problem).len();
+    let n_resource_conflicts = problem.conflicts.len();
+    let avg_tracks: f64 = if n_trains > 0 {
+        problem.trains.iter().map(|t| t.visits.len()).sum::<usize>() as f64
+            / n_trains as f64
+    } else {
+        0.0
+    };
+
+    println!("  Vars: {}", stats.n_vars);
+    println!("  Constraints: {}", stats.n_constraints);
+    println!("  Travel constraints: {}", stats.n_travel);
+    println!("  Resource constraints: {}", stats.n_resource);
+    println!("  Intervals: {}", stats.n_intervals);
+    println!("  Trains: {}", n_trains);
+    println!("  Visit conflict pairs: {}", n_visit_conflict_pairs);
+    println!("  Resource conflicts: {}", n_resource_conflicts);
+    println!("  Avg tracks: {:.4}", avg_tracks);
     println!("  -> {}", lp_path);
+}
+
+struct ExportStats {
+    n_vars: usize,
+    n_constraints: usize,
+    n_travel: usize,
+    n_resource: usize,
+    n_intervals: usize,
 }
 
 fn parse_cost_type(s: &str) -> Option<DelayCostType> {
@@ -150,12 +178,21 @@ fn write_bigm_lp(
     path: &str,
     problem: &Problem,
     cost_type: DelayCostType,
-) -> (usize, usize) {
+) -> ExportStats {
+    // BigM CPLEX: EAGER mode. Đã thử `Lazy Constraints` section nhưng
+    // CPLEX presolve interactions cho ra nghiệm vi phạm constraint
+    // (verified bằng InstanceB8 addtracktime: t_0_18=5524 > t_1_35=5518
+    // dù y_0_17_1_35=1 enforce t_0_18 <= t_1_35).
+    // Eager: tất cả 2*|pairs| BigM conflicts ở Subject To, CPLEX bắt buộc
+    // thoả mọi constraint trong LP relaxation -> correctness 100%.
+    let lazy_conflicts = false;
     let f = File::create(path).expect("create .lp");
     let mut w = BufWriter::new(f);
 
     let mut n_vars = 0usize;
     let mut n_constraints = 0usize;
+    let mut n_travel = 0usize;
+    let mut n_resource = 0usize;
 
     writeln!(w, "\\ TRP BigM MILP, exported by export_lp.rs").unwrap();
     writeln!(w, "Minimize").unwrap();
@@ -249,11 +286,13 @@ fn write_bigm_lp(
             .unwrap();
             c_idx += 1;
             n_constraints += 1;
+            n_travel += 1;
         }
     }
 
-    // ───── Conflict constraints (BigM) ─────
+    // ───── Conflict constraints (BigM) — buffer để có thể emit ở Subject To hoặc Lazy ─
     let pairs = visit_conflicts(problem);
+    let mut conflict_lines: Vec<String> = Vec::new();
     for ((t1, v1), (t2, v2)) in &pairs {
         if v1 + 1 >= problem.trains[*t1].visits.len() {
             continue;
@@ -261,35 +300,34 @@ fn write_bigm_lp(
         if v2 + 1 >= problem.trains[*t2].visits.len() {
             continue;
         }
-        // y=1: t1 first → t[t1][v1+1] - t[t2][v2] - M*(1-y) <= 0
-        //                → t[t1][v1+1] - t[t2][v2] + M*y <= M
-        writeln!(
-            w,
-            " c{}: t_{}_{} - t_{}_{} + {} y_{}_{}_{}_{} <= {}",
-            c_idx,
+        // y=1: t1 first
+        conflict_lines.push(format!(
+            " t_{}_{} - t_{}_{} + {} y_{}_{}_{}_{} <= {}",
             t1, v1 + 1,
             t2, v2,
             BIG_M,
             t1, v1, t2, v2,
             BIG_M,
-        )
-        .unwrap();
-        c_idx += 1;
-        n_constraints += 1;
-
-        // y=0: t2 first → t[t2][v2+1] - t[t1][v1] - M*y <= 0
-        writeln!(
-            w,
-            " c{}: t_{}_{} - t_{}_{} - {} y_{}_{}_{}_{} <= 0",
-            c_idx,
+        ));
+        n_resource += 1;
+        // y=0: t2 first
+        conflict_lines.push(format!(
+            " t_{}_{} - t_{}_{} - {} y_{}_{}_{}_{} <= 0",
             t2, v2 + 1,
             t1, v1,
             BIG_M,
             t1, v1, t2, v2,
-        )
-        .unwrap();
-        c_idx += 1;
-        n_constraints += 1;
+        ));
+        n_resource += 1;
+    }
+
+    // Eager: emit conflicts inline trong Subject To (trước cost).
+    if !lazy_conflicts {
+        for line in &conflict_lines {
+            writeln!(w, " c{}:{}", c_idx, line).unwrap();
+            c_idx += 1;
+            n_constraints += 1;
+        }
     }
 
     // ───── Cost variable constraints ─────
@@ -377,6 +415,18 @@ fn write_bigm_lp(
                     }
                 }
             }
+        }
+    }
+
+    // ───── Lazy Constraints section (CPLEX LP) ─────
+    // Section này phải đứng SAU Subject To, TRƯỚC Bounds.
+    if lazy_conflicts && !conflict_lines.is_empty() {
+        writeln!(w, "Lazy Constraints").unwrap();
+        let mut lc_idx = 0usize;
+        for line in &conflict_lines {
+            writeln!(w, " lc{}:{}", lc_idx, line).unwrap();
+            lc_idx += 1;
+            n_constraints += 1;
         }
     }
 
@@ -469,7 +519,13 @@ fn write_bigm_lp(
 
     writeln!(w, "End").unwrap();
     let _ = cost_var_count;
-    (n_vars, n_constraints)
+    ExportStats {
+        n_vars,
+        n_constraints,
+        n_travel,
+        n_resource,
+        n_intervals: 0,
+    }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -481,12 +537,14 @@ fn write_ti_lp(
     cost_type: DelayCostType,
     interval: i32,
     big_m: i32,
-) -> (usize, usize) {
+) -> ExportStats {
     let f = File::create(path).expect("create .lp");
     let mut w = BufWriter::new(f);
 
     let mut n_vars = 0usize;
     let mut n_constraints = 0usize;
+    let mut n_travel = 0usize;
+    let mut n_resource = 0usize;
 
     writeln!(w, "\\ TRP MILP-TI, exported by export_lp.rs").unwrap();
     writeln!(
@@ -602,6 +660,7 @@ fn write_ti_lp(
                     writeln!(w, " c{}: {} <= 1", c_idx, s).unwrap();
                     c_idx += 1;
                     n_constraints += 1;
+                    n_travel += 1;
                 }
             }
         }
@@ -639,6 +698,7 @@ fn write_ti_lp(
                                     .unwrap();
                                     c_idx += 1;
                                     n_constraints += 1;
+                                    n_resource += 1;
                                 }
                             }
                         }
@@ -659,7 +719,17 @@ fn write_ti_lp(
     }
 
     writeln!(w, "End").unwrap();
-    (n_vars, n_constraints)
+    let n_intervals: usize = time_disc
+        .iter()
+        .flat_map(|train_slots| train_slots.iter().map(|v| v.len()))
+        .sum();
+    ExportStats {
+        n_vars,
+        n_constraints,
+        n_travel,
+        n_resource,
+        n_intervals,
+    }
 }
 
 // ────────────────────────────────────────────────────────────

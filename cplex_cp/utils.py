@@ -35,28 +35,33 @@ def visit_conflicts(problem: Problem) -> List[VisitPair]:
 
 
 def check_pair_separated(
+    problem: Problem,
     schedule: Dict[VisitId, float],
     pair: VisitPair,
     tolerance: float = 1.0,
 ) -> bool:
     """Kiểm tra cặp visit có tách biệt thời gian không (không overlap).
 
-    Port từ check_conflict() trong bigm.rs. Cho phép tolerance để khắc phục
-    floating-point precision issues từ MILP solver (CPLEX/Gurobi).
+    Tính end thực = start + travel_time (đúng cho cả MILP và CP).
+
+    Logic cũ dùng schedule[(t, v+1)] làm "end" — chỉ đúng với MILP tight
+    schedule (visits sát nhau). Với CP cho phép gap giữa visits không trên
+    critical path, logic cũ báo false conflict.
 
     Args:
-        tolerance: dung sai thời gian (giây). Mặc định 1.0 vì TRP làm việc
-                   với integer time, sub-second không có ý nghĩa.
+        tolerance: dung sai thời gian (giây). Mặc định 1.0 vì TRP integer time.
     """
     (t1, v1), (t2, v2) = pair
-    t_t1v1 = schedule[(t1, v1)]
-    t_t1v1next = schedule[(t1, v1 + 1)]
-    t_t2v2 = schedule[(t2, v2)]
-    t_t2v2next = schedule[(t2, v2 + 1)]
+    visit1 = problem.trains[t1].visits[v1]
+    visit2 = problem.trains[t2].visits[v2]
 
-    # Separation = max(gap nếu t1 trước, gap nếu t2 trước)
-    # >= -tolerance để cho phép sai số nhỏ do floating point
-    separation = max(t_t2v2 - t_t1v1next, t_t1v1 - t_t2v2next)
+    t1_start = schedule[(t1, v1)]
+    t1_end = t1_start + visit1.travel_time
+    t2_start = schedule[(t2, v2)]
+    t2_end = t2_start + visit2.travel_time
+
+    # Separation: t2 starts after t1 ends, HOẶC t1 starts after t2 ends
+    separation = max(t2_start - t1_end, t1_start - t2_end)
     return separation >= -tolerance
 
 
@@ -68,12 +73,7 @@ def detect_conflicts_in_schedule(
     """Trả về list các cặp visit thật sự vi phạm trong schedule."""
     violations = []
     for pair in visit_conflicts(problem):
-        (t1, v1), (t2, v2) = pair
-        if v1 + 1 >= len(problem.trains[t1].visits):
-            continue
-        if v2 + 1 >= len(problem.trains[t2].visits):
-            continue
-        if not check_pair_separated(schedule, pair, tolerance=tolerance):
+        if not check_pair_separated(problem, schedule, pair, tolerance=tolerance):
             violations.append(pair)
     return violations
 
@@ -147,12 +147,14 @@ def verify_solution(
         # In ra chi tiết conflict để debug
         sample = conflicts[0]
         (t1, v1), (t2, v2) = sample
+        v1_obj = problem.trains[t1].visits[v1]
+        v2_obj = problem.trains[t2].visits[v2]
+        t1_end = schedule[(t1, v1)] + v1_obj.travel_time
+        t2_end = schedule[(t2, v2)] + v2_obj.travel_time
         return False, (
             f"Resource conflicts found: {len(conflicts)} pairs. "
-            f"Example: t{t1}v{v1}=[{schedule[(t1, v1)]:.2f}-"
-            f"{schedule[(t1, v1 + 1)]:.2f}] vs "
-            f"t{t2}v{v2}=[{schedule[(t2, v2)]:.2f}-"
-            f"{schedule[(t2, v2 + 1)]:.2f}]"
+            f"Example: t{t1}v{v1}=[{schedule[(t1, v1)]:.2f}-{t1_end:.2f}] vs "
+            f"t{t2}v{v2}=[{schedule[(t2, v2)]:.2f}-{t2_end:.2f}]"
         )
 
     return True, "OK"

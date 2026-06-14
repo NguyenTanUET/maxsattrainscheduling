@@ -107,3 +107,12 @@ libipamir.a
 gurobi.log
 quick_scripts/execution.txt
 docs
+cplex_cp/results/original
+cplex_cp/results/addstationtime
+cplex_cp/results/addtracktime
+cplex_milp/results/ti/original
+cplex_milp/results/ti/addstationtime
+cplex_milp/results/ti/addtracktime
+cplex_milp/results/bigm/original
+cplex_milp/results/bigm/addstationtime
+cplex_milp/results/bigm/addtracktime

@@ -1,0 +1,15 @@
+,,120 seconds timeout
+,,Average time (ms),,,,,#Solved,,,,
+Objective function,Set,BigM (Gurobi),TI (Gurobi),BigM (CPLEX),TI (CPLEX),CP (CPLEX),BigM (Gurobi),TI (Gurobi),BigM (CPLEX),TI (CPLEX),CP (CPLEX)
+Linear Continuous,Original,38,5992,63,31582,156,24,24,19,4,14
+,Track time,2022,3923,92,8710,101,22,21,16,1,10
+,Station time,228,7333,45,86770,65,21,21,12,1,8
+,All,749,5760,68,36968,116,67,66,47,6,32
+Rounded Linear,Original,28,4745,255,13582,107,24,24,24,5,14
+,Track time,4904,1173,1777,5655,74,22,21,22,2,9
+,Station time,361,3689,4322,31630,138,21,21,22,1,10
+,All,1733,3273,2063,13856,108,67,66,68,8,33
+Stepwise,Original,10,27,153,33651,34,24,24,24,7,17
+,Track time,862,3639,451,10070,27,24,24,24,4,9
+,Station time,216,637,366,0,18,24,24,24,0,4
+,All,362,1434,323,25076,30,72,72,72,11,30

@@ -1,3 +1,7 @@
 conda activate gurobi
 export GRB_LICENSE_FILE=/home/nguyentan/miniconda3/envs/gurobi/gurobi.lic
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+
+export CPLEX_HOME=/opt/ibm/ILOG/CPLEX_Studio222/cplex
+export PATH=$CPLEX_HOME/bin/x86-64_linux:$PATH
+export LD_LIBRARY_PATH=$CPLEX_HOME/bin/x86-64_linux:$LD_LIBRARY_PATH
